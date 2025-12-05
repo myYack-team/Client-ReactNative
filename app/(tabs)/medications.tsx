@@ -1,0 +1,147 @@
+import React, { useEffect } from 'react';
+import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import { Button, Card, Typography } from '../../components/ui';
+import { Colors } from '../../constants';
+import { useMedicationStore } from '../../stores';
+
+export default function MedicationsScreen() {
+  const { medications, fetchMedications, isLoading } = useMedicationStore();
+
+  useEffect(() => {
+    fetchMedications();
+  }, []);
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={fetchMedications}
+            colors={[Colors.primary]}
+          />
+        }
+      >
+        <View style={styles.header}>
+          <Typography variant="h2">약 목록 💊</Typography>
+          <Typography variant="body" color={Colors.textSecondary}>
+            등록된 약 {medications.length}개
+          </Typography>
+        </View>
+
+        {medications.length === 0 ? (
+          <Card style={styles.emptyCard} variant="elevated">
+            <Typography variant="body" style={styles.emptyText}>
+              등록된 약이 없어요
+            </Typography>
+            <Typography variant="bodySmall" color={Colors.textSecondary} style={styles.emptySubtext}>
+              처방전 사진을 찍어 약을 추가해보세요
+            </Typography>
+          </Card>
+        ) : (
+          medications.map((medication) => (
+            <TouchableOpacity
+              key={medication.id}
+              onPress={() => router.push(`/medication/${medication.id}`)}
+              activeOpacity={0.8}
+            >
+              <Card style={styles.medicationCard} variant="elevated">
+                <View style={styles.medicationHeader}>
+                  <Typography variant="h3" numberOfLines={1}>
+                    {medication.name}
+                  </Typography>
+                  <Typography variant="bodySmall" color={Colors.textSecondary}>
+                    {medication.dosage}
+                  </Typography>
+                </View>
+
+                <View style={styles.medicationInfo}>
+                  <View style={styles.infoItem}>
+                    <Typography variant="caption" color={Colors.textSecondary}>
+                      복용 시간
+                    </Typography>
+                    <Typography variant="bodySmall">
+                      {medication.timing.join(', ')}
+                    </Typography>
+                  </View>
+
+                  <View style={styles.infoItem}>
+                    <Typography variant="caption" color={Colors.textSecondary}>
+                      남은 약
+                    </Typography>
+                    <Typography
+                      variant="bodySmall"
+                      color={
+                        medication.remainingCount <= 3 * medication.frequency
+                          ? Colors.warning
+                          : Colors.textPrimary
+                      }
+                    >
+                      {medication.remainingCount}개
+                      {medication.remainingCount <= 3 * medication.frequency && ' ⚠️'}
+                    </Typography>
+                  </View>
+                </View>
+              </Card>
+            </TouchableOpacity>
+          ))
+        )}
+
+        <Button
+          title="📷 약 추가하기"
+          variant="secondary"
+          size="large"
+          onPress={() => router.push('/scan/camera')}
+          style={styles.addButton}
+        />
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  header: {
+    marginBottom: 24,
+  },
+  emptyCard: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    marginBottom: 8,
+  },
+  emptySubtext: {
+    textAlign: 'center',
+  },
+  medicationCard: {
+    marginBottom: 12,
+  },
+  medicationHeader: {
+    marginBottom: 12,
+  },
+  medicationInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  infoItem: {
+    flex: 1,
+  },
+  addButton: {
+    marginTop: 24,
+  },
+});

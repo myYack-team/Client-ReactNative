@@ -1,0 +1,33 @@
+import React, { ReactNode } from 'react';
+import { View, StyleSheet, ViewStyle } from 'react-native';
+import { Colors, Shadows } from '../../constants';
+
+interface CardProps {
+  children: ReactNode;
+  style?: ViewStyle;
+  variant?: 'default' | 'elevated';
+}
+
+export function Card({ children, style, variant = 'default' }: CardProps) {
+  return (
+    <View
+      style={[
+        styles.card,
+        variant === 'elevated' && Shadows.medium,
+        style,
+      ]}
+    >
+      {children}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: Colors.white,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+});
