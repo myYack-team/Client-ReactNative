@@ -1,9 +1,10 @@
-import React, { useState, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { View, StyleSheet, TouchableOpacity, Alert, Dimensions } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Typography } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useMedicationStore } from '../../stores';
@@ -11,8 +12,29 @@ import { useMedicationStore } from '../../stores';
 export default function CameraScreen() {
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
+  const [isLandscape, setIsLandscape] = useState(false);
   const cameraRef = useRef<CameraView>(null);
   const { scanPrescription, isLoading } = useMedicationStore();
+  const insets = useSafeAreaInsets();
+
+  // 화면 진입 시 가로 모드로 고정
+  useEffect(() => {
+    const lockLandscape = async () => {
+      await ScreenOrientation.lockAsync(
+        ScreenOrientation.OrientationLock.LANDSCAPE_RIGHT
+      );
+      setIsLandscape(true);
+    };
+
+    lockLandscape();
+
+    // 화면 이탈 시 세로 모드로 복원
+    return () => {
+      ScreenOrientation.lockAsync(
+        ScreenOrientation.OrientationLock.PORTRAIT_UP
+      );
+    };
+  }, []);
 
   if (!permission) {
     return (
@@ -58,13 +80,27 @@ export default function CameraScreen() {
   };
 
   const handlePickImage = async () => {
+    // 갤러리 열기 전 세로 모드로 전환
+    await ScreenOrientation.lockAsync(
+      ScreenOrientation.OrientationLock.PORTRAIT_UP
+    );
+
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
+      quality: 1, // 크롭을 위해 원본 품질 유지
     });
 
     if (!result.canceled && result.assets[0]) {
-      await processImage(result.assets[0].uri);
+      // 크롭 화면으로 이동
+      router.push({
+        pathname: '/scan/crop',
+        params: { uri: result.assets[0].uri },
+      });
+    } else {
+      // 취소 시 다시 가로 모드로
+      await ScreenOrientation.lockAsync(
+        ScreenOrientation.OrientationLock.LANDSCAPE_RIGHT
+      );
     }
   };
 
@@ -97,17 +133,46 @@ export default function CameraScreen() {
         style={styles.camera}
         facing={facing}
       >
+        {/* 가이드 프레임 오버레이 */}
         <View style={styles.overlay}>
-          <View style={styles.guideBox}>
+          {/* 상단 안내 문구 */}
+          <View style={styles.topGuide}>
             <Typography variant="body" color={Colors.white} style={styles.guideText}>
-              처방전 또는 약봉투를{'\n'}가이드 안에 맞춰주세요
+              📋 약봉투를 가이드 안에 맞춰주세요
             </Typography>
+            <Typography variant="caption" color="rgba(255,255,255,0.7)" style={styles.subGuideText}>
+              글자가 정방향으로 보이도록 맞춰주세요
+            </Typography>
+          </View>
+
+          {/* 가이드 프레임 */}
+          <View style={styles.guideFrame}>
+            {/* 코너 표시 - 좌상단 */}
+            <View style={[styles.corner, styles.cornerTopLeft]} />
+            {/* 코너 표시 - 우상단 */}
+            <View style={[styles.corner, styles.cornerTopRight]} />
+            {/* 코너 표시 - 좌하단 */}
+            <View style={[styles.corner, styles.cornerBottomLeft]} />
+            {/* 코너 표시 - 우하단 */}
+            <View style={[styles.corner, styles.cornerBottomRight]} />
           </View>
         </View>
 
-        <View style={styles.controls}>
-          <TouchableOpacity style={styles.galleryButton} onPress={handlePickImage}>
-            <Typography variant="body" color={Colors.white}>
+        {/* 컨트롤 버튼 (가로 모드: 우측에 배치) */}
+        <View style={[
+          styles.controlsLandscape,
+          {
+            paddingRight: Math.max(insets.right, 16),
+            width: 100 + Math.max(insets.right, 16),
+          }
+        ]}>
+          <TouchableOpacity style={styles.galleryButtonLandscape} onPress={handlePickImage}>
+            <View style={styles.iconButton}>
+              <Typography variant="caption" color={Colors.white}>
+                🖼️
+              </Typography>
+            </View>
+            <Typography variant="caption" color={Colors.white}>
               갤러리
             </Typography>
           </TouchableOpacity>
@@ -120,12 +185,27 @@ export default function CameraScreen() {
             <View style={styles.captureInner} />
           </TouchableOpacity>
 
-          <View style={styles.placeholder} />
+          <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
+            <View style={styles.iconButton}>
+              <Typography variant="caption" color={Colors.white}>
+                ✕
+              </Typography>
+            </View>
+            <Typography variant="caption" color={Colors.white}>
+              닫기
+            </Typography>
+          </TouchableOpacity>
         </View>
       </CameraView>
     </View>
   );
 }
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const GUIDE_WIDTH = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.85;
+const GUIDE_HEIGHT = GUIDE_WIDTH * 0.65; // 약봉투 비율
+const CORNER_SIZE = 30;
+const CORNER_THICKNESS = 4;
 
 const styles = StyleSheet.create({
   container: {
@@ -152,53 +232,111 @@ const styles = StyleSheet.create({
   },
   camera: {
     flex: 1,
+    flexDirection: 'row',
   },
   overlay: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  guideBox: {
-    width: '85%',
-    aspectRatio: 1.5,
-    borderWidth: 3,
-    borderColor: Colors.white,
-    borderRadius: 12,
-    justifyContent: 'center',
+  topGuide: {
+    position: 'absolute',
+    top: 20,
+    left: 0,
+    right: 0,
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.2)',
   },
   guideText: {
     textAlign: 'center',
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
-  controls: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  subGuideText: {
+    textAlign: 'center',
+    marginTop: 4,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  guideFrame: {
+    width: GUIDE_WIDTH,
+    height: GUIDE_HEIGHT,
+    position: 'relative',
+  },
+  corner: {
+    position: 'absolute',
+    width: CORNER_SIZE,
+    height: CORNER_SIZE,
+    borderColor: '#4CAF50',
+  },
+  cornerTopLeft: {
+    top: 0,
+    left: 0,
+    borderTopWidth: CORNER_THICKNESS,
+    borderLeftWidth: CORNER_THICKNESS,
+    borderTopLeftRadius: 8,
+  },
+  cornerTopRight: {
+    top: 0,
+    right: 0,
+    borderTopWidth: CORNER_THICKNESS,
+    borderRightWidth: CORNER_THICKNESS,
+    borderTopRightRadius: 8,
+  },
+  cornerBottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderBottomWidth: CORNER_THICKNESS,
+    borderLeftWidth: CORNER_THICKNESS,
+    borderBottomLeftRadius: 8,
+  },
+  cornerBottomRight: {
+    bottom: 0,
+    right: 0,
+    borderBottomWidth: CORNER_THICKNESS,
+    borderRightWidth: CORNER_THICKNESS,
+    borderBottomRightRadius: 8,
+  },
+  controlsLandscape: {
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
-    paddingBottom: 50,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingVertical: 20,
+    paddingLeft: 16,
+    // width와 paddingRight는 인라인에서 insets.right로 동적 적용
   },
-  galleryButton: {
-    padding: 16,
+  galleryButtonLandscape: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  iconButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
   },
   captureButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     backgroundColor: Colors.white,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 30,
   },
   captureInner: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: Colors.white,
     borderWidth: 4,
     borderColor: Colors.textPrimary,
   },
-  placeholder: {
-    width: 60,
+  closeButton: {
+    alignItems: 'center',
   },
 });
