@@ -4,6 +4,7 @@ export { medicationService as realMedicationService } from './medication';
 export { intakeService as realIntakeService } from './intake';
 export { userService as realUserService } from './user';
 export { reminderService as realReminderService } from './reminder';
+export { notificationService } from './notification';
 
 // Mock 서비스 (서버 없이 테스트용)
 export {
