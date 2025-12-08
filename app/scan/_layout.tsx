@@ -19,8 +19,13 @@ export default function ScanLayout() {
       <Stack.Screen
         name="camera"
         options={{
-          title: '약 촬영',
-          headerBackTitle: '취소',
+          headerShown: false, // 카메라 화면은 헤더 숨김
+        }}
+      />
+      <Stack.Screen
+        name="crop"
+        options={{
+          headerShown: false, // 크롭 화면도 헤더 숨김
         }}
       />
       <Stack.Screen
