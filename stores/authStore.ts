@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import { User } from '../types';
-import { authService } from '../services';
+import { authService, userService } from '../services';
 
 interface AuthState {
   user: User | null;
@@ -33,7 +33,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         return;
       }
 
-      const user = await authService.getMe();
+      const user = await userService.getMe();
       set({ user, isAuthenticated: true, isLoading: false });
     } catch (error) {
       await SecureStore.deleteItemAsync('accessToken');

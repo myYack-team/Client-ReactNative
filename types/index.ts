@@ -1,78 +1,228 @@
-import { TimingOption } from '../constants';
+// API Response 형식
+export interface ApiResponse<T> {
+  isSuccess: boolean;
+  code: string;
+  message: string;
+  result: T | null;
+}
 
+// Enum 타입들
+export type FontSize = 'SMALL' | 'MEDIUM' | 'LARGE';
+
+export type MedicationTiming =
+  | 'BEFORE_BREAKFAST'
+  | 'AFTER_BREAKFAST'
+  | 'BEFORE_LUNCH'
+  | 'AFTER_LUNCH'
+  | 'BEFORE_DINNER'
+  | 'AFTER_DINNER'
+  | 'BEFORE_BED'
+  | 'AS_NEEDED';
+
+export type IntakeStatus = 'TAKEN' | 'MISSED' | 'SKIPPED';
+
+// Timing 라벨 매핑
+export const TIMING_LABELS: Record<MedicationTiming, string> = {
+  BEFORE_BREAKFAST: '아침 식전',
+  AFTER_BREAKFAST: '아침 식후',
+  BEFORE_LUNCH: '점심 식전',
+  AFTER_LUNCH: '점심 식후',
+  BEFORE_DINNER: '저녁 식전',
+  AFTER_DINNER: '저녁 식후',
+  BEFORE_BED: '취침 전',
+  AS_NEEDED: '필요시',
+};
+
+// Timing 옵션 배열
+export const TIMING_OPTIONS: MedicationTiming[] = [
+  'BEFORE_BREAKFAST',
+  'AFTER_BREAKFAST',
+  'BEFORE_LUNCH',
+  'AFTER_LUNCH',
+  'BEFORE_DINNER',
+  'AFTER_DINNER',
+  'BEFORE_BED',
+  'AS_NEEDED',
+];
+
+// 사용자
 export interface User {
   id: number;
   kakaoId: string;
   name: string;
   profileImage?: string;
-  fontSize: 'small' | 'medium' | 'large';
+  fontSize: FontSize;
   createdAt: string;
 }
 
+// 약물 정보 (식약처 API 기반)
+export interface DrugInfo {
+  itemSeq: string;        // 품목기준코드
+  itemName: string;       // 제품명
+  entpName: string;       // 업체명
+  efficacy?: string;      // 효능/효과
+  useMethod?: string;     // 용법/용량
+  warning?: string;       // 경고
+  caution?: string;       // 주의사항
+  interaction?: string;   // 상호작용
+  sideEffect?: string;    // 부작용
+  storageMethod?: string; // 보관법
+  imageUrl?: string;      // 약 이미지
+}
+
+// 약 정보 (상세)
 export interface Medication {
   id: number;
-  userId: number;
-  name: string;
-  dosage: string;
+  drugName: string;       // 약 이름 (drugInfo가 있으면 그것, 없으면 customDrugName)
+  imageUrl?: string;      // 약 이미지 URL
+  dosage: number;
   frequency: number;
-  timing: TimingOption[];
+  timings: MedicationTiming[];
   durationDays: number;
   totalCount: number;
   remainingCount: number;
   startDate: string;
   createdAt: string;
+  memo?: string;
+  reminders?: Reminder[];
+  drugInfo?: DrugInfo;    // 식약처 API 약물 상세 정보
 }
 
+// 약 목록 아이템 (간략)
+export interface MedicationListItem {
+  id: number;
+  drugName: string;       // 약 이름
+  imageUrl?: string;      // 약 이미지 URL
+  dosage: number;
+  frequency: number;
+  timings: MedicationTiming[];
+  remainingCount: number;
+  daysLeft: number;
+}
+
+// 알림
 export interface Reminder {
   id: number;
-  medicationId: number;
+  medicationId?: number;
+  medicationName?: string;
   time: string;
+  timing: MedicationTiming;
+  timingLabel?: string;
   enabled: boolean;
-  createdAt: string;
 }
 
+// 복약 기록
 export interface Intake {
   id: number;
   medicationId: number;
+  medicationName: string;
   takenAt: string;
-  status: 'taken' | 'missed' | 'skipped';
+  timing: MedicationTiming;
+  status: IntakeStatus;
 }
 
+// 오늘의 복약 - 스케줄 내 약 정보
+export interface ScheduleMedication {
+  id: number;
+  name: string;
+  dosage: number;
+  taken: boolean;
+  takenAt?: string | null;
+}
+
+// 오늘의 복약 - 시간대별 스케줄
+export interface TodaySchedule {
+  timing: MedicationTiming;
+  timingLabel: string;
+  scheduledTime: string;
+  medications: ScheduleMedication[];
+  allTaken: boolean;
+}
+
+// 오늘의 복약 응답
+export interface TodayResponse {
+  date: string;
+  dayOfWeek: string;
+  schedules: TodaySchedule[];
+  summary: {
+    totalMedications: number;
+    takenCount: number;
+    remainingCount: number;
+  };
+}
+
+// 약 목록 응답
+export interface MedicationsResponse {
+  medications: MedicationListItem[];
+  totalCount: number;
+}
+
+// 알림 목록 응답
+export interface RemindersResponse {
+  reminders: Reminder[];
+  totalCount: number;
+}
+
+// 복약 기록 응답
+export interface IntakesResponse {
+  date: string;
+  schedules: TodaySchedule[];
+  summary: {
+    totalScheduled: number;
+    totalTaken: number;
+    completionRate: number;
+  };
+}
+
+// 복약 확인 요청
+export interface RecordIntakeRequest {
+  medicationIds: number[];
+  takenAt: string;
+  timing: MedicationTiming;
+}
+
+// 복약 확인 응답
+export interface RecordIntakeResponse {
+  intakes: Intake[];
+  updatedMedications: {
+    id: number;
+    remainingCount: number;
+    lowStock: boolean;
+    lowStockMessage?: string;
+  }[];
+}
+
+// 처방전 스캔 결과
 export interface ScanResult {
   success: boolean;
   confidence: 'high' | 'medium' | 'low';
   medications: ScannedMedication[];
-  notes?: string;
+  notes: string | null;
 }
 
 export interface ScannedMedication {
-  name: string;
-  dosage: string;
-  frequency: string;
-  timing: TimingOption[];
+  name: string;             // 처방전에서 추출한 이름
+  drugItemSeq?: string;     // 매칭된 DrugInfo의 itemSeq (있으면)
+  dosage: number;
+  frequency: number;
+  timings: MedicationTiming[];
   durationDays: number;
   totalCount: number;
+  // DrugInfo에서 가져온 정보 (매칭된 경우)
+  efficacy?: string;        // 효능/효과
+  imageUrl?: string;        // 약 이미지
+  entpName?: string;        // 제약회사
 }
 
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken: string;
-}
-
-export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  message?: string;
-  error?: string;
-}
-
-export interface TodayMedication {
-  timing: TimingOption;
-  time: string;
-  medications: MedicationWithIntake[];
-}
-
-export interface MedicationWithIntake extends Medication {
-  isTaken: boolean;
-  intakeId?: number;
+// 약 등록 요청
+export interface CreateMedicationRequest {
+  drugItemSeq?: string;     // 식약처 API 약물 코드 (우선)
+  customDrugName?: string;  // 직접 입력한 약 이름 (API에 없는 경우)
+  dosage: number;
+  frequency: number;
+  timings: MedicationTiming[];
+  durationDays: number;
+  totalCount: number;
+  startDate: string;
+  memo?: string;            // 사용자 메모
 }

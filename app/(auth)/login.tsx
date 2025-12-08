@@ -1,39 +1,15 @@
 import React from 'react';
-import { View, StyleSheet, Image } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
-import * as Linking from 'expo-linking';
 import { Button, Typography } from '../../components/ui';
 import { Colors } from '../../constants';
-import { useAuthStore } from '../../stores';
-import { authService } from '../../services';
 
 export default function LoginScreen() {
-  const { loginWithKakao, isLoading, error, clearError } = useAuthStore();
-
-  const handleKakaoLogin = async () => {
-    try {
-      clearError();
-      const loginUrl = await authService.getKakaoLoginUrl();
-
-      const result = await WebBrowser.openAuthSessionAsync(
-        loginUrl,
-        Linking.createURL('auth/callback')
-      );
-
-      if (result.type === 'success' && result.url) {
-        const url = new URL(result.url);
-        const code = url.searchParams.get('code');
-
-        if (code) {
-          await loginWithKakao(code);
-          router.replace('/(tabs)');
-        }
-      }
-    } catch (err) {
-      console.error('Login error:', err);
-    }
+  // TODO: 나중에 실제 카카오 로그인 구현
+  const handleKakaoLogin = () => {
+    // 임시로 바로 홈 화면으로 이동
+    router.replace('/(tabs)');
   };
 
   return (
@@ -49,17 +25,10 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.buttonSection}>
-          {error && (
-            <Typography variant="bodySmall" color={Colors.error} style={styles.error}>
-              {error}
-            </Typography>
-          )}
-
           <Button
             title="카카오로 시작하기"
             variant="kakao"
             onPress={handleKakaoLogin}
-            loading={isLoading}
           />
 
           <Typography
@@ -100,10 +69,6 @@ const styles = StyleSheet.create({
   },
   buttonSection: {
     paddingBottom: 40,
-  },
-  error: {
-    textAlign: 'center',
-    marginBottom: 16,
   },
   terms: {
     textAlign: 'center',

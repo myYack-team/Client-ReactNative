@@ -1,28 +1,42 @@
 import { create } from 'zustand';
-import { Medication, TodayMedication, ScanResult } from '../types';
+import {
+  MedicationListItem,
+  Medication,
+  TodayResponse,
+  TodaySchedule,
+  ScanResult,
+  CreateMedicationRequest,
+  MedicationTiming,
+} from '../types';
 import { medicationService, intakeService } from '../services';
 
 interface MedicationState {
-  medications: Medication[];
-  todayMedications: TodayMedication[];
+  // 약 목록 (간략)
+  medications: MedicationListItem[];
+  // 오늘의 복약 현황
+  todayData: TodayResponse | null;
+  // 처방전 스캔 결과
   currentScanResult: ScanResult | null;
+  // 로딩/에러 상태
   isLoading: boolean;
   error: string | null;
 
+  // Actions
   fetchMedications: () => Promise<void>;
-  fetchTodayMedications: () => Promise<void>;
+  fetchTodaySchedule: () => Promise<void>;
+  getMedicationDetail: (id: number) => Promise<Medication>;
   scanPrescription: (imageUri: string) => Promise<ScanResult>;
-  addMedication: (medication: Omit<Medication, 'id' | 'userId' | 'createdAt'>) => Promise<void>;
-  updateMedication: (id: number, data: Partial<Medication>) => Promise<void>;
+  addMedication: (medication: CreateMedicationRequest) => Promise<void>;
+  updateMedication: (id: number, data: Partial<CreateMedicationRequest>) => Promise<void>;
   deleteMedication: (id: number) => Promise<void>;
-  recordIntake: (medicationIds: number[]) => Promise<void>;
+  recordIntake: (medicationIds: number[], timing: MedicationTiming) => Promise<void>;
   clearScanResult: () => void;
   clearError: () => void;
 }
 
 export const useMedicationStore = create<MedicationState>((set, get) => ({
   medications: [],
-  todayMedications: [],
+  todayData: null,
   currentScanResult: null,
   isLoading: false,
   error: null,
@@ -30,20 +44,35 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
   fetchMedications: async () => {
     try {
       set({ isLoading: true, error: null });
-      const medications = await medicationService.getMedications();
-      set({ medications, isLoading: false });
+      const response = await medicationService.getMedications();
+      set({ medications: response.medications, isLoading: false });
     } catch (error) {
-      set({ isLoading: false, error: '약 목록을 불러오는데 실패했습니다.' });
+      const message = error instanceof Error ? error.message : '약 목록을 불러오는데 실패했습니다.';
+      set({ isLoading: false, error: message });
     }
   },
 
-  fetchTodayMedications: async () => {
+  fetchTodaySchedule: async () => {
     try {
       set({ isLoading: true, error: null });
-      const todayMedications = await medicationService.getTodayMedications();
-      set({ todayMedications, isLoading: false });
+      const todayData = await medicationService.getTodaySchedule();
+      set({ todayData, isLoading: false });
     } catch (error) {
-      set({ isLoading: false, error: '오늘의 약을 불러오는데 실패했습니다.' });
+      const message = error instanceof Error ? error.message : '오늘의 약을 불러오는데 실패했습니다.';
+      set({ isLoading: false, error: message });
+    }
+  },
+
+  getMedicationDetail: async (id: number) => {
+    try {
+      set({ isLoading: true, error: null });
+      const medication = await medicationService.getMedication(id);
+      set({ isLoading: false });
+      return medication;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '약 정보를 불러오는데 실패했습니다.';
+      set({ isLoading: false, error: message });
+      throw error;
     }
   },
 
@@ -54,40 +83,42 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
       set({ currentScanResult: result, isLoading: false });
       return result;
     } catch (error) {
-      set({ isLoading: false, error: '처방전 분석에 실패했습니다.' });
+      const message = error instanceof Error ? error.message : '처방전 분석에 실패했습니다.';
+      set({ isLoading: false, error: message });
       throw error;
     }
   },
 
-  addMedication: async (medication) => {
+  addMedication: async (medication: CreateMedicationRequest) => {
     try {
       set({ isLoading: true, error: null });
-      const newMedication = await medicationService.createMedication(medication);
-      set((state) => ({
-        medications: [...state.medications, newMedication],
-        isLoading: false,
-      }));
+      await medicationService.createMedication(medication);
+      // 목록 새로고침
+      await get().fetchMedications();
+      await get().fetchTodaySchedule();
+      set({ isLoading: false });
     } catch (error) {
-      set({ isLoading: false, error: '약 등록에 실패했습니다.' });
+      const message = error instanceof Error ? error.message : '약 등록에 실패했습니다.';
+      set({ isLoading: false, error: message });
       throw error;
     }
   },
 
-  updateMedication: async (id, data) => {
+  updateMedication: async (id: number, data: Partial<CreateMedicationRequest>) => {
     try {
       set({ isLoading: true, error: null });
-      const updated = await medicationService.updateMedication(id, data);
-      set((state) => ({
-        medications: state.medications.map((m) => (m.id === id ? updated : m)),
-        isLoading: false,
-      }));
+      await medicationService.updateMedication(id, data);
+      await get().fetchMedications();
+      await get().fetchTodaySchedule();
+      set({ isLoading: false });
     } catch (error) {
-      set({ isLoading: false, error: '약 수정에 실패했습니다.' });
+      const message = error instanceof Error ? error.message : '약 수정에 실패했습니다.';
+      set({ isLoading: false, error: message });
       throw error;
     }
   },
 
-  deleteMedication: async (id) => {
+  deleteMedication: async (id: number) => {
     try {
       set({ isLoading: true, error: null });
       await medicationService.deleteMedication(id);
@@ -95,20 +126,23 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
         medications: state.medications.filter((m) => m.id !== id),
         isLoading: false,
       }));
+      await get().fetchTodaySchedule();
     } catch (error) {
-      set({ isLoading: false, error: '약 삭제에 실패했습니다.' });
+      const message = error instanceof Error ? error.message : '약 삭제에 실패했습니다.';
+      set({ isLoading: false, error: message });
       throw error;
     }
   },
 
-  recordIntake: async (medicationIds) => {
+  recordIntake: async (medicationIds: number[], timing: MedicationTiming) => {
     try {
       set({ isLoading: true, error: null });
-      await intakeService.recordIntake({ medicationIds });
-      await get().fetchTodayMedications();
+      await intakeService.markAsTaken(medicationIds, timing);
+      await get().fetchTodaySchedule();
       set({ isLoading: false });
     } catch (error) {
-      set({ isLoading: false, error: '복약 기록에 실패했습니다.' });
+      const message = error instanceof Error ? error.message : '복약 기록에 실패했습니다.';
+      set({ isLoading: false, error: message });
       throw error;
     }
   },

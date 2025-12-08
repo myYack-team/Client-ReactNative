@@ -4,38 +4,48 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Button, Card, Typography } from '../../components/ui';
 import { Colors } from '../../constants';
-import { useMedicationStore, useAuthStore } from '../../stores';
+import { useMedicationStore } from '../../stores';
+import { MedicationTiming, TodaySchedule } from '../../types';
 
 export default function HomeScreen() {
-  const user = useAuthStore((state) => state.user);
-  const { todayMedications, fetchTodayMedications, recordIntake, isLoading } = useMedicationStore();
+  const { todayData, fetchTodaySchedule, recordIntake, isLoading } = useMedicationStore();
 
   useEffect(() => {
-    fetchTodayMedications();
+    fetchTodaySchedule();
   }, []);
 
-  const today = new Date();
-  const dateString = today.toLocaleDateString('ko-KR', {
-    month: 'long',
-    day: 'numeric',
-    weekday: 'short',
-  });
+  const getTimingEmoji = (timingLabel: string): string => {
+    if (timingLabel.includes('아침')) return '☀️';
+    if (timingLabel.includes('점심')) return '🌤️';
+    if (timingLabel.includes('저녁')) return '🌙';
+    if (timingLabel.includes('취침')) return '🌃';
+    return '💊';
+  };
 
-  const handleTakeAll = async (timing: string, medicationIds: number[]) => {
+  const handleTakeAll = async (schedule: TodaySchedule) => {
+    const notTakenMeds = schedule.medications.filter((m) => !m.taken);
+    if (notTakenMeds.length === 0) return;
+
     try {
-      await recordIntake(medicationIds);
+      await recordIntake(
+        notTakenMeds.map((m) => m.id),
+        schedule.timing
+      );
     } catch (error) {
       console.error('Failed to record intake:', error);
     }
   };
 
-  const getTimingEmoji = (timing: string): string => {
-    if (timing.includes('아침')) return '☀️';
-    if (timing.includes('점심')) return '🌤️';
-    if (timing.includes('저녁')) return '🌙';
-    if (timing.includes('취침')) return '🌃';
-    return '💊';
-  };
+  const dateDisplay = todayData
+    ? `${todayData.date.replace(/-/g, '.')} (${todayData.dayOfWeek})`
+    : new Date().toLocaleDateString('ko-KR', {
+        month: 'long',
+        day: 'numeric',
+        weekday: 'short',
+      });
+
+  const schedules = todayData?.schedules || [];
+  const summary = todayData?.summary;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -45,7 +55,7 @@ export default function HomeScreen() {
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
-            onRefresh={fetchTodayMedications}
+            onRefresh={fetchTodaySchedule}
             colors={[Colors.primary]}
           />
         }
@@ -53,11 +63,16 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <Typography variant="h2">오늘의 약 💊</Typography>
           <Typography variant="body" color={Colors.textSecondary}>
-            {dateString}
+            {dateDisplay}
           </Typography>
+          {summary && (
+            <Typography variant="bodySmall" color={Colors.textSecondary} style={styles.summary}>
+              {summary.takenCount}/{summary.totalMedications}개 복용 완료
+            </Typography>
+          )}
         </View>
 
-        {todayMedications.length === 0 ? (
+        {schedules.length === 0 ? (
           <Card style={styles.emptyCard} variant="elevated">
             <Typography variant="body" style={styles.emptyText}>
               오늘 먹을 약이 없어요
@@ -67,53 +82,43 @@ export default function HomeScreen() {
             </Typography>
           </Card>
         ) : (
-          todayMedications.map((schedule, index) => {
-            const allTaken = schedule.medications.every((m) => m.isTaken);
-            const notTakenMeds = schedule.medications.filter((m) => !m.isTaken);
+          schedules.map((schedule, index) => (
+            <Card key={index} style={styles.scheduleCard} variant="elevated">
+              <View style={styles.scheduleHeader}>
+                <Typography variant="h3">
+                  {getTimingEmoji(schedule.timingLabel)} {schedule.timingLabel} ({schedule.scheduledTime})
+                </Typography>
+              </View>
 
-            return (
-              <Card key={index} style={styles.scheduleCard} variant="elevated">
-                <View style={styles.scheduleHeader}>
-                  <Typography variant="h3">
-                    {getTimingEmoji(schedule.timing)} {schedule.timing} ({schedule.time})
-                  </Typography>
-                </View>
-
-                <View style={styles.medicationList}>
-                  {schedule.medications.map((med) => (
-                    <View key={med.id} style={styles.medicationItem}>
-                      <Typography variant="body">
-                        {med.isTaken ? '✅' : '⬜'} {med.name} {med.dosage}
-                      </Typography>
-                    </View>
-                  ))}
-                </View>
-
-                {!allTaken && (
-                  <Button
-                    title="모두 먹었어요 ✓"
-                    variant="primary"
-                    size="medium"
-                    onPress={() =>
-                      handleTakeAll(
-                        schedule.timing,
-                        notTakenMeds.map((m) => m.id)
-                      )
-                    }
-                    style={styles.takeButton}
-                  />
-                )}
-
-                {allTaken && (
-                  <View style={styles.completedBadge}>
-                    <Typography variant="body" color={Colors.primary}>
-                      ✓ 완료
+              <View style={styles.medicationList}>
+                {schedule.medications.map((med) => (
+                  <View key={med.id} style={styles.medicationItem}>
+                    <Typography variant="body">
+                      {med.taken ? '✅' : '⬜'} {med.name} {med.dosage}정
                     </Typography>
                   </View>
-                )}
-              </Card>
-            );
-          })
+                ))}
+              </View>
+
+              {!schedule.allTaken && (
+                <Button
+                  title="모두 먹었어요 ✓"
+                  variant="primary"
+                  size="medium"
+                  onPress={() => handleTakeAll(schedule)}
+                  style={styles.takeButton}
+                />
+              )}
+
+              {schedule.allTaken && (
+                <View style={styles.completedBadge}>
+                  <Typography variant="body" color={Colors.primary}>
+                    ✓ 완료
+                  </Typography>
+                </View>
+              )}
+            </Card>
+          ))
         )}
 
         <Button
@@ -142,6 +147,9 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 24,
+  },
+  summary: {
+    marginTop: 4,
   },
   emptyCard: {
     alignItems: 'center',

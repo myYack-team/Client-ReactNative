@@ -1,29 +1,45 @@
 import api from './api';
-import { Intake, ApiResponse } from '../types';
-
-export interface RecordIntakeParams {
-  medicationIds: number[];
-  takenAt?: string;
-}
+import {
+  ApiResponse,
+  RecordIntakeRequest,
+  RecordIntakeResponse,
+  IntakesResponse,
+  MedicationTiming,
+} from '../types';
 
 export const intakeService = {
-  async recordIntake(params: RecordIntakeParams): Promise<Intake[]> {
-    const response = await api.post<ApiResponse<Intake[]>>('/intakes', {
-      ...params,
-      takenAt: params.takenAt || new Date().toISOString(),
-    });
-    return response.data.data!;
+  // 복약 확인 기록
+  async recordIntake(params: RecordIntakeRequest): Promise<RecordIntakeResponse> {
+    const response = await api.post<ApiResponse<RecordIntakeResponse>>('/intakes', params);
+    return response.data.result!;
   },
 
-  async getIntakes(params?: { startDate?: string; endDate?: string }): Promise<Intake[]> {
-    const response = await api.get<ApiResponse<Intake[]>>('/intakes', { params });
-    return response.data.data!;
+  // 복약 기록 조회 (단일 날짜)
+  async getIntakesByDate(date?: string): Promise<IntakesResponse> {
+    const response = await api.get<ApiResponse<IntakesResponse>>('/intakes', {
+      params: date ? { date } : undefined,
+    });
+    return response.data.result!;
   },
 
-  async getIntakesByDate(date: string): Promise<Intake[]> {
-    const response = await api.get<ApiResponse<Intake[]>>('/intakes', {
-      params: { date },
+  // 복약 기록 조회 (기간)
+  async getIntakesByDateRange(startDate: string, endDate: string): Promise<IntakesResponse> {
+    const response = await api.get<ApiResponse<IntakesResponse>>('/intakes', {
+      params: { startDate, endDate },
     });
-    return response.data.data!;
+    return response.data.result!;
+  },
+
+  // 복약 확인 헬퍼 함수
+  async markAsTaken(
+    medicationIds: number[],
+    timing: MedicationTiming,
+    takenAt?: string
+  ): Promise<RecordIntakeResponse> {
+    return this.recordIntake({
+      medicationIds,
+      timing,
+      takenAt: takenAt || new Date().toISOString(),
+    });
   },
 };

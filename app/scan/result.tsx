@@ -3,9 +3,14 @@ import { View, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Button, Card, Typography } from '../../components/ui';
-import { Colors, TIMING_OPTIONS, TimingOption } from '../../constants';
+import { Colors } from '../../constants';
 import { useMedicationStore } from '../../stores';
-import { ScannedMedication } from '../../types';
+import {
+  ScannedMedication,
+  MedicationTiming,
+  TIMING_LABELS,
+  TIMING_OPTIONS,
+} from '../../types';
 
 export default function ResultScreen() {
   const { currentScanResult, addMedication, clearScanResult, isLoading } = useMedicationStore();
@@ -19,14 +24,14 @@ export default function ResultScreen() {
     );
   };
 
-  const toggleTiming = (index: number, timing: TimingOption) => {
+  const toggleTiming = (index: number, timing: MedicationTiming) => {
     setMedications((prev) =>
       prev.map((med, i) => {
         if (i !== index) return med;
-        const newTiming = med.timing.includes(timing)
-          ? med.timing.filter((t) => t !== timing)
-          : [...med.timing, timing];
-        return { ...med, timing: newTiming };
+        const newTimings = med.timings.includes(timing)
+          ? med.timings.filter((t) => t !== timing)
+          : [...med.timings, timing];
+        return { ...med, timings: newTimings };
       })
     );
   };
@@ -44,14 +49,15 @@ export default function ResultScreen() {
     try {
       for (const med of medications) {
         await addMedication({
-          name: med.name,
+          // drugItemSeq가 있으면 사용, 없으면 customDrugName
+          drugItemSeq: med.drugItemSeq,
+          customDrugName: med.drugItemSeq ? undefined : med.name,
           dosage: med.dosage,
-          frequency: parseInt(med.frequency) || 1,
-          timing: med.timing,
+          frequency: med.frequency,
+          timings: med.timings,
           durationDays: med.durationDays,
           totalCount: med.totalCount,
-          remainingCount: med.totalCount,
-          startDate: new Date().toISOString(),
+          startDate: new Date().toISOString().split('T')[0],
         });
       }
 
@@ -121,18 +127,41 @@ export default function ResultScreen() {
                 onChangeText={(text) => updateMedication(index, 'name', text)}
                 placeholder="약 이름을 입력하세요"
               />
+              {/* DrugInfo와 매칭된 경우 표시 */}
+              {med.drugItemSeq && (
+                <View style={styles.matchBadge}>
+                  <Typography variant="caption" color={Colors.success}>
+                    ✓ 약물 정보 매칭됨
+                  </Typography>
+                </View>
+              )}
             </View>
+
+            {/* 매칭된 DrugInfo 정보 표시 */}
+            {med.efficacy && (
+              <View style={styles.drugInfoBox}>
+                <Typography variant="caption" color={Colors.textSecondary}>
+                  효능: {med.efficacy}
+                </Typography>
+                {med.entpName && (
+                  <Typography variant="caption" color={Colors.textSecondary}>
+                    제약사: {med.entpName}
+                  </Typography>
+                )}
+              </View>
+            )}
 
             <View style={styles.row}>
               <View style={[styles.inputGroup, styles.halfWidth]}>
                 <Typography variant="bodySmall" color={Colors.textSecondary}>
-                  1회 복용량
+                  1회 복용량 (정)
                 </Typography>
                 <TextInput
                   style={styles.input}
-                  value={med.dosage}
-                  onChangeText={(text) => updateMedication(index, 'dosage', text)}
-                  placeholder="예: 1정"
+                  value={String(med.dosage)}
+                  onChangeText={(text) => updateMedication(index, 'dosage', parseInt(text) || 1)}
+                  keyboardType="numeric"
+                  placeholder="예: 1"
                 />
               </View>
 
@@ -142,8 +171,8 @@ export default function ResultScreen() {
                 </Typography>
                 <TextInput
                   style={styles.input}
-                  value={med.frequency}
-                  onChangeText={(text) => updateMedication(index, 'frequency', text)}
+                  value={String(med.frequency)}
+                  onChangeText={(text) => updateMedication(index, 'frequency', parseInt(text) || 1)}
                   keyboardType="numeric"
                   placeholder="예: 2"
                 />
@@ -160,15 +189,15 @@ export default function ResultScreen() {
                     key={timing}
                     style={[
                       styles.timingButton,
-                      med.timing.includes(timing) && styles.timingButtonActive,
+                      med.timings.includes(timing) && styles.timingButtonActive,
                     ]}
                     onPress={() => toggleTiming(index, timing)}
                   >
                     <Typography
                       variant="caption"
-                      color={med.timing.includes(timing) ? Colors.white : Colors.textPrimary}
+                      color={med.timings.includes(timing) ? Colors.white : Colors.textPrimary}
                     >
-                      {timing}
+                      {TIMING_LABELS[timing]}
                     </Typography>
                   </TouchableOpacity>
                 ))}
@@ -302,6 +331,21 @@ const styles = StyleSheet.create({
   timingButtonActive: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
+  },
+  matchBadge: {
+    marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    backgroundColor: '#E8F5E9',
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+  },
+  drugInfoBox: {
+    backgroundColor: '#F5F5F5',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    gap: 4,
   },
   notice: {
     textAlign: 'center',

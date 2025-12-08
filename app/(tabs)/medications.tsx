@@ -5,13 +5,23 @@ import { router } from 'expo-router';
 import { Button, Card, Typography } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useMedicationStore } from '../../stores';
+import { TIMING_LABELS, MedicationTiming } from '../../types';
 
 export default function MedicationsScreen() {
-  const { medications, fetchMedications, isLoading } = useMedicationStore();
+  const { medications, fetchMedications, isLoading, error } = useMedicationStore();
 
   useEffect(() => {
-    fetchMedications();
+    console.log('Fetching medications...');
+    fetchMedications().then(() => {
+      console.log('Medications fetched:', medications.length);
+    }).catch((err) => {
+      console.error('Failed to fetch medications:', err);
+    });
   }, []);
+
+  const formatTimings = (timings: MedicationTiming[]): string => {
+    return timings.map((t) => TIMING_LABELS[t]).join(', ');
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -33,7 +43,15 @@ export default function MedicationsScreen() {
           </Typography>
         </View>
 
-        {medications.length === 0 ? (
+        {error && (
+          <Card style={styles.errorCard} variant="elevated">
+            <Typography variant="body" color={Colors.error}>
+              오류: {error}
+            </Typography>
+          </Card>
+        )}
+
+        {medications.length === 0 && !error ? (
           <Card style={styles.emptyCard} variant="elevated">
             <Typography variant="body" style={styles.emptyText}>
               등록된 약이 없어요
@@ -52,10 +70,10 @@ export default function MedicationsScreen() {
               <Card style={styles.medicationCard} variant="elevated">
                 <View style={styles.medicationHeader}>
                   <Typography variant="h3" numberOfLines={1}>
-                    {medication.name}
+                    {medication.drugName}
                   </Typography>
                   <Typography variant="bodySmall" color={Colors.textSecondary}>
-                    {medication.dosage}
+                    1회 {medication.dosage}정 / 하루 {medication.frequency}회
                   </Typography>
                 </View>
 
@@ -65,7 +83,7 @@ export default function MedicationsScreen() {
                       복용 시간
                     </Typography>
                     <Typography variant="bodySmall">
-                      {medication.timing.join(', ')}
+                      {formatTimings(medication.timings)}
                     </Typography>
                   </View>
 
@@ -76,13 +94,13 @@ export default function MedicationsScreen() {
                     <Typography
                       variant="bodySmall"
                       color={
-                        medication.remainingCount <= 3 * medication.frequency
+                        medication.daysLeft <= 3
                           ? Colors.warning
                           : Colors.textPrimary
                       }
                     >
-                      {medication.remainingCount}개
-                      {medication.remainingCount <= 3 * medication.frequency && ' ⚠️'}
+                      {medication.remainingCount}개 ({medication.daysLeft}일분)
+                      {medication.daysLeft <= 3 && ' ⚠️'}
                     </Typography>
                   </View>
                 </View>
@@ -143,5 +161,9 @@ const styles = StyleSheet.create({
   },
   addButton: {
     marginTop: 24,
+  },
+  errorCard: {
+    marginBottom: 16,
+    backgroundColor: '#FFF0F0',
   },
 });
