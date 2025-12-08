@@ -251,9 +251,28 @@ export default function ResultScreen() {
     setMedications((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const addNewMedication = () => {
+    const newMed: MedicationWithTimes = {
+      name: '',
+      dosage: 1,
+      frequency: 3,
+      timings: ['AFTER_MEAL'],
+      durationDays: 7,
+      times: DEFAULT_TIMES[3],
+    };
+    setMedications((prev) => [...prev, newMed]);
+  };
+
   const handleSubmit = async () => {
     if (medications.length === 0) {
       Alert.alert('오류', '등록할 약이 없어요.');
+      return;
+    }
+
+    // 이름이 비어있는 약이 있는지 확인
+    const emptyNameMed = medications.find((med) => !med.name.trim());
+    if (emptyNameMed) {
+      Alert.alert('오류', '약 이름을 입력해주세요.');
       return;
     }
 
@@ -339,6 +358,7 @@ export default function ResultScreen() {
                   value={med.name}
                   onChangeText={(text) => updateMedication(index, 'name', text)}
                   placeholder="약 이름"
+                  placeholderTextColor={Colors.textTertiary}
                 />
                 {med.efficacy ? (
                   <Typography
@@ -355,16 +375,14 @@ export default function ResultScreen() {
                   </Typography>
                 )}
               </View>
-              {medications.length > 1 && (
-                <TouchableOpacity
-                  style={styles.deleteButton}
-                  onPress={() => removeMedication(index)}
-                >
-                  <Typography variant="body" color={Colors.error}>
-                    ✕
-                  </Typography>
-                </TouchableOpacity>
-              )}
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => removeMedication(index)}
+              >
+                <Typography variant="body" color={Colors.error}>
+                  ✕
+                </Typography>
+              </TouchableOpacity>
             </View>
 
             {/* 복용량 / 하루 횟수 - 가로 배치 */}
@@ -440,6 +458,13 @@ export default function ResultScreen() {
             </View>
           </Card>
         ))}
+
+        {/* 약 추가하기 버튼 */}
+        <TouchableOpacity style={styles.addMedicationButton} onPress={addNewMedication}>
+          <Typography variant="body" color={Colors.primary}>
+            + 약 추가하기
+          </Typography>
+        </TouchableOpacity>
 
         <Typography variant="caption" color={Colors.textSecondary} style={styles.notice}>
           정보가 맞지 않으면 터치해서 수정해주세요
@@ -645,6 +670,17 @@ const styles = StyleSheet.create({
   notice: {
     textAlign: 'center',
     marginTop: 8,
+  },
+  addMedicationButton: {
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    borderStyle: 'dashed',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    backgroundColor: Colors.background,
   },
   footer: {
     position: 'absolute',
