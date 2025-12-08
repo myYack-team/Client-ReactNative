@@ -51,10 +51,26 @@ export default function CropScreen() {
     const { width, height } = event.nativeEvent.source;
     setImageSize({ width, height });
 
-    // 이미지가 크롭 영역을 채우도록 초기 스케일 설정
-    const scaleToFitWidth = CROP_WIDTH / width;
-    const scaleToFitHeight = CROP_HEIGHT / height;
-    const initialScale = Math.max(scaleToFitWidth, scaleToFitHeight) * 1.2;
+    // 이미지가 크롭 영역을 완전히 채우도록 초기 스케일 설정
+    // 화면 전체 기준으로 이미지가 표시되는 크기 계산
+    const imageAspect = width / height;
+    const screenAspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+
+    let displayedWidth, displayedHeight;
+    if (imageAspect > screenAspect) {
+      // 가로가 더 긴 이미지
+      displayedWidth = SCREEN_WIDTH;
+      displayedHeight = SCREEN_WIDTH / imageAspect;
+    } else {
+      // 세로가 더 긴 이미지
+      displayedHeight = SCREEN_HEIGHT;
+      displayedWidth = SCREEN_HEIGHT * imageAspect;
+    }
+
+    // 크롭 영역을 채우기 위한 스케일 계산
+    const scaleToFillCropWidth = CROP_WIDTH / displayedWidth;
+    const scaleToFillCropHeight = CROP_HEIGHT / displayedHeight;
+    const initialScale = Math.max(scaleToFillCropWidth, scaleToFillCropHeight) * 1.1;
 
     scale.value = initialScale;
     savedScale.value = initialScale;
@@ -104,9 +120,22 @@ export default function CropScreen() {
       const currentTranslateX = translateX.value;
       const currentTranslateY = translateY.value;
 
-      // 화면상 이미지 크기
-      const displayedWidth = imageSize.width * currentScale;
-      const displayedHeight = imageSize.height * currentScale;
+      // 이미지가 화면에 표시되는 기본 크기 계산 (resizeMode="contain" 기준)
+      const imageAspect = imageSize.width / imageSize.height;
+      const screenAspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+
+      let baseDisplayedWidth, baseDisplayedHeight;
+      if (imageAspect > screenAspect) {
+        baseDisplayedWidth = SCREEN_WIDTH;
+        baseDisplayedHeight = SCREEN_WIDTH / imageAspect;
+      } else {
+        baseDisplayedHeight = SCREEN_HEIGHT;
+        baseDisplayedWidth = SCREEN_HEIGHT * imageAspect;
+      }
+
+      // 스케일 적용 후 표시 크기
+      const displayedWidth = baseDisplayedWidth * currentScale;
+      const displayedHeight = baseDisplayedHeight * currentScale;
 
       // 크롭 영역의 화면 중앙 좌표
       const cropCenterX = SCREEN_WIDTH / 2;
@@ -124,19 +153,25 @@ export default function CropScreen() {
       const imageLeft = imageCenterX - displayedWidth / 2;
       const imageTop = imageCenterY - displayedHeight / 2;
 
-      // 크롭 영역의 이미지 내 상대 좌표
-      const cropX = (cropLeftInDisplay - imageLeft) / currentScale;
-      const cropY = (cropTopInDisplay - imageTop) / currentScale;
-      const cropWidth = CROP_WIDTH / currentScale;
-      const cropHeight = CROP_HEIGHT / currentScale;
+      // 화면 좌표를 원본 이미지 좌표로 변환
+      const scaleRatio = imageSize.width / displayedWidth;
+
+      const cropX = (cropLeftInDisplay - imageLeft) * scaleRatio;
+      const cropY = (cropTopInDisplay - imageTop) * scaleRatio;
+      const cropWidth = CROP_WIDTH * scaleRatio;
+      const cropHeight = CROP_HEIGHT * scaleRatio;
 
       // 원본 이미지 기준 좌표로 변환 (범위 체크)
       const originX = Math.max(0, Math.min(cropX, imageSize.width - cropWidth));
       const originY = Math.max(0, Math.min(cropY, imageSize.height - cropHeight));
-      const width = Math.min(cropWidth, imageSize.width - originX);
-      const height = Math.min(cropHeight, imageSize.height - originY);
+      const finalWidth = Math.min(cropWidth, imageSize.width - originX);
+      const finalHeight = Math.min(cropHeight, imageSize.height - originY);
 
-      // 이미지 크롭
+      console.log('[Crop] Original image size:', imageSize);
+      console.log('[Crop] Scale:', currentScale, 'scaleRatio:', scaleRatio);
+      console.log('[Crop] Crop area:', { originX, originY, width: finalWidth, height: finalHeight });
+
+      // 이미지 크롭 (원본 해상도 유지)
       const manipResult = await ImageManipulator.manipulateAsync(
         uri,
         [
@@ -144,13 +179,16 @@ export default function CropScreen() {
             crop: {
               originX: Math.round(Math.max(0, originX)),
               originY: Math.round(Math.max(0, originY)),
-              width: Math.round(Math.max(1, width)),
-              height: Math.round(Math.max(1, height)),
+              width: Math.round(Math.max(100, finalWidth)),
+              height: Math.round(Math.max(100, finalHeight)),
             },
           },
         ],
-        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+        { compress: 0.95, format: ImageManipulator.SaveFormat.JPEG }
       );
+
+      console.log('[Crop] Result URI:', manipResult.uri);
+      console.log('[Crop] Result size:', manipResult.width, 'x', manipResult.height);
 
       // 로딩 화면으로 이동
       router.push('/scan/loading');

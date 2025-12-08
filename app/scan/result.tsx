@@ -264,7 +264,6 @@ export default function ResultScreen() {
           customDrugName: med.drugItemSeq ? undefined : med.name,
           dosage: med.dosage,
           frequency: med.frequency,
-          // times 배열을 reminderTimes로 전달
           reminderTimes: med.times,
           timings: med.timings,
           durationDays: med.durationDays,
@@ -273,9 +272,14 @@ export default function ResultScreen() {
         });
       }
 
-      clearScanResult();
       Alert.alert('등록 완료', '약이 성공적으로 등록되었어요!', [
-        { text: '확인', onPress: () => router.replace('/(tabs)') },
+        {
+          text: '확인',
+          onPress: () => {
+            clearScanResult();
+            router.replace('/(tabs)');
+          }
+        },
       ]);
     } catch (error) {
       Alert.alert('오류', '약 등록에 실패했어요. 다시 시도해주세요.');
