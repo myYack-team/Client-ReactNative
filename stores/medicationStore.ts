@@ -8,7 +8,7 @@ import {
   CreateMedicationRequest,
   MedicationTiming,
 } from '../types';
-import { medicationService, intakeService } from '../services';
+import { medicationService, intakeService, prescriptionService } from '../services';
 
 interface MedicationState {
   // 약 목록 (간략)
@@ -17,6 +17,8 @@ interface MedicationState {
   todayData: TodayResponse | null;
   // 처방전 스캔 결과
   currentScanResult: ScanResult | null;
+  // 현재 처리 중인 처방전 ID
+  currentPrescriptionId: number | null;
   // 로딩/에러 상태
   isLoading: boolean;
   error: string | null;
@@ -38,6 +40,7 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
   medications: [],
   todayData: null,
   currentScanResult: null,
+  currentPrescriptionId: null,
   isLoading: false,
   error: null,
 
@@ -79,6 +82,20 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
   scanPrescription: async (imageUri: string) => {
     try {
       set({ isLoading: true, error: null });
+
+      // 1. 처방전 이미지를 서버에 업로드 (저장용)
+      let prescriptionId: number | null = null;
+      try {
+        const uploadResult = await prescriptionService.uploadImage(imageUri);
+        prescriptionId = uploadResult.id;
+        set({ currentPrescriptionId: prescriptionId });
+        console.log('[Store] Prescription uploaded, id:', prescriptionId);
+      } catch (uploadError) {
+        // 업로드 실패해도 스캔은 계속 진행
+        console.warn('[Store] Failed to upload prescription image:', uploadError);
+      }
+
+      // 2. 이미지 분석 (AI 스캔)
       const result = await medicationService.scanPrescription(imageUri);
       set({ currentScanResult: result, isLoading: false });
       return result;
@@ -92,7 +109,14 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
   addMedication: async (medication: CreateMedicationRequest) => {
     try {
       set({ isLoading: true, error: null });
-      await medicationService.createMedication(medication);
+
+      // 현재 처방전 ID가 있으면 약품에 연결
+      const prescriptionId = get().currentPrescriptionId;
+      const medicationWithPrescription = prescriptionId
+        ? { ...medication, prescriptionId }
+        : medication;
+
+      await medicationService.createMedication(medicationWithPrescription);
       // 목록 새로고침
       await get().fetchMedications();
       await get().fetchTodaySchedule();
@@ -147,6 +171,6 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
     }
   },
 
-  clearScanResult: () => set({ currentScanResult: null }),
+  clearScanResult: () => set({ currentScanResult: null, currentPrescriptionId: null }),
   clearError: () => set({ error: null }),
 }));

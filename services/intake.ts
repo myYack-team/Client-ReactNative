@@ -5,6 +5,7 @@ import {
   RecordIntakeResponse,
   IntakesResponse,
   MedicationTiming,
+  MonthlySummaryResponse,
 } from '../types';
 
 export const intakeService = {
@@ -41,5 +42,13 @@ export const intakeService = {
       timing,
       takenAt: takenAt || new Date().toISOString(),
     });
+  },
+
+  // 월별 복약 요약 조회
+  async getMonthlySummary(year: number, month: number): Promise<MonthlySummaryResponse> {
+    const response = await api.get<ApiResponse<MonthlySummaryResponse>>('/intakes/monthly-summary', {
+      params: { year, month },
+    });
+    return response.data.result!;
   },
 };

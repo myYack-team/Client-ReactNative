@@ -225,4 +225,58 @@ export interface CreateMedicationRequest {
   totalCount: number;
   startDate: string;
   memo?: string;            // 사용자 메모
+  prescriptionId?: number;  // 처방전 ID (처방전에서 등록된 경우)
+}
+
+// 처방전
+export interface Prescription {
+  id: number;
+  imageUrl: string;
+  prescriptionDate: string;
+  hospitalName?: string;
+  notes?: string;
+  medicationCount: number;
+  createdAt: string;
+}
+
+// 처방전 상세 (연결된 약품 포함)
+export interface PrescriptionDetail extends Prescription {
+  medications: {
+    id: number;
+    drugName: string;
+    dosage: string;
+    frequency: number;
+    durationDays: number;
+  }[];
+}
+
+// 처방전 목록 응답
+export interface PrescriptionListResponse {
+  prescriptions: Prescription[];
+  totalCount: number;
+}
+
+// 처방전 업로드 응답
+export interface PrescriptionUploadResponse {
+  id: number;
+  imageUrl: string;
+  prescriptionDate: string;
+}
+
+// 일별 복약 요약 상태
+export type DayStatus = 'COMPLETE' | 'PARTIAL' | 'MISSED' | 'PENDING' | 'NONE';
+
+// 일별 복약 요약
+export interface DaySummary {
+  date: string;
+  totalScheduled: number;
+  totalTaken: number;
+  status: DayStatus;
+}
+
+// 월별 복약 요약 응답
+export interface MonthlySummaryResponse {
+  year: number;
+  month: number;
+  days: DaySummary[];
 }

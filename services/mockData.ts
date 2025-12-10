@@ -10,6 +10,8 @@ import {
   ScanResult,
   MedicationTiming,
   DrugInfo,
+  MonthlySummaryResponse,
+  DaySummary,
 } from '../types';
 
 // 현재 날짜 형식
@@ -361,6 +363,53 @@ export const mockIntakeService = {
       timing,
       takenAt: takenAt || new Date().toISOString(),
     });
+  },
+
+  async getMonthlySummary(year: number, month: number): Promise<MonthlySummaryResponse> {
+    await delay(300);
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const todayDate = new Date();
+    const days: DaySummary[] = [];
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const date = new Date(year, month - 1, day);
+      const dateStr = formatDate(date);
+      const isPast = date < todayDate && dateStr !== formatDate(todayDate);
+      const isToday = dateStr === formatDate(todayDate);
+      const isFuture = date > todayDate;
+
+      let status: 'COMPLETE' | 'PARTIAL' | 'MISSED' | 'PENDING' | 'NONE';
+      let totalTaken = 0;
+      const totalScheduled = 5;
+
+      if (isFuture || isToday) {
+        status = 'PENDING';
+        totalTaken = isToday ? 1 : 0;
+      } else if (isPast) {
+        const rand = Math.random();
+        if (rand > 0.7) {
+          status = 'COMPLETE';
+          totalTaken = totalScheduled;
+        } else if (rand > 0.4) {
+          status = 'PARTIAL';
+          totalTaken = Math.floor(totalScheduled * 0.6);
+        } else {
+          status = 'MISSED';
+          totalTaken = 0;
+        }
+      } else {
+        status = 'NONE';
+      }
+
+      days.push({
+        date: dateStr,
+        totalScheduled,
+        totalTaken,
+        status,
+      });
+    }
+
+    return { year, month, days };
   },
 };
 
