@@ -37,6 +37,13 @@ const STATUS_COLORS: Record<DayStatus, string> = {
   NONE: 'transparent',   // 예정된 약 없음
 };
 
+// 요일별 색상
+const DAY_OF_WEEK_COLORS = {
+  SUNDAY: '#F44336',     // 일요일 - 빨간색
+  SATURDAY: '#2196F3',   // 토요일 - 파란색
+  WEEKDAY: Colors.textSecondary,  // 평일 - 기본 회색
+};
+
 type FontWeight = 'normal' | 'bold' | '100' | '200' | '300' | '400' | '500' | '600' | '700' | '800' | '900';
 
 interface MarkedDates {
@@ -184,15 +191,24 @@ export default function HomeScreen() {
     return 'NONE';
   };
 
+  // 요일별 색상 가져오기
+  const getDayOfWeekColor = (dayIndex: number): string => {
+    if (dayIndex === 0) return DAY_OF_WEEK_COLORS.SUNDAY;
+    if (dayIndex === 6) return DAY_OF_WEEK_COLORS.SATURDAY;
+    return DAY_OF_WEEK_COLORS.WEEKDAY;
+  };
+
   // 주간 달력 아이템 렌더링
   const renderWeekDayItem = ({ item: dateString }: { item: string }) => {
     const dateObj = new Date(dateString);
-    const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][dateObj.getDay()];
+    const dayIndex = dateObj.getDay();
+    const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][dayIndex];
     const dayNum = dateObj.getDate();
     const isToday = dateString === today;
     const isSelected = dateString === selectedDate;
     const status = getDayStatus(dateString);
     const statusColor = STATUS_COLORS[status] || 'transparent';
+    const dayOfWeekColor = getDayOfWeekColor(dayIndex);
 
     return (
       <TouchableOpacity
@@ -204,7 +220,7 @@ export default function HomeScreen() {
       >
         <Typography
           variant="caption"
-          color={isToday ? Colors.primary : Colors.textSecondary}
+          color={isToday ? Colors.primary : dayOfWeekColor}
           style={isToday ? { fontWeight: 'bold' } : undefined}
         >
           {dayOfWeek}
@@ -218,7 +234,7 @@ export default function HomeScreen() {
         >
           <Typography
             variant="body"
-            color={isSelected || status === 'COMPLETE' ? Colors.white : isToday ? Colors.primary : Colors.textPrimary}
+            color={isSelected || status === 'COMPLETE' ? Colors.white : isToday ? Colors.primary : dayOfWeekColor}
             style={isToday ? { fontWeight: 'bold' } : undefined}
           >
             {dayNum}
@@ -355,6 +371,55 @@ export default function HomeScreen() {
                     textDayFontSize: 14,
                     textMonthFontSize: 16,
                     textDayHeaderFontSize: 12,
+                  }}
+                  dayComponent={({ date, state }) => {
+                    if (!date) return null;
+                    const dateObj = new Date(date.dateString);
+                    const dayIndex = dateObj.getDay();
+                    const dayColor = getDayOfWeekColor(dayIndex);
+                    const isToday = date.dateString === today;
+                    const isSelected = date.dateString === selectedDate;
+                    const daySummary = monthlySummary.find((d) => d.date === date.dateString);
+                    const status = daySummary?.status as DayStatus || 'NONE';
+                    const statusColor = STATUS_COLORS[status] || 'transparent';
+                    const isDisabled = state === 'disabled';
+
+                    return (
+                      <TouchableOpacity
+                        style={[
+                          styles.calendarDayContainer,
+                          status === 'COMPLETE' && { backgroundColor: statusColor },
+                          status !== 'COMPLETE' && status !== 'NONE' && { borderWidth: 2, borderColor: statusColor },
+                          isSelected && { borderWidth: 2, borderColor: Colors.primary },
+                        ]}
+                        onPress={() => handleDayPress({ dateString: date.dateString })}
+                        disabled={isDisabled}
+                      >
+                        <Typography
+                          variant="body"
+                          color={
+                            isDisabled
+                              ? Colors.textSecondary
+                              : status === 'COMPLETE'
+                              ? Colors.white
+                              : isToday
+                              ? Colors.primary
+                              : dayColor
+                          }
+                          style={isToday ? { fontWeight: 'bold' } : undefined}
+                        >
+                          {date.day}
+                        </Typography>
+                      </TouchableOpacity>
+                    );
+                  }}
+                  renderHeader={(date) => {
+                    const d = new Date(date.toString());
+                    return (
+                      <Typography variant="h3" style={{ marginVertical: 10 }}>
+                        {d.getFullYear()}년 {d.getMonth() + 1}월
+                      </Typography>
+                    );
                   }}
                 />
 
@@ -540,6 +605,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
+  },
+  calendarDayContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   legend: {
     flexDirection: 'row',

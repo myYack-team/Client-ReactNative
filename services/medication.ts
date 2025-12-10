@@ -21,8 +21,8 @@ export const medicationService = {
     } as unknown as Blob);
 
     try {
-      console.log('[scanPrescription] Sending request to /scan...');
-      const response = await api.post<ApiResponse<ScanResult>>('/scan', formData, {
+      console.log('[scanPrescription] Sending request to /scan/with-embedding...');
+      const response = await api.post<ApiResponse<ScanResult>>('/scan/with-embedding', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
