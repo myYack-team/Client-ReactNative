@@ -9,14 +9,14 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
   const icons: Record<string, string> = {
     home: '홈',
     medications: '약',
-    history: '기록',
+    history: '처방',
     settings: '설정',
   };
 
   const emojis: Record<string, string> = {
     home: '🏠',
     medications: '💊',
-    history: '📅',
+    history: '📋',
     settings: '⚙️',
   };
 
@@ -70,7 +70,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="history"
         options={{
-          title: '기록',
+          title: '처방',
           tabBarIcon: ({ focused }) => <TabIcon name="history" focused={focused} />,
         }}
       />
