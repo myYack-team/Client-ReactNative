@@ -184,7 +184,7 @@ export default function CropScreen() {
             },
           },
         ],
-        { compress: 0.95, format: ImageManipulator.SaveFormat.JPEG }
+        { compress: 1, format: ImageManipulator.SaveFormat.PNG }
       );
 
       console.log('[Crop] Result URI:', manipResult.uri);

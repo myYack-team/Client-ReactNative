@@ -14,7 +14,7 @@ export default function CameraScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [isLandscape, setIsLandscape] = useState(false);
   const cameraRef = useRef<CameraView>(null);
-  const { scanPrescription, isLoading } = useMedicationStore();
+  const { isLoading } = useMedicationStore();
   const insets = useSafeAreaInsets();
 
   // 화면 진입 시 가로 모드로 고정
@@ -68,11 +68,18 @@ export default function CameraScreen() {
 
     try {
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.8,
+        quality: 1, // 원본 품질 유지 (무손실)
       });
 
       if (photo?.uri) {
-        await processImage(photo.uri);
+        // 세로 모드로 전환 후 크롭 화면으로 이동
+        await ScreenOrientation.lockAsync(
+          ScreenOrientation.OrientationLock.PORTRAIT_UP
+        );
+        router.push({
+          pathname: '/scan/crop',
+          params: { uri: photo.uri },
+        });
       }
     } catch (error) {
       Alert.alert('오류', '사진 촬영에 실패했어요. 다시 시도해주세요.');
@@ -101,28 +108,6 @@ export default function CameraScreen() {
       await ScreenOrientation.lockAsync(
         ScreenOrientation.OrientationLock.LANDSCAPE_RIGHT
       );
-    }
-  };
-
-  const processImage = async (uri: string) => {
-    router.push('/scan/loading');
-
-    try {
-      const result = await scanPrescription(uri);
-
-      if (result.confidence === 'low') {
-        Alert.alert(
-          '인식 실패',
-          '처방전을 명확하게 읽을 수 없어요.\n다시 촬영해주세요.',
-          [{ text: '확인', onPress: () => router.back() }]
-        );
-      } else {
-        router.replace('/scan/result');
-      }
-    } catch (error) {
-      Alert.alert('오류', '처방전 분석에 실패했어요. 다시 시도해주세요.', [
-        { text: '확인', onPress: () => router.back() },
-      ]);
     }
   };
 
