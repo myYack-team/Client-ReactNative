@@ -360,6 +360,16 @@ export default function ResultScreen() {
                   placeholder="약 이름"
                   placeholderTextColor={Colors.textTertiary}
                 />
+                {med.ingredient && (
+                  <Typography
+                    variant="caption"
+                    color={Colors.textSecondary}
+                    numberOfLines={1}
+                    style={styles.ingredientText}
+                  >
+                    성분 : {med.ingredient}
+                  </Typography>
+                )}
                 {med.efficacy ? (
                   <Typography
                     variant="caption"
@@ -559,6 +569,10 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     padding: 0,
     marginBottom: 4,
+  },
+  ingredientText: {
+    lineHeight: 16,
+    marginBottom: 2,
   },
   efficacyText: {
     lineHeight: 18,
