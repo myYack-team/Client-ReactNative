@@ -1,11 +1,12 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
-  Image,
   Dimensions,
   TouchableOpacity,
   ActivityIndicator,
+  LayoutChangeEvent,
+  Image,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import {
@@ -16,7 +17,6 @@ import {
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
 } from 'react-native-reanimated';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -24,7 +24,7 @@ import { Typography } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useMedicationStore } from '../../stores';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CROP_ASPECT_RATIO = 1.5; // 가로:세로 = 1.5:1 (약봉투 비율)
 const CROP_WIDTH = SCREEN_WIDTH * 0.85;
 const CROP_HEIGHT = CROP_WIDTH / CROP_ASPECT_RATIO;
@@ -34,7 +34,12 @@ export default function CropScreen() {
   const { scanPrescription } = useMedicationStore();
   const insets = useSafeAreaInsets();
 
+  // 원본 이미지 크기
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  // 화면에 표시되는 이미지 크기 (비율 유지)
+  const [displayedSize, setDisplayedSize] = useState({ width: 0, height: 0 });
+  // 실제 컨테이너 크기 (onLayout으로 측정)
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [isProcessing, setIsProcessing] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
@@ -46,41 +51,100 @@ export default function CropScreen() {
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
 
-  // 이미지 로드 시 크기 계산
-  const onImageLoad = (event: any) => {
-    const { width, height } = event.nativeEvent.source;
-    setImageSize({ width, height });
+  // 컨테이너 레이아웃 측정
+  const onContainerLayout = (event: LayoutChangeEvent) => {
+    const { width, height } = event.nativeEvent.layout;
+    console.log('[onContainerLayout] containerSize:', { width, height });
+    setContainerSize({ width, height });
+  };
 
-    // 이미지가 크롭 영역을 완전히 채우도록 초기 스케일 설정
-    // 화면 전체 기준으로 이미지가 표시되는 크기 계산
-    const imageAspect = width / height;
-    const screenAspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+  // 컴포넌트 마운트 시 실제 이미지 크기 가져오기
+  // Image.getSize()는 캐시된 크기를 반환할 수 있으므로,
+  // ImageManipulator를 사용해서 실제 파일 크기를 확인
+  useEffect(() => {
+    if (!uri) return;
+
+    const getActualImageSize = async () => {
+      try {
+        // 빈 작업으로 manipulate하면 실제 파일 크기를 얻을 수 있음
+        const result = await ImageManipulator.manipulateAsync(uri, []);
+        console.log('[ImageManipulator] Actual imageSize:', { width: result.width, height: result.height });
+        setImageSize({ width: result.width, height: result.height });
+      } catch (error) {
+        console.error('[ImageManipulator] Error getting size:', error);
+        // 폴백: Image.getSize 사용
+        Image.getSize(
+          uri,
+          (width, height) => {
+            console.log('[Image.getSize fallback] imageSize:', { width, height });
+            setImageSize({ width, height });
+          },
+          (err) => console.error('[Image.getSize] Error:', err)
+        );
+      }
+    };
+
+    getActualImageSize();
+  }, [uri]);
+
+  // 이미지 로드 완료 시 (UI 준비 확인용)
+  const onImageLoad = () => {
+    console.log('[onImageLoad] Image rendered');
+  };
+
+  // displayedSize 계산 (컨테이너 크기 기반)
+  const calculateDisplayedSize = (
+    imgWidth: number,
+    imgHeight: number,
+    contWidth: number,
+    contHeight: number
+  ) => {
+    const imageAspect = imgWidth / imgHeight;
+    const containerAspect = contWidth / contHeight;
 
     let displayedWidth, displayedHeight;
-    if (imageAspect > screenAspect) {
-      // 가로가 더 긴 이미지
-      displayedWidth = SCREEN_WIDTH;
-      displayedHeight = SCREEN_WIDTH / imageAspect;
+    if (imageAspect > containerAspect) {
+      // 이미지가 더 넓음 -> 너비에 맞춤
+      displayedWidth = contWidth;
+      displayedHeight = contWidth / imageAspect;
     } else {
-      // 세로가 더 긴 이미지
-      displayedHeight = SCREEN_HEIGHT;
-      displayedWidth = SCREEN_HEIGHT * imageAspect;
+      // 이미지가 더 높음 -> 높이에 맞춤
+      displayedHeight = contHeight;
+      displayedWidth = contHeight * imageAspect;
     }
 
-    // 크롭 영역을 채우기 위한 스케일 계산
+    setDisplayedSize({ width: displayedWidth, height: displayedHeight });
+
+    // 크롭 영역을 채우기 위한 초기 스케일 계산
     const scaleToFillCropWidth = CROP_WIDTH / displayedWidth;
     const scaleToFillCropHeight = CROP_HEIGHT / displayedHeight;
     const initialScale = Math.max(scaleToFillCropWidth, scaleToFillCropHeight) * 1.1;
+
+    console.log('[calculateDisplayedSize] displayedSize:', { displayedWidth, displayedHeight });
+    console.log('[calculateDisplayedSize] initialScale:', initialScale);
 
     scale.value = initialScale;
     savedScale.value = initialScale;
     setImageLoaded(true);
   };
 
+  // imageSize와 containerSize가 모두 준비되면 displayedSize 계산
+  useEffect(() => {
+    if (imageSize.width > 0 && containerSize.width > 0 && !imageLoaded) {
+      console.log('[useEffect] Both ready, calculating displayedSize');
+      calculateDisplayedSize(
+        imageSize.width,
+        imageSize.height,
+        containerSize.width,
+        containerSize.height
+      );
+    }
+  }, [containerSize, imageSize, imageLoaded]);
+
   // 핀치 줌 제스처
   const pinchGesture = Gesture.Pinch()
     .onUpdate((event) => {
-      scale.value = Math.max(0.5, Math.min(5, savedScale.value * event.scale));
+      scale.value = Math.max(0.3, Math.min(5, savedScale.value * event.scale));
     })
     .onEnd(() => {
       savedScale.value = scale.value;
@@ -97,21 +161,20 @@ export default function CropScreen() {
       savedTranslateY.value = translateY.value;
     });
 
-  // 제스처 동시 인식
   const composedGesture = Gesture.Simultaneous(pinchGesture, panGesture);
 
   // 애니메이션 스타일
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
+      { scale: scale.value },
       { translateX: translateX.value },
       { translateY: translateY.value },
-      { scale: scale.value },
     ],
   }));
 
   // 크롭 및 스캔 처리
   const handleCrop = async () => {
-    if (!uri || imageSize.width === 0) return;
+    if (!uri || imageSize.width === 0 || containerSize.width === 0) return;
 
     setIsProcessing(true);
 
@@ -120,74 +183,94 @@ export default function CropScreen() {
       const currentTranslateX = translateX.value;
       const currentTranslateY = translateY.value;
 
-      // 이미지가 화면에 표시되는 기본 크기 계산 (resizeMode="contain" 기준)
-      const imageAspect = imageSize.width / imageSize.height;
-      const screenAspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+      // ========================================
+      // 핵심: 컨테이너 크기 기준으로 계산
+      // ========================================
 
-      let baseDisplayedWidth, baseDisplayedHeight;
-      if (imageAspect > screenAspect) {
-        baseDisplayedWidth = SCREEN_WIDTH;
-        baseDisplayedHeight = SCREEN_WIDTH / imageAspect;
-      } else {
-        baseDisplayedHeight = SCREEN_HEIGHT;
-        baseDisplayedWidth = SCREEN_HEIGHT * imageAspect;
+      const baseWidth = displayedSize.width;
+      const baseHeight = displayedSize.height;
+
+      // 1. 화면상 이미지의 크기 (스케일 적용)
+      const scaledWidth = baseWidth * currentScale;
+      const scaledHeight = baseHeight * currentScale;
+
+      // 2. 화면상 이미지의 위치 (컨테이너 중앙 기준 + translate)
+      const imageLeft = (containerSize.width - scaledWidth) / 2 + currentTranslateX;
+      const imageTop = (containerSize.height - scaledHeight) / 2 + currentTranslateY;
+      const imageRight = imageLeft + scaledWidth;
+      const imageBottom = imageTop + scaledHeight;
+
+      // 3. 가이드라인의 화면 좌표 (컨테이너 중앙 기준)
+      const guideLeft = (containerSize.width - CROP_WIDTH) / 2;
+      const guideTop = (containerSize.height - CROP_HEIGHT) / 2;
+      const guideRight = guideLeft + CROP_WIDTH;
+      const guideBottom = guideTop + CROP_HEIGHT;
+
+      // 4. 가이드라인과 이미지가 겹치는 영역 (화면 좌표)
+      const overlapLeft = Math.max(guideLeft, imageLeft);
+      const overlapTop = Math.max(guideTop, imageTop);
+      const overlapRight = Math.min(guideRight, imageRight);
+      const overlapBottom = Math.min(guideBottom, imageBottom);
+
+      // 5. 겹치는 영역이 이미지 내에서 차지하는 비율 계산
+      const ratioLeft = (overlapLeft - imageLeft) / scaledWidth;
+      const ratioTop = (overlapTop - imageTop) / scaledHeight;
+      const ratioRight = (overlapRight - imageLeft) / scaledWidth;
+      const ratioBottom = (overlapBottom - imageTop) / scaledHeight;
+
+      // 6. 비율을 원본 이미지 크기에 적용
+      const cropX = ratioLeft * imageSize.width;
+      const cropY = ratioTop * imageSize.height;
+      const cropWidth = (ratioRight - ratioLeft) * imageSize.width;
+      const cropHeight = (ratioBottom - ratioTop) * imageSize.height;
+
+      console.log('=== CROP DEBUG v9 (containerSize 기반) ===');
+      console.log('[Crop] Original image:', imageSize);
+      console.log('[Crop] Container size:', containerSize);
+      console.log('[Crop] Displayed size:', displayedSize);
+      console.log('[Crop] Scale:', currentScale, 'Translate:', { x: currentTranslateX, y: currentTranslateY });
+      console.log('[Crop] 화면상 이미지:', { left: imageLeft.toFixed(1), top: imageTop.toFixed(1), width: scaledWidth.toFixed(1), height: scaledHeight.toFixed(1) });
+      console.log('[Crop] 가이드라인:', { left: guideLeft.toFixed(1), top: guideTop.toFixed(1), width: CROP_WIDTH.toFixed(1), height: CROP_HEIGHT.toFixed(1) });
+      console.log('[Crop] 겹치는 영역:', { left: overlapLeft.toFixed(1), top: overlapTop.toFixed(1), right: overlapRight.toFixed(1), bottom: overlapBottom.toFixed(1) });
+      console.log('[Crop] 이미지 내 비율:', {
+        left: (ratioLeft*100).toFixed(1)+'%',
+        top: (ratioTop*100).toFixed(1)+'%',
+        right: (ratioRight*100).toFixed(1)+'%',
+        bottom: (ratioBottom*100).toFixed(1)+'%'
+      });
+
+      // 유효성 검사
+      if (cropWidth <= 0 || cropHeight <= 0) {
+        console.error('[Crop] Invalid crop dimensions:', { cropWidth, cropHeight });
+        setIsProcessing(false);
+        return;
       }
 
-      // 스케일 적용 후 표시 크기
-      const displayedWidth = baseDisplayedWidth * currentScale;
-      const displayedHeight = baseDisplayedHeight * currentScale;
+      // 7. 안전하게 클램핑
+      const originX = Math.max(0, Math.round(cropX));
+      const originY = Math.max(0, Math.round(cropY));
+      const finalWidth = Math.max(100, Math.min(Math.round(cropWidth), imageSize.width - originX));
+      const finalHeight = Math.max(100, Math.min(Math.round(cropHeight), imageSize.height - originY));
 
-      // 크롭 영역의 화면 중앙 좌표
-      const cropCenterX = SCREEN_WIDTH / 2;
-      const cropCenterY = SCREEN_HEIGHT / 2;
+      console.log('[Crop] 원본에서 크롭:', { originX, originY, width: finalWidth, height: finalHeight });
+      console.log('==========================================');
 
-      // 이미지 중앙 좌표 (변환 적용)
-      const imageCenterX = SCREEN_WIDTH / 2 + currentTranslateX;
-      const imageCenterY = SCREEN_HEIGHT / 2 + currentTranslateY;
-
-      // 크롭 영역의 이미지 내 좌표 계산
-      const cropLeftInDisplay = cropCenterX - CROP_WIDTH / 2;
-      const cropTopInDisplay = cropCenterY - CROP_HEIGHT / 2;
-
-      // 이미지 좌상단 기준 좌표
-      const imageLeft = imageCenterX - displayedWidth / 2;
-      const imageTop = imageCenterY - displayedHeight / 2;
-
-      // 화면 좌표를 원본 이미지 좌표로 변환
-      const scaleRatio = imageSize.width / displayedWidth;
-
-      const cropX = (cropLeftInDisplay - imageLeft) * scaleRatio;
-      const cropY = (cropTopInDisplay - imageTop) * scaleRatio;
-      const cropWidth = CROP_WIDTH * scaleRatio;
-      const cropHeight = CROP_HEIGHT * scaleRatio;
-
-      // 원본 이미지 기준 좌표로 변환 (범위 체크)
-      const originX = Math.max(0, Math.min(cropX, imageSize.width - cropWidth));
-      const originY = Math.max(0, Math.min(cropY, imageSize.height - cropHeight));
-      const finalWidth = Math.min(cropWidth, imageSize.width - originX);
-      const finalHeight = Math.min(cropHeight, imageSize.height - originY);
-
-      console.log('[Crop] Original image size:', imageSize);
-      console.log('[Crop] Scale:', currentScale, 'scaleRatio:', scaleRatio);
-      console.log('[Crop] Crop area:', { originX, originY, width: finalWidth, height: finalHeight });
-
-      // 이미지 크롭 (원본 해상도 유지)
+      // 이미지 크롭 (원본 해상도 유지 - OCR 정확도를 위해)
       const manipResult = await ImageManipulator.manipulateAsync(
         uri,
         [
           {
             crop: {
-              originX: Math.round(Math.max(0, originX)),
-              originY: Math.round(Math.max(0, originY)),
-              width: Math.round(Math.max(100, finalWidth)),
-              height: Math.round(Math.max(100, finalHeight)),
+              originX,
+              originY,
+              width: finalWidth,
+              height: finalHeight,
             },
           },
         ],
         { compress: 1, format: ImageManipulator.SaveFormat.PNG }
       );
 
-      console.log('[Crop] Result URI:', manipResult.uri);
       console.log('[Crop] Result size:', manipResult.width, 'x', manipResult.height);
 
       // 로딩 화면으로 이동
@@ -222,31 +305,37 @@ export default function CropScreen() {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      {/* 이미지 영역 */}
-      <GestureDetector gesture={composedGesture}>
-        <Animated.View style={styles.imageContainer}>
-          <Animated.Image
-            source={{ uri }}
-            style={[styles.image, animatedStyle]}
-            onLoad={onImageLoad}
-            resizeMode="contain"
-          />
-        </Animated.View>
-      </GestureDetector>
+      {/* 이미지 컨테이너 - onLayout으로 실제 크기 측정 */}
+      <View style={styles.imageContainer} onLayout={onContainerLayout}>
+        <GestureDetector gesture={composedGesture}>
+          <Animated.View>
+            <Animated.Image
+              source={{ uri }}
+              style={[
+                {
+                  width: displayedSize.width || containerSize.width || 1,
+                  height: displayedSize.height || containerSize.height || 1,
+                },
+                animatedStyle,
+              ]}
+              onLoad={onImageLoad}
+            />
+          </Animated.View>
+        </GestureDetector>
+      </View>
 
       {/* 어두운 오버레이 (크롭 영역 외) */}
       <View style={styles.overlay} pointerEvents="none">
         {/* 상단 어두운 영역 */}
-        <View style={[styles.darkArea, { height: (SCREEN_HEIGHT - CROP_HEIGHT) / 2 - 30 }]} />
+        <View style={[styles.darkArea, { height: (containerSize.height - CROP_HEIGHT) / 2 || 0 }]} />
 
         {/* 중간 행 */}
-        <View style={styles.middleRow}>
+        <View style={[styles.middleRow, { height: CROP_HEIGHT }]}>
           {/* 좌측 어두운 영역 */}
-          <View style={[styles.darkArea, { width: (SCREEN_WIDTH - CROP_WIDTH) / 2 }]} />
+          <View style={[styles.darkArea, { width: (containerSize.width - CROP_WIDTH) / 2 || 0 }]} />
 
           {/* 크롭 영역 (밝은 부분) */}
           <View style={styles.cropArea}>
-            {/* 코너 표시 */}
             <View style={[styles.corner, styles.cornerTopLeft]} />
             <View style={[styles.corner, styles.cornerTopRight]} />
             <View style={[styles.corner, styles.cornerBottomLeft]} />
@@ -254,7 +343,7 @@ export default function CropScreen() {
           </View>
 
           {/* 우측 어두운 영역 */}
-          <View style={[styles.darkArea, { width: (SCREEN_WIDTH - CROP_WIDTH) / 2 }]} />
+          <View style={[styles.darkArea, { width: (containerSize.width - CROP_WIDTH) / 2 || 0 }]} />
         </View>
 
         {/* 하단 어두운 영역 */}
@@ -307,10 +396,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  image: {
-    width: SCREEN_WIDTH,
-    height: SCREEN_HEIGHT,
-  },
   overlay: {
     ...StyleSheet.absoluteFillObject,
   },
@@ -319,7 +404,6 @@ const styles = StyleSheet.create({
   },
   middleRow: {
     flexDirection: 'row',
-    height: CROP_HEIGHT,
   },
   cropArea: {
     width: CROP_WIDTH,

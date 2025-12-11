@@ -89,6 +89,17 @@ export default function HomeScreen() {
 
   const today = new Date().toISOString().split('T')[0];
 
+  // 오늘 날짜로 주간 달력 스크롤
+  const scrollToToday = useCallback(() => {
+    const todayIndex = weekDates.findIndex((d) => d === today);
+    if (todayIndex !== -1 && weekListRef.current) {
+      weekListRef.current.scrollToIndex({
+        index: Math.max(0, todayIndex - 3),
+        animated: true,
+      });
+    }
+  }, [weekDates, today]);
+
   useFocusEffect(
     useCallback(() => {
       fetchTodaySchedule();
@@ -290,6 +301,7 @@ export default function HomeScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
+        onTouchStart={scrollToToday}
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
