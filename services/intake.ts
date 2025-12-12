@@ -41,6 +41,33 @@ export const intakeService = {
       medicationIds,
       timing,
       takenAt: takenAt || new Date().toISOString(),
+      status: 'TAKEN',
+    });
+  },
+
+  // 누락 기록 헬퍼 함수
+  async recordMissed(
+    medicationId: number,
+    timing: MedicationTiming
+  ): Promise<RecordIntakeResponse> {
+    return this.recordIntake({
+      medicationIds: [medicationId],
+      timing,
+      takenAt: new Date().toISOString(),
+      status: 'MISSED',
+    });
+  },
+
+  // 건너뛰기 기록 헬퍼 함수
+  async recordSkipped(
+    medicationId: number,
+    timing: MedicationTiming
+  ): Promise<RecordIntakeResponse> {
+    return this.recordIntake({
+      medicationIds: [medicationId],
+      timing,
+      takenAt: new Date().toISOString(),
+      status: 'SKIPPED',
     });
   },
 

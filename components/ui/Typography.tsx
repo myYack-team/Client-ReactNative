@@ -4,7 +4,7 @@ import { Colors } from '../../constants';
 import { FontSizes, LineHeights } from '../../constants/fonts';
 import { useSettingsStore } from '../../stores';
 
-type TypographyVariant = 'h1' | 'h2' | 'h3' | 'body' | 'bodySmall' | 'caption';
+export type TypographyVariant = 'h1' | 'h2' | 'h3' | 'h4' | 'body' | 'bodySmall' | 'caption';
 
 interface TypographyProps {
   children: ReactNode;
@@ -43,6 +43,12 @@ export function Typography({
         return {
           fontSize: fontSize.xl,
           lineHeight: lineHeight.xl,
+          fontWeight: '600',
+        };
+      case 'h4':
+        return {
+          fontSize: fontSize.lg,
+          lineHeight: lineHeight.lg,
           fontWeight: '600',
         };
       case 'body':

@@ -6,6 +6,8 @@ export { userService as realUserService } from './user';
 export { reminderService as realReminderService } from './reminder';
 export { notificationService } from './notification';
 export { prescriptionService } from './prescription';
+export { supplementService } from './supplement';
+export { drugService } from './drug';
 
 // Mock 서비스 (서버 없이 테스트용)
 export {
