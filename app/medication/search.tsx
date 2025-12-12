@@ -103,10 +103,15 @@ export default function MedicationSearchScreen() {
           <View style={styles.drugInfo}>
             <View style={styles.drugHeader}>
               <Typography variant="body" style={styles.drugName} numberOfLines={2}>
-                {item.itemName}
+                {item.displayName || item.itemName}
               </Typography>
               {item.drugType && <DrugTypeBadge type={item.drugType} size="small" />}
             </View>
+            {item.ingredientKr && (
+              <Typography variant="caption" color={Colors.textTertiary}>
+                {item.ingredientKr}
+              </Typography>
+            )}
             <Typography variant="caption" color={Colors.textSecondary}>
               {item.entpName}
             </Typography>

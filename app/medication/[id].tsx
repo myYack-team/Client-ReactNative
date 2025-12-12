@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { Button, Card, Typography } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useMedicationStore } from '../../stores';
@@ -251,6 +252,17 @@ export default function MedicationDetailScreen() {
             </Typography>
           </Card>
         )}
+
+        {/* 데이터 출처 안내 */}
+        {drugInfo && (
+          <View style={styles.sourceSection}>
+            <Ionicons name="information-circle-outline" size={20} color={Colors.textSecondary} />
+            <Typography variant="caption" color={Colors.textSecondary} style={styles.sourceText}>
+              약물 정보는 식품의약품안전처 공공데이터를 기반으로{'\n'}
+              제공되며, 참고용으로만 사용해 주세요.
+            </Typography>
+          </View>
+        )}
       </ScrollView>
 
       <View style={styles.footer}>
@@ -348,5 +360,18 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     borderColor: Colors.error,
+  },
+  sourceSection: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    padding: 16,
+    backgroundColor: Colors.backgroundSecondary,
+    borderRadius: 12,
+    marginBottom: 16,
+  },
+  sourceText: {
+    flex: 1,
+    lineHeight: 18,
   },
 });
