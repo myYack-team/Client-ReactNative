@@ -72,12 +72,12 @@ export default function CameraScreen() {
       });
 
       if (photo?.uri) {
-        // 세로 모드로 전환 후 크롭 화면으로 이동
+        // 세로 모드로 전환 후 로딩 화면으로 이동 (원본 이미지 전송)
         await ScreenOrientation.lockAsync(
           ScreenOrientation.OrientationLock.PORTRAIT_UP
         );
         router.push({
-          pathname: '/scan/crop',
+          pathname: '/scan/loading',
           params: { uri: photo.uri },
         });
       }
@@ -94,13 +94,13 @@ export default function CameraScreen() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1, // 크롭을 위해 원본 품질 유지
+      quality: 1, // 원본 품질 유지
     });
 
     if (!result.canceled && result.assets[0]) {
-      // 크롭 화면으로 이동
+      // 로딩 화면으로 이동 (원본 이미지 전송)
       router.push({
-        pathname: '/scan/crop',
+        pathname: '/scan/loading',
         params: { uri: result.assets[0].uri },
       });
     } else {
