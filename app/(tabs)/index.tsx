@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Modal, FlatList, Dimensions } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Modal, FlatList, Dimensions, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
@@ -364,15 +364,24 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* 헤더 - 제목과 달력 아이콘 */}
+        {/* 헤더 - 날짜, 복용 현황, 달력 아이콘 */}
         <View style={styles.header}>
-          <Typography variant="h2">오늘의 약</Typography>
-          <TouchableOpacity
-            style={styles.calendarIconButton}
-            onPress={() => setShowCalendarModal(true)}
-          >
-            <Typography variant="h2">📅</Typography>
-          </TouchableOpacity>
+          <Typography variant="h3">{dateDisplay}</Typography>
+          <View style={styles.headerRight}>
+            {summary && (
+              <View style={styles.completionBadge}>
+                <Typography variant="bodySmall" color={Colors.primary} style={{ fontWeight: '600' }}>
+                  {summary.takenCount}/{summary.totalMedications} 복용완료
+                </Typography>
+              </View>
+            )}
+            <TouchableOpacity
+              style={styles.calendarIconButton}
+              onPress={() => setShowCalendarModal(true)}
+            >
+              <Typography variant="h3">📅</Typography>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* 주간 달력 스트립 */}
@@ -526,13 +535,8 @@ export default function HomeScreen() {
         {/* 오늘의 복약 스케줄 */}
         <View style={styles.scheduleSection}>
           <Typography variant="h3" style={styles.sectionTitle}>
-            {dateDisplay}
+            복약 스케줄
           </Typography>
-          {summary && (
-            <Typography variant="bodySmall" color={Colors.textSecondary}>
-              {summary.takenCount}/{summary.totalMedications}개 복용 완료
-            </Typography>
-          )}
         </View>
 
         {schedules.length === 0 ? (
@@ -557,12 +561,22 @@ export default function HomeScreen() {
                 {schedule.medications.map((med) => (
                   <View key={med.id} style={styles.medicationItem}>
                     <View style={styles.medicationRow}>
-                      <View
-                        style={[
-                          styles.statusDot,
-                          { backgroundColor: med.taken ? STATUS_COLORS.COMPLETE : Colors.backgroundSecondary },
-                        ]}
-                      />
+                      {/* 약물 이미지 썸네일 */}
+                      <View style={styles.medThumbnailContainer}>
+                        {med.imageUrl ? (
+                          <Image source={{ uri: med.imageUrl }} style={styles.medThumbnail} resizeMode="cover" />
+                        ) : (
+                          <View style={[styles.medThumbnail, styles.medThumbnailPlaceholder]}>
+                            <Typography variant="caption" color={Colors.textSecondary}>💊</Typography>
+                          </View>
+                        )}
+                        {/* 복용 상태 표시 */}
+                        {med.taken && (
+                          <View style={styles.takenOverlay}>
+                            <Typography variant="caption" color={Colors.white}>✓</Typography>
+                          </View>
+                        )}
+                      </View>
                       <View style={styles.medicationInfo}>
                         <View style={styles.medicationNameRow}>
                           <Typography variant="body" style={styles.medicationName}>
@@ -650,6 +664,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  completionBadge: {
+    backgroundColor: Colors.primaryLightest,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
   },
   calendarIconButton: {
     padding: 4,
@@ -778,11 +803,29 @@ const styles = StyleSheet.create({
   medicationName: {
     fontWeight: '500',
   },
-  statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginTop: 4,
+  medThumbnailContainer: {
+    position: 'relative',
+  },
+  medThumbnail: {
+    width: 44,
+    height: 36,
+    borderRadius: 6,
+  },
+  medThumbnailPlaceholder: {
+    backgroundColor: Colors.backgroundSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  takenOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(76, 175, 80, 0.8)',
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   takeButton: {
     marginTop: 8,
