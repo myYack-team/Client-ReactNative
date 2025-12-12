@@ -21,6 +21,84 @@ export type MedicationTiming =
 
 export type IntakeStatus = 'TAKEN' | 'MISSED' | 'SKIPPED';
 
+// 의약품 타입
+export type DrugType = 'PROFESSIONAL' | 'GENERAL' | 'SUPPLEMENT' | 'UNKNOWN';
+
+// 영양제 태그
+export type SupplementTag =
+  | 'VITAMIN_A'
+  | 'VITAMIN_B'
+  | 'VITAMIN_C'
+  | 'VITAMIN_D'
+  | 'VITAMIN_E'
+  | 'OMEGA_3'
+  | 'MAGNESIUM'
+  | 'CALCIUM'
+  | 'IRON'
+  | 'ZINC'
+  | 'ARGININE'
+  | 'COLLAGEN'
+  | 'PROBIOTICS'
+  | 'LUTEIN'
+  | 'COENZYME_Q10'
+  | 'OTHER';
+
+// 의약품 타입 라벨 매핑
+export const DRUG_TYPE_LABELS: Record<DrugType, string> = {
+  PROFESSIONAL: '전문',
+  GENERAL: '일반',
+  SUPPLEMENT: '영양제',
+  UNKNOWN: '미분류',
+};
+
+// 의약품 타입 색상 매핑
+export const DRUG_TYPE_COLORS: Record<DrugType, string> = {
+  PROFESSIONAL: '#F97316',  // 주황색
+  GENERAL: '#22C55E',       // 초록색
+  SUPPLEMENT: '#3B82F6',    // 파란색
+  UNKNOWN: '#6B7280',       // 회색
+};
+
+// 영양제 태그 라벨 매핑
+export const SUPPLEMENT_TAG_LABELS: Record<SupplementTag, string> = {
+  VITAMIN_A: '비타민 A',
+  VITAMIN_B: '비타민 B',
+  VITAMIN_C: '비타민 C',
+  VITAMIN_D: '비타민 D',
+  VITAMIN_E: '비타민 E',
+  OMEGA_3: '오메가 3',
+  MAGNESIUM: '마그네슘',
+  CALCIUM: '칼슘',
+  IRON: '철분',
+  ZINC: '아연',
+  ARGININE: '아르기닌',
+  COLLAGEN: '콜라겐',
+  PROBIOTICS: '유산균',
+  LUTEIN: '루테인',
+  COENZYME_Q10: '코엔자임Q10',
+  OTHER: '기타',
+};
+
+// 영양제 태그 옵션 배열
+export const SUPPLEMENT_TAG_OPTIONS: SupplementTag[] = [
+  'VITAMIN_A',
+  'VITAMIN_B',
+  'VITAMIN_C',
+  'VITAMIN_D',
+  'VITAMIN_E',
+  'OMEGA_3',
+  'MAGNESIUM',
+  'CALCIUM',
+  'IRON',
+  'ZINC',
+  'ARGININE',
+  'COLLAGEN',
+  'PROBIOTICS',
+  'LUTEIN',
+  'COENZYME_Q10',
+  'OTHER',
+];
+
 // Timing 라벨 매핑
 export const TIMING_LABELS: Record<MedicationTiming, string> = {
   BEFORE_BREAKFAST: '아침 식전',
@@ -68,6 +146,7 @@ export interface DrugInfo {
   sideEffect?: string;    // 부작용
   storageMethod?: string; // 보관법
   imageUrl?: string;      // 약 이미지
+  drugType?: DrugType;    // 전문/일반/영양제 구분
 }
 
 // 약 정보 (상세)
@@ -128,6 +207,9 @@ export interface ScheduleMedication {
   dosage: number;
   taken: boolean;
   takenAt?: string | null;
+  reminderId?: number;       // 알림 ID (스누즈용)
+  drugType?: DrugType;       // 전문/일반/영양제 구분
+  imageUrl?: string;         // 약 이미지
 }
 
 // 오늘의 복약 - 시간대별 스케줄
@@ -179,6 +261,7 @@ export interface RecordIntakeRequest {
   medicationIds: number[];
   takenAt: string;
   timing: MedicationTiming;
+  status?: IntakeStatus;  // 복용 상태 (기본값: TAKEN)
 }
 
 // 복약 확인 응답
@@ -226,6 +309,7 @@ export interface CreateMedicationRequest {
   startDate: string;
   memo?: string;            // 사용자 메모
   prescriptionId?: number;  // 처방전 ID (처방전에서 등록된 경우)
+  reminderTimes?: string[]; // 알림 시간 목록
 }
 
 // 처방전
@@ -279,4 +363,117 @@ export interface MonthlySummaryResponse {
   year: number;
   month: number;
   days: DaySummary[];
+}
+
+// ========== 영양제 관련 타입 ==========
+
+// 영양제 마스터 (검색용)
+export interface Supplement {
+  id: number;
+  name: string;
+  description?: string;
+  tag: SupplementTag;
+  tagLabel: string;
+  imageUrl?: string;
+  selectionCount: number;
+  createdByName: string;
+}
+
+// 영양제 상세
+export interface SupplementDetail extends Supplement {
+  createdById: number;
+  createdAt: string;
+}
+
+// 영양제 검색 결과 (페이징)
+export interface SupplementListResponse {
+  supplements: Supplement[];
+  totalCount: number;
+  page: number;
+  size: number;
+  totalPages: number;
+  hasNext: boolean;
+}
+
+// 사용자 영양제 (내 영양제)
+export interface UserSupplement {
+  id: number;
+  supplementId: number;
+  supplementName: string;
+  tag: SupplementTag;
+  tagLabel: string;
+  imageUrl?: string;
+  dosage: string;
+  frequency: number;
+  timings: MedicationTiming[];
+}
+
+// 사용자 영양제 목록
+export interface UserSupplementListResponse {
+  supplements: UserSupplement[];
+  totalCount: number;
+}
+
+// 사용자 영양제 상세
+export interface UserSupplementDetail {
+  id: number;
+  dosage: string;
+  frequency: number;
+  timings: MedicationTiming[];
+  startDate: string;
+  endDate?: string;
+  memo?: string;
+  createdAt: string;
+  reminders: Reminder[];
+  supplementInfo: SupplementDetail;
+}
+
+// 영양제 등록 요청 (마스터)
+export interface CreateSupplementRequest {
+  name: string;
+  description?: string;
+  tag: SupplementTag;
+  imageUrl?: string;
+}
+
+// 사용자 영양제 추가 요청
+export interface AddUserSupplementRequest {
+  supplementId: number;
+  dosage: string;
+  frequency: number;
+  timings: MedicationTiming[];
+  startDate: string;
+  endDate?: string;
+  memo?: string;
+}
+
+// 사용자 영양제 수정 요청
+export interface UpdateUserSupplementRequest {
+  dosage?: string;
+  frequency?: number;
+  timings?: MedicationTiming[];
+  endDate?: string;
+  memo?: string;
+}
+
+// 의약품 검색 결과 (페이징)
+export interface DrugSearchPageResponse {
+  drugs: DrugInfo[];
+  totalCount: number;
+  page: number;
+  size: number;
+  totalPages: number;
+  hasNext: boolean;
+}
+
+// 스누즈 요청
+export interface SnoozeRequest {
+  minutes: number;  // 10, 30, 60
+}
+
+// 스누즈 응답
+export interface SnoozeResponse {
+  id: number;
+  snoozeUntil: string;
+  snoozeMinutes: number;
 }

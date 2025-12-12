@@ -3,11 +3,11 @@ import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Modal, 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
-import { Button, Card, Typography } from '../../components/ui';
+import { Button, Card, Typography, MedicationActionButtons, SnoozeModal, DrugTypeBadge } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useMedicationStore } from '../../stores';
-import { intakeService } from '../../services';
-import { MedicationTiming, TodaySchedule, DaySummary, DayStatus } from '../../types';
+import { intakeService, reminderService } from '../../services';
+import { MedicationTiming, TodaySchedule, DaySummary, DayStatus, ScheduleMedication } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DAY_ITEM_WIDTH = (SCREEN_WIDTH - 40) / 7; // 양쪽 padding 20씩 빼고 7등분
@@ -86,6 +86,11 @@ export default function HomeScreen() {
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [weekDates] = useState(generateWeekDates());
   const weekListRef = useRef<FlatList>(null);
+
+  // 스누즈 모달 상태
+  const [showSnoozeModal, setShowSnoozeModal] = useState(false);
+  const [selectedMedForSnooze, setSelectedMedForSnooze] = useState<ScheduleMedication | null>(null);
+  const [selectedTiming, setSelectedTiming] = useState<MedicationTiming | null>(null);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -279,6 +284,52 @@ export default function HomeScreen() {
       loadMonthlySummary(currentMonth.year, currentMonth.month);
     } catch (error) {
       console.error('Failed to record intake:', error);
+    }
+  };
+
+  // 개별 약물 복용 처리
+  const handleTakeMedication = async (med: ScheduleMedication, timing: MedicationTiming) => {
+    if (med.taken) return;
+    try {
+      await recordIntake([med.id], timing);
+      loadMonthlySummary(currentMonth.year, currentMonth.month);
+    } catch (error) {
+      console.error('Failed to record intake:', error);
+    }
+  };
+
+  // 건너뛰기 (스누즈 모달 열기)
+  const handleSkipMedication = (med: ScheduleMedication, timing: MedicationTiming) => {
+    setSelectedMedForSnooze(med);
+    setSelectedTiming(timing);
+    setShowSnoozeModal(true);
+  };
+
+  // 스누즈 선택 처리
+  const handleSnoozeSelect = async (minutes: number) => {
+    if (!selectedMedForSnooze?.reminderId) return;
+    try {
+      await reminderService.snoozeReminder(selectedMedForSnooze.reminderId, minutes);
+      setShowSnoozeModal(false);
+      setSelectedMedForSnooze(null);
+      setSelectedTiming(null);
+      // 새로고침
+      fetchTodaySchedule();
+    } catch (error) {
+      console.error('Failed to snooze:', error);
+    }
+  };
+
+  // 누락 처리
+  const handleMissMedication = async (med: ScheduleMedication, timing: MedicationTiming) => {
+    if (med.taken) return;
+    try {
+      // 누락 상태로 기록 (MISSED)
+      await intakeService.recordMissed(med.id, timing);
+      fetchTodaySchedule();
+      loadMonthlySummary(currentMonth.year, currentMonth.month);
+    } catch (error) {
+      console.error('Failed to record missed:', error);
     }
   };
 
@@ -512,10 +563,28 @@ export default function HomeScreen() {
                           { backgroundColor: med.taken ? STATUS_COLORS.COMPLETE : Colors.backgroundSecondary },
                         ]}
                       />
-                      <Typography variant="body">
-                        {med.name} {med.dosage}정
-                      </Typography>
+                      <View style={styles.medicationInfo}>
+                        <View style={styles.medicationNameRow}>
+                          <Typography variant="body" style={styles.medicationName}>
+                            {med.name}
+                          </Typography>
+                          {med.drugType && (
+                            <DrugTypeBadge type={med.drugType} size="small" />
+                          )}
+                        </View>
+                        <Typography variant="caption" color={Colors.textSecondary}>
+                          {med.dosage}정
+                        </Typography>
+                      </View>
                     </View>
+                    {/* 복용 안 한 약물에만 액션 버튼 표시 */}
+                    {!med.taken && (
+                      <MedicationActionButtons
+                        onSkip={() => handleSkipMedication(med, schedule.timing)}
+                        onMiss={() => handleMissMedication(med, schedule.timing)}
+                        onTakeNow={() => handleTakeMedication(med, schedule.timing)}
+                      />
+                    )}
                   </View>
                 ))}
               </View>
@@ -542,13 +611,24 @@ export default function HomeScreen() {
         )}
 
         <Button
-          title="📷 약 추가하기"
+          title="+ 약/영양제 추가하기"
           variant="secondary"
           size="large"
-          onPress={() => router.push('/scan/camera')}
+          onPress={() => router.push('/medication/add')}
           style={styles.addButton}
         />
       </ScrollView>
+
+      {/* 스누즈 모달 */}
+      <SnoozeModal
+        visible={showSnoozeModal}
+        onClose={() => {
+          setShowSnoozeModal(false);
+          setSelectedMedForSnooze(null);
+          setSelectedTiming(null);
+        }}
+        onSelect={handleSnoozeSelect}
+      />
     </SafeAreaView>
   );
 }
@@ -677,19 +757,32 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   medicationItem: {
-    paddingVertical: 8,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: Colors.divider,
   },
   medicationRow: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  medicationInfo: {
+    flex: 1,
+  },
+  medicationNameRow: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginBottom: 2,
+  },
+  medicationName: {
+    fontWeight: '500',
   },
   statusDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
+    marginTop: 4,
   },
   takeButton: {
     marginTop: 8,

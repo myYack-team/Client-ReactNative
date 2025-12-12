@@ -365,6 +365,44 @@ export const mockIntakeService = {
     });
   },
 
+  async recordMissed(medicationId: number, timing: MedicationTiming): Promise<RecordIntakeResponse> {
+    await delay(500);
+    return {
+      intakes: [{
+        id: Date.now(),
+        medicationId,
+        medicationName: mockMedications[medicationId]?.drugName || '알 수 없는 약',
+        takenAt: new Date().toISOString(),
+        timing,
+        status: 'MISSED' as const,
+      }],
+      updatedMedications: [{
+        id: medicationId,
+        remainingCount: mockMedications[medicationId]?.remainingCount || 10,
+        lowStock: false,
+      }],
+    };
+  },
+
+  async recordSkipped(medicationId: number, timing: MedicationTiming): Promise<RecordIntakeResponse> {
+    await delay(500);
+    return {
+      intakes: [{
+        id: Date.now(),
+        medicationId,
+        medicationName: mockMedications[medicationId]?.drugName || '알 수 없는 약',
+        takenAt: new Date().toISOString(),
+        timing,
+        status: 'SKIPPED' as const,
+      }],
+      updatedMedications: [{
+        id: medicationId,
+        remainingCount: mockMedications[medicationId]?.remainingCount || 10,
+        lowStock: false,
+      }],
+    };
+  },
+
   async getMonthlySummary(year: number, month: number): Promise<MonthlySummaryResponse> {
     await delay(300);
     const daysInMonth = new Date(year, month, 0).getDate();
@@ -449,6 +487,17 @@ export const mockReminderService = {
     const reminder = mockRemindersResponse.reminders.find(r => r.id === id);
     if (reminder) reminder.enabled = !reminder.enabled;
     return { id, enabled: reminder?.enabled || false };
+  },
+
+  async snoozeReminder(id: number, minutes: number): Promise<{ id: number; snoozeUntil: string; snoozeMinutes: number }> {
+    await delay(500);
+    const snoozeUntil = new Date(Date.now() + minutes * 60 * 1000).toISOString();
+    return { id, snoozeUntil, snoozeMinutes: minutes };
+  },
+
+  async clearSnooze(id: number): Promise<{ id: number; snoozeUntil: string | null; snoozeMinutes: number }> {
+    await delay(500);
+    return { id, snoozeUntil: null, snoozeMinutes: 0 };
   },
 };
 

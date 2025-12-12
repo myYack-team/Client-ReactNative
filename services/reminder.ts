@@ -1,5 +1,5 @@
 import api from './api';
-import { ApiResponse, Reminder, RemindersResponse } from '../types';
+import { ApiResponse, Reminder, RemindersResponse, SnoozeRequest, SnoozeResponse } from '../types';
 
 export interface UpdateReminderTimeResponse {
   id: number;
@@ -32,6 +32,23 @@ export const reminderService = {
   async toggleReminder(id: number): Promise<ToggleReminderResponse> {
     const response = await api.patch<ApiResponse<ToggleReminderResponse>>(
       `/reminders/${id}/toggle`
+    );
+    return response.data.result!;
+  },
+
+  // 다시 알림 설정 (스누즈)
+  async snoozeReminder(id: number, minutes: number): Promise<SnoozeResponse> {
+    const response = await api.post<ApiResponse<SnoozeResponse>>(
+      `/reminders/${id}/snooze`,
+      { minutes } as SnoozeRequest
+    );
+    return response.data.result!;
+  },
+
+  // 다시 알림 해제
+  async clearSnooze(id: number): Promise<SnoozeResponse> {
+    const response = await api.delete<ApiResponse<SnoozeResponse>>(
+      `/reminders/${id}/snooze`
     );
     return response.data.result!;
   },
