@@ -17,6 +17,12 @@ export default function MedicationLayout() {
       }}
     >
       <Stack.Screen
+        name="add"
+        options={{
+          title: '약/영양제 추가',
+        }}
+      />
+      <Stack.Screen
         name="[id]"
         options={{
           title: '약 상세',
