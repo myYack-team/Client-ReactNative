@@ -256,14 +256,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   drugImage: {
-    width: 60,
-    height: 60,
+    width: 80,
+    height: 56,
     borderRadius: 8,
     marginRight: 12,
   },
   drugImagePlaceholder: {
-    width: 60,
-    height: 60,
+    width: 80,
+    height: 56,
     borderRadius: 8,
     backgroundColor: Colors.backgroundSecondary,
     alignItems: 'center',

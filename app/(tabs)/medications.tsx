@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Button, Card, Typography } from '../../components/ui';
@@ -68,16 +68,26 @@ export default function MedicationsScreen() {
               activeOpacity={0.8}
             >
               <Card style={styles.medicationCard} variant="elevated">
-                <View style={styles.medicationHeader}>
-                  <Typography variant="h3" numberOfLines={1}>
-                    {medication.drugName}
-                  </Typography>
-                  <Typography variant="bodySmall" color={Colors.textSecondary}>
-                    1회 {medication.dosage}정 / 하루 {medication.frequency}회
-                  </Typography>
-                </View>
+                <View style={styles.medicationRow}>
+                  {/* 약물 이미지 썸네일 */}
+                  {medication.imageUrl ? (
+                    <Image source={{ uri: medication.imageUrl }} style={styles.medThumbnail} resizeMode="cover" />
+                  ) : (
+                    <View style={[styles.medThumbnail, styles.medThumbnailPlaceholder]}>
+                      <Typography variant="h3" color={Colors.textSecondary}>💊</Typography>
+                    </View>
+                  )}
+                  <View style={styles.medicationContent}>
+                    <View style={styles.medicationHeader}>
+                      <Typography variant="h3" numberOfLines={1}>
+                        {medication.drugName}
+                      </Typography>
+                      <Typography variant="bodySmall" color={Colors.textSecondary}>
+                        1회 {medication.dosage}정 / 하루 {medication.frequency}회
+                      </Typography>
+                    </View>
 
-                <View style={styles.medicationInfo}>
+                    <View style={styles.medicationInfo}>
                   <View style={styles.infoItem}>
                     <Typography variant="caption" color={Colors.textSecondary}>
                       복용 시간
@@ -102,6 +112,8 @@ export default function MedicationsScreen() {
                       {medication.remainingCount}개 ({medication.daysLeft}일분)
                       {medication.daysLeft <= 3 && ' ⚠️'}
                     </Typography>
+                    </View>
+                  </View>
                   </View>
                 </View>
               </Card>
@@ -149,8 +161,25 @@ const styles = StyleSheet.create({
   medicationCard: {
     marginBottom: 12,
   },
+  medicationRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  medThumbnail: {
+    width: 60,
+    height: 48,
+    borderRadius: 8,
+  },
+  medThumbnailPlaceholder: {
+    backgroundColor: Colors.backgroundSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  medicationContent: {
+    flex: 1,
+  },
   medicationHeader: {
-    marginBottom: 12,
+    marginBottom: 8,
   },
   medicationInfo: {
     flexDirection: 'row',

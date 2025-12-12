@@ -409,14 +409,14 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   drugImage: {
-    width: 80,
-    height: 80,
+    width: 100,
+    height: 70,
     borderRadius: 12,
     marginRight: 16,
   },
   drugImagePlaceholder: {
-    width: 80,
-    height: 80,
+    width: 100,
+    height: 70,
     borderRadius: 12,
     backgroundColor: Colors.backgroundSecondary,
     alignItems: 'center',
