@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
   },
   drugName: {
     fontWeight: '600',
-    fontSize: 15,
+    fontSize: 17,
   },
   reminderTagsContainer: {
     flexDirection: 'row',
