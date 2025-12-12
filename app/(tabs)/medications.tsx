@@ -106,7 +106,7 @@ export default function MedicationsScreen() {
                         {getDrugDisplayName(medication)}
                       </Typography>
                       <Typography variant="caption" color={Colors.textSecondary}>
-                        1회 {medication.dosage}정 / 하루 {medication.frequency}회
+                        1회 {medication.dosage}정 / 하루 {medication.frequency}회{medication.ingredientKr ? ` · ${medication.ingredientKr}` : ''}
                       </Typography>
                     </View>
 

@@ -174,6 +174,7 @@ export interface MedicationListItem {
   id: number;
   drugName: string;       // 약 이름
   displayName?: string;   // 표시용 약물명 (한글 이름만)
+  ingredientKr?: string;  // 한글 성분명
   imageUrl?: string;      // 약 이미지 URL
   dosage: number;
   frequency: number;
