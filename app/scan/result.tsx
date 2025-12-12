@@ -40,6 +40,7 @@ for (let h = 0; h < 24; h++) {
 // 확장된 약 정보 타입 (시간 배열 추가)
 interface MedicationWithTimes extends ScannedMedication {
   times: string[];
+  ingredient?: string;
 }
 
 // 드래그 가능한 시간 슬롯 아이템 타입
@@ -256,8 +257,9 @@ export default function ResultScreen() {
       name: '',
       dosage: 1,
       frequency: 3,
-      timings: ['AFTER_MEAL'],
+      timings: ['AFTER_BREAKFAST'],
       durationDays: 7,
+      totalCount: 21,
       times: DEFAULT_TIMES[3],
     };
     setMedications((prev) => [...prev, newMed]);

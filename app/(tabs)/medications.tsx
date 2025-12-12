@@ -110,10 +110,10 @@ export default function MedicationsScreen() {
         )}
 
         <Button
-          title="📷 약 추가하기"
+          title="+ 약/영양제 추가하기"
           variant="secondary"
           size="large"
-          onPress={() => router.push('/scan/camera')}
+          onPress={() => router.push('/medication/add')}
           style={styles.addButton}
         />
       </ScrollView>
