@@ -136,7 +136,9 @@ export interface User {
 // 약물 정보 (식약처 API 기반)
 export interface DrugInfo {
   itemSeq: string;        // 품목기준코드
-  itemName: string;       // 제품명
+  itemName: string;       // 제품명 (원본)
+  displayName?: string;   // 표시용 약물명 ("메드론정4밀리그람")
+  ingredientKr?: string;  // 한글 성분명 ("메틸프레드니솔론")
   entpName: string;       // 업체명
   efficacy?: string;      // 효능/효과
   useMethod?: string;     // 용법/용량

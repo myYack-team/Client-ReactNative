@@ -133,7 +133,8 @@ export default function MedicationRegisterScreen() {
         reminderTimes,
       });
 
-      Alert.alert('등록 완료', `${drug.itemName}이(가) 등록되었어요.`, [
+      const drugDisplayName = drug.displayName || drug.itemName;
+      Alert.alert('등록 완료', `${drugDisplayName}이(가) 등록되었어요.`, [
         { text: '확인', onPress: () => router.replace('/(tabs)/medications') },
       ]);
     } catch (error) {
@@ -182,10 +183,15 @@ export default function MedicationRegisterScreen() {
               <View style={styles.drugInfo}>
                 <View style={styles.drugTitleRow}>
                   <Typography variant="h3" style={styles.drugName} numberOfLines={2}>
-                    {drug.itemName}
+                    {drug.displayName || drug.itemName}
                   </Typography>
                   {drug.drugType && <DrugTypeBadge type={drug.drugType} />}
                 </View>
+                {drug.ingredientKr && (
+                  <Typography variant="caption" color={Colors.textTertiary}>
+                    {drug.ingredientKr}
+                  </Typography>
+                )}
                 <Typography variant="caption" color={Colors.textSecondary}>
                   {drug.entpName}
                 </Typography>
