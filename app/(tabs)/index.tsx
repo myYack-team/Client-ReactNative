@@ -7,7 +7,7 @@ import { Button, Card, Typography, MedicationActionButtons, SnoozeModal, DrugTyp
 import { Colors } from '../../constants';
 import { useMedicationStore } from '../../stores';
 import { intakeService, reminderService } from '../../services';
-import { MedicationTiming, TodaySchedule, DaySummary, DayStatus, ScheduleMedication } from '../../types';
+import { MedicationTiming, TodaySchedule, DaySummary, DayStatus, ScheduleMedication, IntakesResponse } from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DAY_ITEM_WIDTH = (SCREEN_WIDTH - 40) / 7; // 양쪽 padding 20씩 빼고 7등분
@@ -92,6 +92,10 @@ export default function HomeScreen() {
   const [selectedMedForSnooze, setSelectedMedForSnooze] = useState<ScheduleMedication | null>(null);
   const [selectedTiming, setSelectedTiming] = useState<MedicationTiming | null>(null);
 
+  // 선택된 날짜의 스케줄 데이터
+  const [selectedDateSchedules, setSelectedDateSchedules] = useState<TodaySchedule[]>([]);
+  const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
+
   const today = new Date().toISOString().split('T')[0];
 
   // 오늘 날짜로 주간 달력 스크롤
@@ -105,12 +109,36 @@ export default function HomeScreen() {
     }
   }, [weekDates, today]);
 
+  // 선택된 날짜의 스케줄 가져오기
+  const loadScheduleForDate = async (date: string) => {
+    if (date === today) {
+      // 오늘이면 todayData 사용
+      setSelectedDateSchedules(todayData?.schedules || []);
+      return;
+    }
+    setIsLoadingSchedule(true);
+    try {
+      const data = await intakeService.getIntakesByDate(date);
+      setSelectedDateSchedules(data.schedules || []);
+    } catch (error) {
+      console.error('Failed to load schedule for date:', error);
+      setSelectedDateSchedules([]);
+    } finally {
+      setIsLoadingSchedule(false);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       fetchTodaySchedule();
       loadMonthlySummary(currentMonth.year, currentMonth.month);
     }, [currentMonth])
   );
+
+  // 선택된 날짜가 변경되면 스케줄 로드
+  useEffect(() => {
+    loadScheduleForDate(selectedDate);
+  }, [selectedDate, todayData]);
 
   const loadMonthlySummary = async (year: number, month: number) => {
     try {
@@ -333,16 +361,27 @@ export default function HomeScreen() {
     }
   };
 
-  const dateDisplay = todayData
-    ? `${todayData.date.replace(/-/g, '.')} (${todayData.dayOfWeek})`
-    : new Date().toLocaleDateString('ko-KR', {
-        month: 'long',
-        day: 'numeric',
-        weekday: 'short',
-      });
+  // 선택된 날짜 표시
+  const getDateDisplay = () => {
+    const dateObj = new Date(selectedDate);
+    const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+    const dayOfWeek = dayNames[dateObj.getDay()];
+    return `${selectedDate.replace(/-/g, '.')} (${dayOfWeek})`;
+  };
 
-  const schedules = todayData?.schedules || [];
-  const summary = todayData?.summary;
+  const dateDisplay = getDateDisplay();
+
+  // 선택된 날짜가 오늘인지 확인
+  const isSelectedDateToday = selectedDate === today;
+
+  // 표시할 스케줄 (선택된 날짜 기준)
+  const schedules = selectedDateSchedules;
+  const summary = isSelectedDateToday ? todayData?.summary : null;
+
+  // 약 이름 가져오기 (displayName 우선)
+  const getMedDisplayName = (med: ScheduleMedication): string => {
+    return med.displayName || med.name;
+  };
 
   // 선택된 날짜의 요약 정보
   const selectedDaySummary = monthlySummary.find((d) => d.date === selectedDate);
@@ -532,29 +571,40 @@ export default function HomeScreen() {
           </Card>
         )}
 
-        {/* 오늘의 복약 스케줄 */}
+        {/* 복약 스케줄 */}
         <View style={styles.scheduleSection}>
           <Typography variant="h3" style={styles.sectionTitle}>
-            복약 스케줄
+            {isSelectedDateToday ? '오늘의 복약' : `${selectedDate.substring(5).replace('-', '/')} 복약`}
           </Typography>
         </View>
 
-        {schedules.length === 0 ? (
+        {isLoadingSchedule ? (
           <Card style={styles.emptyCard} variant="elevated">
             <Typography variant="body" style={styles.emptyText}>
-              오늘 먹을 약이 없어요
+              불러오는 중...
+            </Typography>
+          </Card>
+        ) : schedules.length === 0 ? (
+          <Card style={styles.emptyCard} variant="elevated">
+            <Typography variant="body" style={styles.emptyText}>
+              {isSelectedDateToday ? '오늘 먹을 약이 없어요' : '이 날짜에 복약 기록이 없어요'}
             </Typography>
             <Typography variant="bodySmall" color={Colors.textSecondary} style={styles.emptySubtext}>
-              약을 추가하면 여기에 표시됩니다
+              {isSelectedDateToday ? '약을 추가하면 여기에 표시됩니다' : ''}
             </Typography>
           </Card>
         ) : (
           schedules.map((schedule, index) => (
             <Card key={index} style={styles.scheduleCard} variant="elevated">
               <View style={styles.scheduleHeader}>
-                <Typography variant="h3">
-                  {getTimingEmoji(schedule.timingLabel)} {schedule.timingLabel} ({schedule.scheduledTime})
-                </Typography>
+                <View style={styles.scheduleHeaderRow}>
+                  <Typography variant="h3">
+                    {getTimingEmoji(schedule.timingLabel)} {schedule.timingLabel}
+                  </Typography>
+                  <Typography variant="body" style={styles.scheduleTime}>
+                    {schedule.scheduledTime}
+                  </Typography>
+                </View>
               </View>
 
               <View style={styles.medicationList}>
@@ -580,19 +630,19 @@ export default function HomeScreen() {
                       <View style={styles.medicationInfo}>
                         <View style={styles.medicationNameRow}>
                           <Typography variant="body" style={styles.medicationName}>
-                            {med.name}
+                            {getMedDisplayName(med)}
                           </Typography>
                           {med.drugType && (
                             <DrugTypeBadge type={med.drugType} size="small" />
                           )}
                         </View>
                         <Typography variant="caption" color={Colors.textSecondary}>
-                          {med.dosage}정
+                          {med.dosage}정{med.ingredientKr ? ` · 성분 : ${med.ingredientKr}` : ''}
                         </Typography>
                       </View>
                     </View>
-                    {/* 복용 안 한 약물에만 액션 버튼 표시 */}
-                    {!med.taken && (
+                    {/* 복용 안 한 약물에만 액션 버튼 표시 (오늘 날짜일 때만) */}
+                    {!med.taken && isSelectedDateToday && (
                       <MedicationActionButtons
                         onSkip={() => handleSkipMedication(med, schedule.timing)}
                         onMiss={() => handleMissMedication(med, schedule.timing)}
@@ -603,7 +653,7 @@ export default function HomeScreen() {
                 ))}
               </View>
 
-              {!schedule.allTaken && (
+              {!schedule.allTaken && isSelectedDateToday && (
                 <Button
                   title="모두 먹었어요 ✓"
                   variant="primary"
@@ -777,6 +827,15 @@ const styles = StyleSheet.create({
   },
   scheduleHeader: {
     marginBottom: 12,
+  },
+  scheduleHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  scheduleTime: {
+    color: '#2196F3',
+    fontWeight: '600',
   },
   medicationList: {
     marginBottom: 16,
