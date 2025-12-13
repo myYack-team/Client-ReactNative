@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { Button, Card, Typography } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useMedicationStore } from '../../stores';
-import { TIMING_LABELS, MedicationTiming } from '../../types';
+import { MedicationListItem, Reminder } from '../../types';
 
 export default function MedicationsScreen() {
   const { medications, fetchMedications, isLoading, error } = useMedicationStore();
@@ -19,8 +19,31 @@ export default function MedicationsScreen() {
     });
   }, []);
 
-  const formatTimings = (timings: MedicationTiming[]): string => {
-    return timings.map((t) => TIMING_LABELS[t]).join(', ');
+  // 약 이름 가져오기 (displayName 우선)
+  const getDrugDisplayName = (medication: MedicationListItem): string => {
+    return medication.displayName || medication.drugName;
+  };
+
+  // 알림 시간 태그 렌더링
+  const renderReminderTimeTags = (reminders?: Reminder[]) => {
+    if (!reminders || reminders.length === 0) {
+      return (
+        <Typography variant="caption" color={Colors.textSecondary}>
+          알림 설정 없음
+        </Typography>
+      );
+    }
+    return (
+      <View style={styles.reminderTagsContainer}>
+        {reminders.map((reminder) => (
+          <View key={reminder.id} style={styles.reminderTimeTag}>
+            <Typography variant="caption" color={Colors.primary}>
+              {reminder.time.substring(0, 5)}
+            </Typography>
+          </View>
+        ))}
+      </View>
+    );
   };
 
   return (
@@ -74,46 +97,44 @@ export default function MedicationsScreen() {
                     <Image source={{ uri: medication.imageUrl }} style={styles.medThumbnail} resizeMode="cover" />
                   ) : (
                     <View style={[styles.medThumbnail, styles.medThumbnailPlaceholder]}>
-                      <Typography variant="h3" color={Colors.textSecondary}>💊</Typography>
+                      <Typography variant="body" color={Colors.textSecondary}>💊</Typography>
                     </View>
                   )}
                   <View style={styles.medicationContent}>
                     <View style={styles.medicationHeader}>
-                      <Typography variant="h3" numberOfLines={1}>
-                        {medication.drugName}
+                      <Typography variant="body" style={styles.drugName} numberOfLines={1}>
+                        {getDrugDisplayName(medication)}
                       </Typography>
-                      <Typography variant="bodySmall" color={Colors.textSecondary}>
-                        1회 {medication.dosage}정 / 하루 {medication.frequency}회
+                      <Typography variant="caption" color={Colors.textSecondary}>
+                        1회 {medication.dosage}정 / 하루 {medication.frequency}회{medication.ingredientKr ? ` · ${medication.ingredientKr}` : ''}
                       </Typography>
                     </View>
 
                     <View style={styles.medicationInfo}>
-                  <View style={styles.infoItem}>
-                    <Typography variant="caption" color={Colors.textSecondary}>
-                      복용 시간
-                    </Typography>
-                    <Typography variant="bodySmall">
-                      {formatTimings(medication.timings)}
-                    </Typography>
-                  </View>
+                      <View style={styles.infoItem}>
+                        <Typography variant="caption" color={Colors.textSecondary}>
+                          알림 시간
+                        </Typography>
+                        {renderReminderTimeTags(medication.reminders)}
+                      </View>
 
-                  <View style={styles.infoItem}>
-                    <Typography variant="caption" color={Colors.textSecondary}>
-                      남은 약
-                    </Typography>
-                    <Typography
-                      variant="bodySmall"
-                      color={
-                        medication.daysLeft <= 3
-                          ? Colors.warning
-                          : Colors.textPrimary
-                      }
-                    >
-                      {medication.remainingCount}개 ({medication.daysLeft}일분)
-                      {medication.daysLeft <= 3 && ' ⚠️'}
-                    </Typography>
+                      <View style={styles.infoItem}>
+                        <Typography variant="caption" color={Colors.textSecondary}>
+                          남은 약
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          color={
+                            medication.daysLeft <= 3
+                              ? Colors.warning
+                              : Colors.textPrimary
+                          }
+                        >
+                          {medication.remainingCount}개 ({medication.daysLeft}일분)
+                          {medication.daysLeft <= 3 && ' ⚠️'}
+                        </Typography>
+                      </View>
                     </View>
-                  </View>
                   </View>
                 </View>
               </Card>
@@ -187,6 +208,22 @@ const styles = StyleSheet.create({
   },
   infoItem: {
     flex: 1,
+  },
+  drugName: {
+    fontWeight: '600',
+    fontSize: 17,
+  },
+  reminderTagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 2,
+  },
+  reminderTimeTag: {
+    backgroundColor: Colors.primaryLightest,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
   },
   addButton: {
     marginTop: 24,

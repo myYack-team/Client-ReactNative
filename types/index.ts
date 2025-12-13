@@ -173,12 +173,15 @@ export interface Medication {
 export interface MedicationListItem {
   id: number;
   drugName: string;       // 약 이름
+  displayName?: string;   // 표시용 약물명 (한글 이름만)
+  ingredientKr?: string;  // 한글 성분명
   imageUrl?: string;      // 약 이미지 URL
   dosage: number;
   frequency: number;
   timings: MedicationTiming[];
   remainingCount: number;
   daysLeft: number;
+  reminders?: Reminder[]; // 알림 정보 (시간 표시용)
 }
 
 // 알림
@@ -206,6 +209,8 @@ export interface Intake {
 export interface ScheduleMedication {
   id: number;
   name: string;
+  displayName?: string;      // 표시용 약물명 (한글 이름만)
+  ingredientKr?: string;     // 한글 성분명
   dosage: number;
   taken: boolean;
   takenAt?: string | null;
