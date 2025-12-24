@@ -192,19 +192,49 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
   },
 
   recordIntake: async (medicationIds: number[], timing: MedicationTiming) => {
-    try {
-      set({ isLoading: true, error: null });
-      await intakeService.markAsTaken(medicationIds, timing);
-      await get().fetchTodaySchedule();
+    const { todayData } = get();
 
-      // 오늘 날짜 캐시 무효화
+    // 이전 상태 저장 (롤백용)
+    const previousTodayData = todayData ? { ...todayData } : null;
+
+    // 낙관적 업데이트 (UI 먼저 반영)
+    if (todayData?.schedules) {
+      const updatedSchedules = todayData.schedules.map((schedule) => {
+        if (schedule.timing === timing) {
+          const updatedMedications = schedule.medications.map((med) =>
+            medicationIds.includes(med.id) ? { ...med, taken: true } : med
+          );
+          const allTaken = updatedMedications.every((med) => med.taken);
+          return { ...schedule, medications: updatedMedications, allTaken };
+        }
+        return schedule;
+      });
+
+      set({
+        todayData: { ...todayData, schedules: updatedSchedules },
+      });
+    }
+
+    try {
+      // 서버 호출
+      await intakeService.markAsTaken(medicationIds, timing);
+
+      // 성공 시 캐시 무효화
       const today = new Date().toISOString().split('T')[0];
       get().invalidateCache(today);
 
-      set({ isLoading: false });
+      // 서버에서 최신 데이터 가져오기 (동기화)
+      await get().fetchTodaySchedule();
     } catch (error) {
+      // 실패 시 롤백
+      console.error('Failed to record intake, rolling back:', error);
+
+      if (previousTodayData) {
+        set({ todayData: previousTodayData });
+      }
+
       const message = error instanceof Error ? error.message : '복약 기록에 실패했습니다.';
-      set({ isLoading: false, error: message });
+      set({ error: message });
       throw error;
     }
   },
