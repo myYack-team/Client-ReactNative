@@ -75,7 +75,7 @@ const generateWeekDates = () => {
 };
 
 export default function HomeScreen() {
-  const { todayData, fetchTodaySchedule, recordIntake, isLoading } = useMedicationStore();
+  const { todayData, fetchTodaySchedule, recordIntake, isLoading, fetchScheduleForDate, isLoadingSchedule: storeIsLoadingSchedule } = useMedicationStore();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [currentMonth, setCurrentMonth] = useState({
     year: new Date().getFullYear(),
@@ -94,7 +94,6 @@ export default function HomeScreen() {
 
   // 선택된 날짜의 스케줄 데이터
   const [selectedDateSchedules, setSelectedDateSchedules] = useState<TodaySchedule[]>([]);
-  const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -109,23 +108,10 @@ export default function HomeScreen() {
     }
   }, [weekDates, today]);
 
-  // 선택된 날짜의 스케줄 가져오기
+  // 선택된 날짜의 스케줄 가져오기 (캐시 적용)
   const loadScheduleForDate = async (date: string) => {
-    if (date === today) {
-      // 오늘이면 todayData 사용
-      setSelectedDateSchedules(todayData?.schedules || []);
-      return;
-    }
-    setIsLoadingSchedule(true);
-    try {
-      const data = await intakeService.getIntakesByDate(date);
-      setSelectedDateSchedules(data.schedules || []);
-    } catch (error) {
-      console.error('Failed to load schedule for date:', error);
-      setSelectedDateSchedules([]);
-    } finally {
-      setIsLoadingSchedule(false);
-    }
+    const schedules = await fetchScheduleForDate(date);
+    setSelectedDateSchedules(schedules);
   };
 
   useFocusEffect(
@@ -578,7 +564,7 @@ export default function HomeScreen() {
           </Typography>
         </View>
 
-        {isLoadingSchedule ? (
+        {storeIsLoadingSchedule ? (
           <Card style={styles.emptyCard} variant="elevated">
             <Typography variant="body" style={styles.emptyText}>
               불러오는 중...

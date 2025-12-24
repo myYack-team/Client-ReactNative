@@ -7,8 +7,12 @@ import {
   ScanResult,
   CreateMedicationRequest,
   MedicationTiming,
+  IntakesResponse,
 } from '../types';
 import { medicationService, intakeService, prescriptionService } from '../services';
+
+// 캐시 만료 시간 (5분)
+const CACHE_DURATION = 5 * 60 * 1000;
 
 interface MedicationState {
   // 약 목록 (간략)
@@ -25,6 +29,11 @@ interface MedicationState {
   // 스캔 에러 상태 (에러 오버레이용)
   scanError: string | null;
 
+  // 날짜별 스케줄 캐시
+  scheduleCache: Map<string, TodaySchedule[]>;
+  cacheExpiry: Map<string, number>;
+  isLoadingSchedule: boolean;
+
   // Actions
   fetchMedications: () => Promise<void>;
   fetchTodaySchedule: () => Promise<void>;
@@ -37,6 +46,10 @@ interface MedicationState {
   clearScanResult: () => void;
   clearError: () => void;
   clearScanError: () => void;
+
+  // 캐시 관련 Actions
+  fetchScheduleForDate: (date: string) => Promise<TodaySchedule[]>;
+  invalidateCache: (date?: string) => void;
 }
 
 export const useMedicationStore = create<MedicationState>((set, get) => ({
@@ -47,6 +60,9 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
   isLoading: false,
   error: null,
   scanError: null,
+  scheduleCache: new Map(),
+  cacheExpiry: new Map(),
+  isLoadingSchedule: false,
 
   fetchMedications: async () => {
     try {
@@ -167,6 +183,11 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
       set({ isLoading: true, error: null });
       await intakeService.markAsTaken(medicationIds, timing);
       await get().fetchTodaySchedule();
+
+      // 오늘 날짜 캐시 무효화
+      const today = new Date().toISOString().split('T')[0];
+      get().invalidateCache(today);
+
       set({ isLoading: false });
     } catch (error) {
       const message = error instanceof Error ? error.message : '복약 기록에 실패했습니다.';
@@ -178,4 +199,69 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
   clearScanResult: () => set({ currentScanResult: null, currentPrescriptionId: null }),
   clearError: () => set({ error: null }),
   clearScanError: () => set({ scanError: null }),
+
+  // 날짜별 스케줄 가져오기 (캐시 적용)
+  fetchScheduleForDate: async (date: string) => {
+    const { scheduleCache, cacheExpiry, todayData } = get();
+    const now = Date.now();
+    const today = new Date().toISOString().split('T')[0];
+
+    // 오늘 날짜면 todayData 사용
+    if (date === today && todayData?.schedules) {
+      return todayData.schedules;
+    }
+
+    // 캐시 유효성 확인
+    const cachedExpiry = cacheExpiry.get(date);
+    if (cachedExpiry && cachedExpiry > now) {
+      const cached = scheduleCache.get(date);
+      if (cached) {
+        return cached;
+      }
+    }
+
+    // 캐시 없거나 만료 → API 호출
+    set({ isLoadingSchedule: true });
+    try {
+      const data = await intakeService.getIntakesByDate(date);
+      const schedules = data.schedules || [];
+
+      // 캐시 저장
+      const newCache = new Map(scheduleCache);
+      const newExpiry = new Map(cacheExpiry);
+      newCache.set(date, schedules);
+      newExpiry.set(date, now + CACHE_DURATION);
+
+      set({
+        scheduleCache: newCache,
+        cacheExpiry: newExpiry,
+        isLoadingSchedule: false,
+      });
+
+      return schedules;
+    } catch (error) {
+      set({ isLoadingSchedule: false });
+      console.error('Failed to fetch schedule for date:', error);
+      return [];
+    }
+  },
+
+  // 캐시 무효화
+  invalidateCache: (date?: string) => {
+    const { scheduleCache, cacheExpiry } = get();
+    const newCache = new Map(scheduleCache);
+    const newExpiry = new Map(cacheExpiry);
+
+    if (date) {
+      // 특정 날짜만 무효화
+      newCache.delete(date);
+      newExpiry.delete(date);
+    } else {
+      // 전체 무효화
+      newCache.clear();
+      newExpiry.clear();
+    }
+
+    set({ scheduleCache: newCache, cacheExpiry: newExpiry });
+  },
 }));
