@@ -295,7 +295,7 @@ export default function HomeScreen() {
         notTakenMeds.map((m) => m.id),
         schedule.timing
       );
-      loadMonthlySummary(currentMonth.year, currentMonth.month);
+      // 로컬 상태는 recordIntake에서 낙관적 업데이트되므로 월별 요약 재로드 불필요
     } catch (error) {
       console.error('Failed to record intake:', error);
     }
@@ -306,7 +306,7 @@ export default function HomeScreen() {
     if (med.taken) return;
     try {
       await recordIntake([med.id], timing);
-      loadMonthlySummary(currentMonth.year, currentMonth.month);
+      // 로컬 상태는 recordIntake에서 낙관적 업데이트되므로 월별 요약 재로드 불필요
     } catch (error) {
       console.error('Failed to record intake:', error);
     }
@@ -341,7 +341,7 @@ export default function HomeScreen() {
       // 누락 상태로 기록 (MISSED)
       await intakeService.recordMissed(med.id, timing);
       fetchTodaySchedule();
-      loadMonthlySummary(currentMonth.year, currentMonth.month);
+      // 로컬 상태 업데이트로 충분, 월별 요약 재로드 불필요
     } catch (error) {
       console.error('Failed to record missed:', error);
     }
