@@ -70,7 +70,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="history"
         options={{
-          title: '처방',
+          title: '처방 기록',
           tabBarIcon: ({ focused }) => <TabIcon name="history" focused={focused} />,
         }}
       />
