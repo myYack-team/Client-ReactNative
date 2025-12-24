@@ -1,23 +1,29 @@
-import React, { useEffect } from 'react';
+import React, { useCallback } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Button, Card, Typography } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useMedicationStore } from '../../stores';
 import { MedicationListItem, Reminder } from '../../types';
 
 export default function MedicationsScreen() {
-  const { medications, fetchMedications, isLoading, error } = useMedicationStore();
+  const { medications, fetchMedications, isLoading, error, needsRefresh, clearNeedsRefresh } = useMedicationStore();
 
-  useEffect(() => {
-    console.log('Fetching medications...');
-    fetchMedications().then(() => {
-      console.log('Medications fetched:', medications.length);
-    }).catch((err) => {
-      console.error('Failed to fetch medications:', err);
-    });
-  }, []);
+  // 탭이 실제로 포커스될 때 조건부 데이터 로드
+  // - 데이터가 없거나 needsRefresh 플래그가 true일 때만 로드
+  useFocusEffect(
+    useCallback(() => {
+      if (medications.length === 0 || needsRefresh) {
+        fetchMedications().then(() => {
+          clearNeedsRefresh();
+        }).catch((err) => {
+          console.error('Failed to fetch medications:', err);
+        });
+      }
+    }, [needsRefresh])
+  );
 
   // 약 이름 가져오기 (displayName 우선)
   const getDrugDisplayName = (medication: MedicationListItem): string => {

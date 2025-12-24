@@ -28,6 +28,8 @@ interface MedicationState {
   error: string | null;
   // 스캔 에러 상태 (에러 오버레이용)
   scanError: string | null;
+  // 데이터 갱신 필요 플래그 (약 등록/삭제 후 medications 탭에서 조건부 로드용)
+  needsRefresh: boolean;
 
   // 날짜별 스케줄 캐시
   scheduleCache: Map<string, TodaySchedule[]>;
@@ -46,6 +48,7 @@ interface MedicationState {
   clearScanResult: () => void;
   clearError: () => void;
   clearScanError: () => void;
+  clearNeedsRefresh: () => void;
 
   // 캐시 관련 Actions
   fetchScheduleForDate: (date: string) => Promise<TodaySchedule[]>;
@@ -60,6 +63,7 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
   isLoading: false,
   error: null,
   scanError: null,
+  needsRefresh: false,
   scheduleCache: new Map(),
   cacheExpiry: new Map(),
   isLoadingSchedule: false,
@@ -105,10 +109,10 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
     try {
       // 1. 처방전 이미지를 서버에 업로드 (저장용)
       const uploadResult = await prescriptionService.uploadImage(imageUri);
-      if (!uploadResult?.id) {
+      if (!uploadResult?.prescriptionId) {
         throw new Error('이미지 업로드에 실패했습니다.');
       }
-      const prescriptionId = uploadResult.id;
+      const prescriptionId = uploadResult.prescriptionId;
       set({ currentPrescriptionId: prescriptionId });
       console.log('[Store] Prescription uploaded, id:', prescriptionId);
 
@@ -137,10 +141,11 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
         : medication;
 
       await medicationService.createMedication(medicationWithPrescription);
-      // 목록 새로고침
-      await get().fetchMedications();
+      // medications 목록은 탭 포커스 시 로드되므로 여기서는 호출 불필요
+      // 오늘 스케줄만 갱신 (홈 화면에서 바로 보이도록)
       await get().fetchTodaySchedule();
-      set({ isLoading: false });
+      // 데이터 변경 플래그 설정 (medications 탭에서 조건부 로드용)
+      set({ isLoading: false, needsRefresh: true });
     } catch (error) {
       const message = error instanceof Error ? error.message : '약 등록에 실패했습니다.';
       set({ isLoading: false, error: message });
@@ -242,6 +247,7 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
   clearScanResult: () => set({ currentScanResult: null, currentPrescriptionId: null }),
   clearError: () => set({ error: null }),
   clearScanError: () => set({ scanError: null }),
+  clearNeedsRefresh: () => set({ needsRefresh: false }),
 
   // 날짜별 스케줄 가져오기 (캐시 적용)
   fetchScheduleForDate: async (date: string) => {

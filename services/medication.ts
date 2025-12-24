@@ -42,8 +42,19 @@ export const medicationService = {
 
   // 약 등록
   async createMedication(medication: CreateMedicationRequest): Promise<Medication> {
-    const response = await api.post<ApiResponse<Medication>>('/medications', medication);
-    return response.data.result!;
+    console.log('[createMedication] Request:', JSON.stringify(medication, null, 2));
+    try {
+      const response = await api.post<ApiResponse<Medication>>('/medications', medication);
+      console.log('[createMedication] Response:', JSON.stringify(response.data, null, 2));
+      return response.data.result!;
+    } catch (error: any) {
+      console.error('[createMedication] Error:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      throw error;
+    }
   },
 
   // 약 목록 조회

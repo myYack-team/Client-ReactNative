@@ -29,19 +29,27 @@ export const prescriptionService = {
       formData.append('prescriptionDate', prescriptionDate);
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/prescriptions/upload?userId=${TEMP_USER_ID}`, {
+    const uploadUrl = `${API_BASE_URL}/prescriptions/upload?userId=${TEMP_USER_ID}`;
+    console.log('[Upload] URL:', uploadUrl);
+    console.log('[Upload] Image URI:', imageUri);
+
+    const response = await fetch(uploadUrl, {
       method: 'POST',
       body: formData,
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+      // Content-Type 헤더는 FormData 사용 시 자동 설정됨 (boundary 포함)
     });
 
+    console.log('[Upload] Response status:', response.status);
+
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Upload] Error response:', errorText);
       throw new Error('이미지 업로드에 실패했습니다.');
     }
 
     const data = await response.json() as ApiResponse<PrescriptionUploadResponse>;
+    console.log('[Upload] Response data:', JSON.stringify(data, null, 2));
+
     if (!data.isSuccess || !data.result) {
       throw new Error(data.message || '이미지 업로드에 실패했습니다.');
     }
@@ -51,13 +59,13 @@ export const prescriptionService = {
 
   // 처방전 목록 조회
   async getList(): Promise<PrescriptionListResponse> {
-    const response = await api.get<ApiResponse<PrescriptionListResponse>>('/api/prescriptions');
+    const response = await api.get<ApiResponse<PrescriptionListResponse>>('/prescriptions');
     return response.data.result!;
   },
 
   // 처방전 상세 조회
   async getDetail(prescriptionId: number): Promise<PrescriptionDetail> {
-    const response = await api.get<ApiResponse<PrescriptionDetail>>(`/api/prescriptions/${prescriptionId}`);
+    const response = await api.get<ApiResponse<PrescriptionDetail>>(`/prescriptions/${prescriptionId}`);
     return response.data.result!;
   },
 
@@ -66,12 +74,12 @@ export const prescriptionService = {
     prescriptionId: number,
     data: { prescriptionDate?: string; hospitalName?: string; notes?: string }
   ): Promise<Prescription> {
-    const response = await api.patch<ApiResponse<Prescription>>(`/api/prescriptions/${prescriptionId}`, data);
+    const response = await api.patch<ApiResponse<Prescription>>(`/prescriptions/${prescriptionId}`, data);
     return response.data.result!;
   },
 
   // 처방전 삭제
   async delete(prescriptionId: number): Promise<void> {
-    await api.delete(`/api/prescriptions/${prescriptionId}`);
+    await api.delete(`/prescriptions/${prescriptionId}`);
   },
 };
