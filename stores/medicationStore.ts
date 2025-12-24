@@ -22,6 +22,8 @@ interface MedicationState {
   // 로딩/에러 상태
   isLoading: boolean;
   error: string | null;
+  // 스캔 에러 상태 (에러 오버레이용)
+  scanError: string | null;
 
   // Actions
   fetchMedications: () => Promise<void>;
@@ -34,6 +36,7 @@ interface MedicationState {
   recordIntake: (medicationIds: number[], timing: MedicationTiming) => Promise<void>;
   clearScanResult: () => void;
   clearError: () => void;
+  clearScanError: () => void;
 }
 
 export const useMedicationStore = create<MedicationState>((set, get) => ({
@@ -43,6 +46,7 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
   currentPrescriptionId: null,
   isLoading: false,
   error: null,
+  scanError: null,
 
   fetchMedications: async () => {
     try {
@@ -80,28 +84,28 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
   },
 
   scanPrescription: async (imageUri: string) => {
-    try {
-      set({ isLoading: true, error: null });
+    set({ isLoading: true, error: null, scanError: null });
 
+    try {
       // 1. 처방전 이미지를 서버에 업로드 (저장용)
-      let prescriptionId: number | null = null;
-      try {
-        const uploadResult = await prescriptionService.uploadImage(imageUri);
-        prescriptionId = uploadResult.id;
-        set({ currentPrescriptionId: prescriptionId });
-        console.log('[Store] Prescription uploaded, id:', prescriptionId);
-      } catch (uploadError) {
-        // 업로드 실패해도 스캔은 계속 진행
-        console.warn('[Store] Failed to upload prescription image:', uploadError);
+      const uploadResult = await prescriptionService.uploadImage(imageUri);
+      if (!uploadResult?.id) {
+        throw new Error('이미지 업로드에 실패했습니다.');
       }
+      const prescriptionId = uploadResult.id;
+      set({ currentPrescriptionId: prescriptionId });
+      console.log('[Store] Prescription uploaded, id:', prescriptionId);
 
       // 2. 이미지 분석 (AI 스캔)
       const result = await medicationService.scanPrescription(imageUri);
       set({ currentScanResult: result, isLoading: false });
       return result;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : '처방전 분석에 실패했습니다.';
-      set({ isLoading: false, error: message });
+    } catch (error: any) {
+      const message = error.message || '처방전 스캔에 실패했습니다.';
+      set({
+        isLoading: false,
+        scanError: message,
+      });
       throw error;
     }
   },
@@ -173,4 +177,5 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
 
   clearScanResult: () => set({ currentScanResult: null, currentPrescriptionId: null }),
   clearError: () => set({ error: null }),
+  clearScanError: () => set({ scanError: null }),
 }));
