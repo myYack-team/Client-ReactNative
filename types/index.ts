@@ -349,7 +349,7 @@ export interface PrescriptionListResponse {
 
 // 처방전 업로드 응답
 export interface PrescriptionUploadResponse {
-  id: number;
+  prescriptionId: number;
   imageUrl: string;
   prescriptionDate: string;
 }
