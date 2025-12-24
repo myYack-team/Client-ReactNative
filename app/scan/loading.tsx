@@ -212,11 +212,15 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     marginBottom: 32,
+    paddingVertical: 8,
+    alignItems: 'center',
   },
   percentText: {
     fontSize: 56,
     fontWeight: '700',
     color: Colors.primary,
+    lineHeight: 68,
+    includeFontPadding: false,
   },
   progressBarContainer: {
     width: '100%',
