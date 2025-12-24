@@ -177,12 +177,16 @@ function DraggableTimeSlotList({
 export default function ResultScreen() {
   const { currentScanResult, addMedication, clearScanResult, isLoading } = useMedicationStore();
 
-  // 초기 medications에 times 배열 추가
+  // 초기 medications에 times 배열 추가 및 null 값 기본값 설정
   const [medications, setMedications] = useState<MedicationWithTimes[]>(() => {
     if (!currentScanResult?.medications) return [];
     return currentScanResult.medications.map((med) => ({
       ...med,
-      times: DEFAULT_TIMES[med.frequency] || DEFAULT_TIMES[1],
+      dosage: med.dosage ?? 1,           // null이면 기본값 1
+      frequency: med.frequency ?? 1,      // null이면 기본값 1
+      durationDays: med.durationDays ?? 7, // null이면 기본값 7
+      totalCount: med.totalCount ?? 7,    // null이면 기본값 7
+      times: DEFAULT_TIMES[med.frequency ?? 1] || DEFAULT_TIMES[1],
     }));
   });
 
@@ -293,17 +297,23 @@ export default function ResultScreen() {
         });
       }
 
+      // 스캔 결과 정리 후 홈으로 이동
+      clearScanResult();
       Alert.alert('등록 완료', '약이 성공적으로 등록되었어요!', [
         {
           text: '확인',
-          onPress: () => {
-            clearScanResult();
-            router.replace('/(tabs)');
-          }
+          onPress: () => router.replace('/(tabs)'),
         },
       ]);
     } catch (error) {
-      Alert.alert('오류', '약 등록에 실패했어요. 다시 시도해주세요.');
+      // 에러 시에도 스캔 결과 정리 (재시도 시 새로운 스캔 유도)
+      clearScanResult();
+      Alert.alert('오류', '약 등록에 실패했어요. 다시 촬영해주세요.', [
+        {
+          text: '확인',
+          onPress: () => router.replace('/(tabs)'),
+        },
+      ]);
     }
   };
 
