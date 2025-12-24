@@ -151,10 +151,23 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
   updateMedication: async (id: number, data: Partial<CreateMedicationRequest>) => {
     try {
       set({ isLoading: true, error: null });
-      await medicationService.updateMedication(id, data);
-      await get().fetchMedications();
+
+      // 서버 업데이트 후 응답으로 로컬 상태 업데이트
+      const updated = await medicationService.updateMedication(id, data);
+
+      // 로컬 상태 부분 업데이트
+      const { medications } = get();
+      const updatedMedications = medications.map((med) =>
+        med.id === id
+          ? { ...med, name: updated.name, displayName: updated.displayName }
+          : med
+      );
+
+      set({ medications: updatedMedications, isLoading: false });
+
+      // 관련 캐시 무효화 및 오늘 스케줄 새로고침
+      get().invalidateCache();
       await get().fetchTodaySchedule();
-      set({ isLoading: false });
     } catch (error) {
       const message = error instanceof Error ? error.message : '약 수정에 실패했습니다.';
       set({ isLoading: false, error: message });
