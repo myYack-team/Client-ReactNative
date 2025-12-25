@@ -1,15 +1,15 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo, memo } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   RefreshControl,
-  Image,
   TouchableOpacity,
   Dimensions,
   Modal,
   Alert,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { Card, Typography } from '../../components/ui';
@@ -20,29 +20,99 @@ import { Prescription, PrescriptionDetail } from '../../types';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 60) / 2;
 
+// 이미지 URL 생성 함수 (컴포넌트 외부로 이동)
+const getImageUrl = (imageUrl: string): string => {
+  if (imageUrl.startsWith('http')) {
+    return imageUrl;
+  }
+  const baseUrl = API_BASE_URL.replace('/api', '');
+  return `${baseUrl}${imageUrl}`;
+};
+
+// 날짜 포맷 함수 (컴포넌트 외부로 이동)
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
+};
+
+// 처방전 카드 컴포넌트 (메모이제이션)
+interface PrescriptionCardProps {
+  prescription: Prescription;
+  onPress: () => void;
+}
+
+const PrescriptionCard = memo(({ prescription, onPress }: PrescriptionCardProps) => (
+  <TouchableOpacity
+    style={styles.prescriptionCard}
+    onPress={onPress}
+    activeOpacity={0.8}
+  >
+    <Image
+      source={{ uri: getImageUrl(prescription.imageUrl) }}
+      style={styles.thumbnailImage}
+      contentFit="cover"
+      cachePolicy="memory-disk"
+      transition={200}
+      placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+    />
+    <View style={styles.cardInfo}>
+      <Typography variant="bodySmall" numberOfLines={1}>
+        {formatDate(prescription.prescriptionDate)}
+      </Typography>
+      {prescription.hospitalName && (
+        <Typography
+          variant="caption"
+          color={Colors.textSecondary}
+          numberOfLines={1}
+        >
+          {prescription.hospitalName}
+        </Typography>
+      )}
+      <Typography variant="caption" color={Colors.primary}>
+        약 {prescription.medicationCount}개
+      </Typography>
+    </View>
+  </TouchableOpacity>
+));
+
 export default function PrescriptionScreen() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [selectedPrescription, setSelectedPrescription] = useState<PrescriptionDetail | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      loadPrescriptions();
-    }, [])
-  );
-
-  const loadPrescriptions = async () => {
+  const loadPrescriptions = useCallback(async (isRefresh = false) => {
     try {
-      setIsLoading(true);
+      if (isRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+      }
       const data = await prescriptionService.getList();
       setPrescriptions(data.prescriptions);
     } catch (error) {
       console.error('Failed to load prescriptions:', error);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
+      setIsInitialLoad(false);
     }
-  };
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      // 최초 로드 시에만 또는 데이터가 없을 때만 로드
+      if (isInitialLoad || prescriptions.length === 0) {
+        loadPrescriptions();
+      }
+    }, [isInitialLoad, prescriptions.length, loadPrescriptions])
+  );
+
+  const handleRefresh = useCallback(() => {
+    loadPrescriptions(true);
+  }, [loadPrescriptions]);
 
   const openDetail = async (prescription: Prescription) => {
     try {
@@ -84,20 +154,6 @@ export default function PrescriptionScreen() {
     );
   };
 
-  const formatDate = (dateString: string): string => {
-    const date = new Date(dateString);
-    return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
-  };
-
-  const getImageUrl = (imageUrl: string): string => {
-    if (imageUrl.startsWith('http')) {
-      return imageUrl;
-    }
-    // API_BASE_URL에서 '/api'를 제거하고 이미지 경로 연결
-    const baseUrl = API_BASE_URL.replace('/api', '');
-    return `${baseUrl}${imageUrl}`;
-  };
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
@@ -105,8 +161,8 @@ export default function PrescriptionScreen() {
         contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl
-            refreshing={isLoading}
-            onRefresh={loadPrescriptions}
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
             colors={[Colors.primary]}
           />
         }
@@ -133,35 +189,11 @@ export default function PrescriptionScreen() {
         ) : (
           <View style={styles.grid}>
             {prescriptions.map((prescription) => (
-              <TouchableOpacity
+              <PrescriptionCard
                 key={prescription.id}
-                style={styles.prescriptionCard}
+                prescription={prescription}
                 onPress={() => openDetail(prescription)}
-                activeOpacity={0.8}
-              >
-                <Image
-                  source={{ uri: getImageUrl(prescription.imageUrl) }}
-                  style={styles.thumbnailImage}
-                  resizeMode="cover"
-                />
-                <View style={styles.cardInfo}>
-                  <Typography variant="bodySmall" numberOfLines={1}>
-                    {formatDate(prescription.prescriptionDate)}
-                  </Typography>
-                  {prescription.hospitalName && (
-                    <Typography
-                      variant="caption"
-                      color={Colors.textSecondary}
-                      numberOfLines={1}
-                    >
-                      {prescription.hospitalName}
-                    </Typography>
-                  )}
-                  <Typography variant="caption" color={Colors.primary}>
-                    약 {prescription.medicationCount}개
-                  </Typography>
-                </View>
-              </TouchableOpacity>
+              />
             ))}
           </View>
         )}
@@ -196,7 +228,8 @@ export default function PrescriptionScreen() {
               <Image
                 source={{ uri: getImageUrl(selectedPrescription.imageUrl) }}
                 style={styles.detailImage}
-                resizeMode="contain"
+                contentFit="contain"
+                cachePolicy="memory-disk"
               />
 
               <View style={styles.detailInfo}>
