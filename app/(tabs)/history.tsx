@@ -93,7 +93,9 @@ export default function PrescriptionScreen() {
     if (imageUrl.startsWith('http')) {
       return imageUrl;
     }
-    return `${API_BASE_URL}${imageUrl}`;
+    // API_BASE_URL에서 '/api'를 제거하고 이미지 경로 연결
+    const baseUrl = API_BASE_URL.replace('/api', '');
+    return `${baseUrl}${imageUrl}`;
   };
 
   return (
