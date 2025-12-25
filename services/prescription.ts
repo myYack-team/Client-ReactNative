@@ -111,7 +111,7 @@ export const prescriptionService = {
       type,
     } as any);
 
-    // JSON 데이터 추가
+    // JSON 데이터 추가 (문자열로 전송, 서버에서 파싱)
     formData.append('data', JSON.stringify(request));
 
     const registerUrl = `${API_BASE_URL}/prescriptions/register?userId=${TEMP_USER_ID}`;
