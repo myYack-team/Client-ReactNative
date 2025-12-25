@@ -8,6 +8,7 @@ import {
   CreateMedicationRequest,
   MedicationTiming,
   IntakesResponse,
+  MonthlySummaryResponse,
 } from '../types';
 import { medicationService, intakeService, prescriptionService } from '../services';
 
@@ -38,6 +39,10 @@ interface MedicationState {
   cacheExpiry: Map<string, number>;
   isLoadingSchedule: boolean;
 
+  // 월별 요약 캐시
+  monthlySummaryCache: Map<string, MonthlySummaryResponse>;
+  monthlySummaryCacheExpiry: Map<string, number>;
+
   // Actions
   fetchMedications: () => Promise<void>;
   fetchTodaySchedule: () => Promise<void>;
@@ -55,6 +60,8 @@ interface MedicationState {
   // 캐시 관련 Actions
   fetchScheduleForDate: (date: string) => Promise<TodaySchedule[]>;
   invalidateCache: (date?: string) => void;
+  fetchMonthlySummary: (year: number, month: number) => Promise<MonthlySummaryResponse>;
+  invalidateMonthlySummary: (yearMonth?: string) => void;
 }
 
 export const useMedicationStore = create<MedicationState>((set, get) => ({
@@ -70,6 +77,8 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
   scheduleCache: new Map(),
   cacheExpiry: new Map(),
   isLoadingSchedule: false,
+  monthlySummaryCache: new Map(),
+  monthlySummaryCacheExpiry: new Map(),
 
   fetchMedications: async () => {
     try {
@@ -223,12 +232,9 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
       // 서버 호출
       await intakeService.markAsTaken(medicationIds, timing);
 
-      // 성공 시 캐시 무효화
+      // 성공 시 캐시 무효화 (낙관적 업데이트가 이미 적용되어 있으므로 fetchTodaySchedule 호출 불필요)
       const today = new Date().toISOString().split('T')[0];
       get().invalidateCache(today);
-
-      // 서버에서 최신 데이터 가져오기 (동기화)
-      await get().fetchTodaySchedule();
     } catch (error) {
       // 실패 시 롤백
       console.error('Failed to record intake, rolling back:', error);
@@ -311,5 +317,61 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
     }
 
     set({ scheduleCache: newCache, cacheExpiry: newExpiry });
+  },
+
+  // 월별 요약 가져오기 (캐시 적용)
+  fetchMonthlySummary: async (year: number, month: number) => {
+    const { monthlySummaryCache, monthlySummaryCacheExpiry } = get();
+    const now = Date.now();
+    const cacheKey = `${year}-${String(month).padStart(2, '0')}`;
+
+    // 캐시 유효성 확인
+    const cachedExpiry = monthlySummaryCacheExpiry.get(cacheKey);
+    if (cachedExpiry && cachedExpiry > now) {
+      const cached = monthlySummaryCache.get(cacheKey);
+      if (cached) {
+        return cached;
+      }
+    }
+
+    // 캐시 없거나 만료 → API 호출
+    try {
+      const data = await intakeService.getMonthlySummary(year, month);
+
+      // 캐시 저장
+      const newCache = new Map(monthlySummaryCache);
+      const newExpiry = new Map(monthlySummaryCacheExpiry);
+      newCache.set(cacheKey, data);
+      newExpiry.set(cacheKey, now + CACHE_DURATION);
+
+      set({
+        monthlySummaryCache: newCache,
+        monthlySummaryCacheExpiry: newExpiry,
+      });
+
+      return data;
+    } catch (error) {
+      console.error('Failed to fetch monthly summary:', error);
+      throw error;
+    }
+  },
+
+  // 월별 요약 캐시 무효화
+  invalidateMonthlySummary: (yearMonth?: string) => {
+    const { monthlySummaryCache, monthlySummaryCacheExpiry } = get();
+    const newCache = new Map(monthlySummaryCache);
+    const newExpiry = new Map(monthlySummaryCacheExpiry);
+
+    if (yearMonth) {
+      // 특정 월만 무효화
+      newCache.delete(yearMonth);
+      newExpiry.delete(yearMonth);
+    } else {
+      // 전체 무효화
+      newCache.clear();
+      newExpiry.clear();
+    }
+
+    set({ monthlySummaryCache: newCache, monthlySummaryCacheExpiry: newExpiry });
   },
 }));

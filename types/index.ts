@@ -394,6 +394,54 @@ export interface PrescriptionUploadResponse {
   prescriptionDate: string;
 }
 
+// 복용 시점 + 알림 시간 쌍
+export interface TimingWithTime {
+  timing: MedicationTiming;
+  time: string;  // "HH:mm" 형식
+}
+
+// 약물 정보 (처방전 일괄 등록용)
+export interface RegisterMedicationInfo {
+  drugItemSeq?: string;
+  customDrugName?: string;
+  dosage: number;
+  frequency: number;
+  timings: TimingWithTime[];
+  durationDays: number;
+  totalCount: number;
+  startDate: string;
+  memo?: string;
+}
+
+// 처방전 + 약물 일괄 등록 요청
+export interface PrescriptionRegisterRequest {
+  prescriptionDate?: string;
+  patientName?: string;
+  hospitalName?: string;
+  diagnosis?: string;
+  durationDays?: number;
+  notes?: string;
+  medications: RegisterMedicationInfo[];
+}
+
+// 등록된 약물 정보 (일괄 등록 결과용)
+export interface RegisteredMedication {
+  id: number;
+  drugName: string;
+  dosage: number;
+  frequency: number;
+  durationDays: number;
+}
+
+// 처방전 + 약물 일괄 등록 응답
+export interface PrescriptionRegisterResponse {
+  prescriptionId: number;
+  imageUrl: string;
+  prescriptionDate: string;
+  medications: RegisteredMedication[];
+  totalMedicationCount: number;
+}
+
 // 일별 복약 요약 상태
 export type DayStatus = 'COMPLETE' | 'PARTIAL' | 'MISSED' | 'PENDING' | 'NONE';
 

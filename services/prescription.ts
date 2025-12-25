@@ -5,6 +5,8 @@ import {
   PrescriptionDetail,
   PrescriptionListResponse,
   PrescriptionUploadResponse,
+  PrescriptionRegisterRequest,
+  PrescriptionRegisterResponse,
 } from '../types';
 import { API_BASE_URL, TEMP_USER_ID } from '../constants';
 
@@ -89,5 +91,56 @@ export const prescriptionService = {
   // 처방전 삭제
   async delete(prescriptionId: number): Promise<void> {
     await api.delete(`/prescriptions/${prescriptionId}`);
+  },
+
+  // 처방전 + 약물 일괄 등록
+  async register(
+    imageUri: string,
+    request: PrescriptionRegisterRequest
+  ): Promise<PrescriptionRegisterResponse> {
+    const formData = new FormData();
+
+    // 이미지 파일 추가
+    const filename = imageUri.split('/').pop() || 'prescription.png';
+    const match = /\.(\w+)$/.exec(filename);
+    const type = match ? `image/${match[1]}` : 'image/png';
+
+    formData.append('file', {
+      uri: imageUri,
+      name: filename,
+      type,
+    } as any);
+
+    // JSON 데이터 추가
+    formData.append('data', JSON.stringify(request));
+
+    const registerUrl = `${API_BASE_URL}/prescriptions/register?userId=${TEMP_USER_ID}`;
+    console.log('[Register] URL:', registerUrl);
+    console.log('[Register] Request:', JSON.stringify(request, null, 2));
+
+    const response = await fetch(registerUrl, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+
+    console.log('[Register] Response status:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Register] Error response:', errorText);
+      throw new Error('처방전 등록에 실패했습니다.');
+    }
+
+    const data = await response.json() as ApiResponse<PrescriptionRegisterResponse>;
+    console.log('[Register] Response data:', JSON.stringify(data, null, 2));
+
+    if (!data.isSuccess || !data.result) {
+      throw new Error(data.message || '처방전 등록에 실패했습니다.');
+    }
+
+    return data.result;
   },
 };
