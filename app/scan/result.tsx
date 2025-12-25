@@ -21,7 +21,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Button, Card, Typography } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useMedicationStore } from '../../stores';
-import { ScannedMedication, DuplicateMedication } from '../../types';
+import { ScannedMedication, DuplicateMedication, TimingWithTime, PrescriptionRegisterRequest, RegisterMedicationInfo, MedicationTiming } from '../../types';
 import { medicationService, prescriptionService } from '../../services';
 
 // 시간 기본값 설정
@@ -177,7 +177,7 @@ function DraggableTimeSlotList({
 }
 
 export default function ResultScreen() {
-  const { currentScanResult, currentImageUri, addMedication, clearScanResult, isLoading } = useMedicationStore();
+  const { currentScanResult, currentImageUri, clearScanResult, isLoading } = useMedicationStore();
 
   // 초기 medications에 times 배열 추가 및 null 값 기본값 설정
   const [medications, setMedications] = useState<MedicationWithTimes[]>(() => {
@@ -359,56 +359,59 @@ export default function ResultScreen() {
     await registerMedications(selectedMedications);
   };
 
-  // 실제 약물 등록 함수
+  // 실제 약물 등록 함수 (통합 API 사용)
   const registerMedications = async (medsToRegister: MedicationWithTimes[]) => {
     try {
-      let prescriptionId: number | undefined;
-
-      // 1. 처방전 이미지 업로드 (이미지가 있는 경우에만)
-      if (currentImageUri) {
-        const uploadResult = await prescriptionService.uploadImage(currentImageUri);
-        if (uploadResult?.prescriptionId) {
-          prescriptionId = uploadResult.prescriptionId;
-          console.log('[Register] Prescription uploaded, id:', prescriptionId);
-
-          // 2. 스캔 결과의 메타정보로 처방전 업데이트
-          if (currentScanResult) {
-            await prescriptionService.update(prescriptionId, {
-              patientName: currentScanResult.patientName || undefined,
-              hospitalName: currentScanResult.hospitalName || undefined,
-              diagnosis: currentScanResult.diagnosis || undefined,
-              durationDays: currentScanResult.durationDays || undefined,
-            });
-            console.log('[Register] Prescription metadata updated');
-          }
-        }
+      if (!currentImageUri) {
+        throw new Error('처방전 이미지가 없습니다.');
       }
 
-      // 3. 약물 등록 (처방전 ID와 연결)
-      for (const med of medsToRegister) {
-        await addMedication({
+      const today = new Date().toISOString().split('T')[0];
+
+      // 약물 정보를 통합 API 형식으로 변환
+      const medications: RegisterMedicationInfo[] = medsToRegister.map((med) => {
+        // times 배열과 timings 배열을 매핑하여 TimingWithTime 배열 생성
+        const timingsWithTime: TimingWithTime[] = med.times.map((time, idx) => ({
+          timing: med.timings[idx] || med.timings[0] || 'AFTER_BREAKFAST' as MedicationTiming,
+          time: time,
+        }));
+
+        return {
           drugItemSeq: med.drugItemSeq,
           customDrugName: med.drugItemSeq ? undefined : med.name,
           dosage: med.dosage,
           frequency: med.frequency,
-          reminderTimes: med.times,
-          timings: med.timings,
+          timings: timingsWithTime,
           durationDays: med.durationDays,
           totalCount: med.totalCount,
-          startDate: new Date().toISOString().split('T')[0],
-          prescriptionId,
-        });
-      }
+          startDate: today,
+        };
+      });
+
+      // 통합 등록 요청 생성
+      const request: PrescriptionRegisterRequest = {
+        prescriptionDate: today,
+        patientName: currentScanResult?.patientName || undefined,
+        hospitalName: currentScanResult?.hospitalName || undefined,
+        diagnosis: currentScanResult?.diagnosis || undefined,
+        durationDays: currentScanResult?.durationDays || undefined,
+        medications,
+      };
+
+      // 한번의 API 호출로 처방전 + 약물 일괄 등록
+      const result = await prescriptionService.register(currentImageUri, request);
+      console.log('[Register] Success:', result);
 
       // 스캔 결과 정리 후 홈으로 이동
       clearScanResult();
-      Alert.alert('등록 완료', '약이 성공적으로 등록되었어요!', [
+      Alert.alert('등록 완료', `${result.totalMedicationCount}개의 약이 성공적으로 등록되었어요!`, [
         {
           text: '확인',
           onPress: () => router.replace('/(tabs)'),
         },
       ]);
     } catch (error) {
+      console.error('[Register] Error:', error);
       // 에러 시에도 스캔 결과 정리 (재시도 시 새로운 스캔 유도)
       clearScanResult();
       Alert.alert('오류', '약 등록에 실패했어요. 다시 촬영해주세요.', [

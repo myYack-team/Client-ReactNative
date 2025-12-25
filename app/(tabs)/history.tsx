@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, memo } from 'react';
+import React, { useState, useCallback, useMemo, memo, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -99,6 +99,9 @@ const PrescriptionCard = memo(({ prescription, onPress }: PrescriptionCardProps)
   );
 });
 
+// 캐시 최대 개수
+const MAX_CACHE_SIZE = 5;
+
 export default function PrescriptionScreen() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -106,6 +109,9 @@ export default function PrescriptionScreen() {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [selectedPrescription, setSelectedPrescription] = useState<PrescriptionDetail | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+
+  // 처방전 상세 캐시 (최대 5개, LRU 방식)
+  const detailCacheRef = useRef<Map<number, PrescriptionDetail>>(new Map());
 
   const loadPrescriptions = useCallback(async (isRefresh = false) => {
     try {
@@ -139,8 +145,34 @@ export default function PrescriptionScreen() {
   }, [loadPrescriptions]);
 
   const openDetail = async (prescription: Prescription) => {
+    const cache = detailCacheRef.current;
+
+    // 캐시에서 먼저 확인
+    if (cache.has(prescription.id)) {
+      const cached = cache.get(prescription.id)!;
+      // LRU: 캐시 히트 시 순서 갱신 (삭제 후 재삽입)
+      cache.delete(prescription.id);
+      cache.set(prescription.id, cached);
+      setSelectedPrescription(cached);
+      setIsModalVisible(true);
+      return;
+    }
+
+    // 캐시에 없으면 API 호출
     try {
       const detail = await prescriptionService.getDetail(prescription.id);
+
+      // 캐시 크기 제한 (LRU: 가장 오래된 항목 제거)
+      if (cache.size >= MAX_CACHE_SIZE) {
+        const oldestKey = cache.keys().next().value;
+        if (oldestKey !== undefined) {
+          cache.delete(oldestKey);
+        }
+      }
+
+      // 새 데이터 캐시에 추가
+      cache.set(prescription.id, detail);
+
       setSelectedPrescription(detail);
       setIsModalVisible(true);
     } catch (error) {
@@ -166,6 +198,8 @@ export default function PrescriptionScreen() {
           onPress: async () => {
             try {
               await prescriptionService.delete(id);
+              // 삭제된 처방전 캐시에서 제거
+              detailCacheRef.current.delete(id);
               closeModal();
               loadPrescriptions();
             } catch (error) {

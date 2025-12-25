@@ -75,7 +75,7 @@ const generateWeekDates = () => {
 };
 
 export default function HomeScreen() {
-  const { todayData, fetchTodaySchedule, recordIntake, isLoading, fetchScheduleForDate, isLoadingSchedule: storeIsLoadingSchedule } = useMedicationStore();
+  const { todayData, fetchTodaySchedule, recordIntake, isLoading, fetchScheduleForDate, isLoadingSchedule: storeIsLoadingSchedule, fetchMonthlySummary } = useMedicationStore();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [currentMonth, setCurrentMonth] = useState({
     year: new Date().getFullYear(),
@@ -128,7 +128,8 @@ export default function HomeScreen() {
 
   const loadMonthlySummary = async (year: number, month: number) => {
     try {
-      const data = await intakeService.getMonthlySummary(year, month);
+      // store의 캐싱 함수 사용
+      const data = await fetchMonthlySummary(year, month);
       setMonthlySummary(data.days);
       updateMarkedDates(data.days);
     } catch (error) {
