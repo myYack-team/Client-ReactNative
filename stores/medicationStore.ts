@@ -20,6 +20,8 @@ interface MedicationState {
   medications: MedicationListItem[];
   // 오늘의 복약 현황
   todayData: TodayResponse | null;
+  // 오늘 스케줄 캐시 만료 시간
+  todayDataExpiry: number;
   // 처방전 스캔 결과
   currentScanResult: ScanResult | null;
   // 스캔한 이미지 URI (등록 시 업로드용)
@@ -67,6 +69,7 @@ interface MedicationState {
 export const useMedicationStore = create<MedicationState>((set, get) => ({
   medications: [],
   todayData: null,
+  todayDataExpiry: 0,
   currentScanResult: null,
   currentImageUri: null,
   currentPrescriptionId: null,
@@ -92,10 +95,22 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
   },
 
   fetchTodaySchedule: async () => {
+    const { todayData, todayDataExpiry } = get();
+    const now = Date.now();
+
+    // 캐시가 유효하면 API 호출 건너뜀
+    if (todayData && todayDataExpiry > now) {
+      return;
+    }
+
     try {
       set({ isLoading: true, error: null });
-      const todayData = await medicationService.getTodaySchedule();
-      set({ todayData, isLoading: false });
+      const newTodayData = await medicationService.getTodaySchedule();
+      set({
+        todayData: newTodayData,
+        todayDataExpiry: now + CACHE_DURATION,
+        isLoading: false,
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : '오늘의 약을 불러오는데 실패했습니다.';
       set({ isLoading: false, error: message });
@@ -235,6 +250,8 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
       // 성공 시 캐시 무효화 (낙관적 업데이트가 이미 적용되어 있으므로 fetchTodaySchedule 호출 불필요)
       const today = new Date().toISOString().split('T')[0];
       get().invalidateCache(today);
+      // 오늘 스케줄 캐시도 무효화
+      set({ todayDataExpiry: 0 });
     } catch (error) {
       // 실패 시 롤백
       console.error('Failed to record intake, rolling back:', error);
