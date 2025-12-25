@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,6 +8,7 @@ import {
   Alert,
   Image,
   Platform,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -20,7 +21,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Button, Card, Typography } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useMedicationStore } from '../../stores';
-import { ScannedMedication } from '../../types';
+import { ScannedMedication, DuplicateMedication } from '../../types';
+import { medicationService, prescriptionService } from '../../services';
 
 // 시간 기본값 설정
 const DEFAULT_TIMES: Record<number, string[]> = {
@@ -175,7 +177,7 @@ function DraggableTimeSlotList({
 }
 
 export default function ResultScreen() {
-  const { currentScanResult, addMedication, clearScanResult, isLoading } = useMedicationStore();
+  const { currentScanResult, currentImageUri, addMedication, clearScanResult, isLoading } = useMedicationStore();
 
   // 초기 medications에 times 배열 추가 및 null 값 기본값 설정
   const [medications, setMedications] = useState<MedicationWithTimes[]>(() => {
@@ -189,6 +191,64 @@ export default function ResultScreen() {
       times: DEFAULT_TIMES[med.frequency ?? 1] || DEFAULT_TIMES[1],
     }));
   });
+
+  // 체크박스 상태 (모든 약물이 기본적으로 체크됨)
+  const [checkedItems, setCheckedItems] = useState<boolean[]>(() => {
+    if (!currentScanResult?.medications) return [];
+    return currentScanResult.medications.map(() => true);
+  });
+
+  // 중복 약물 정보
+  const [duplicates, setDuplicates] = useState<DuplicateMedication[]>([]);
+  const [duplicatesLoading, setDuplicatesLoading] = useState(false);
+
+  // 중복 확인 모달 상태
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+
+  // 중복 약물 체크 API 호출
+  useEffect(() => {
+    const checkDuplicates = async () => {
+      if (!currentScanResult?.medications || currentScanResult.medications.length === 0) return;
+
+      // drugItemSeq가 있는 약물들만 필터링
+      const drugItemSeqs = currentScanResult.medications
+        .filter((med) => med.drugItemSeq)
+        .map((med) => med.drugItemSeq!);
+
+      if (drugItemSeqs.length === 0) return;
+
+      setDuplicatesLoading(true);
+      try {
+        const result = await medicationService.checkDuplicates(drugItemSeqs);
+        setDuplicates(result.duplicates);
+      } catch (error) {
+        console.error('중복 체크 실패:', error);
+      } finally {
+        setDuplicatesLoading(false);
+      }
+    };
+
+    checkDuplicates();
+  }, [currentScanResult]);
+
+  // 특정 약물이 중복인지 확인
+  const getDuplicateInfo = (drugItemSeq?: string): DuplicateMedication | undefined => {
+    if (!drugItemSeq) return undefined;
+    return duplicates.find((d) => d.drugItemSeq === drugItemSeq);
+  };
+
+  // 체크박스 토글
+  const toggleCheck = (index: number) => {
+    setCheckedItems((prev) => prev.map((checked, i) => (i === index ? !checked : checked)));
+  };
+
+  // 선택된 약물 중 중복인 것들
+  const getSelectedDuplicates = (): DuplicateMedication[] => {
+    return medications
+      .filter((med, index) => checkedItems[index] && med.drugItemSeq)
+      .map((med) => getDuplicateInfo(med.drugItemSeq))
+      .filter((d): d is DuplicateMedication => d !== undefined);
+  };
 
   const updateMedication = (index: number, field: keyof MedicationWithTimes, value: any) => {
     setMedications((prev) =>
@@ -254,6 +314,7 @@ export default function ResultScreen() {
 
   const removeMedication = (index: number) => {
     setMedications((prev) => prev.filter((_, i) => i !== index));
+    setCheckedItems((prev) => prev.filter((_, i) => i !== index));
   };
 
   const addNewMedication = () => {
@@ -267,23 +328,64 @@ export default function ResultScreen() {
       times: DEFAULT_TIMES[3],
     };
     setMedications((prev) => [...prev, newMed]);
+    setCheckedItems((prev) => [...prev, true]);
   };
 
   const handleSubmit = async () => {
-    if (medications.length === 0) {
-      Alert.alert('오류', '등록할 약이 없어요.');
+    // 체크된 약물만 필터링
+    const selectedMedications = medications.filter((_, index) => checkedItems[index]);
+
+    if (selectedMedications.length === 0) {
+      Alert.alert('오류', '등록할 약을 선택해주세요.');
       return;
     }
 
     // 이름이 비어있는 약이 있는지 확인
-    const emptyNameMed = medications.find((med) => !med.name.trim());
+    const emptyNameMed = selectedMedications.find((med) => !med.name.trim());
     if (emptyNameMed) {
       Alert.alert('오류', '약 이름을 입력해주세요.');
       return;
     }
 
+    // 선택된 약물 중 중복인 것이 있는지 확인
+    const selectedDuplicates = getSelectedDuplicates();
+    if (selectedDuplicates.length > 0) {
+      // 중복 확인 모달 표시
+      setShowDuplicateModal(true);
+      return;
+    }
+
+    // 중복 없으면 바로 등록
+    await registerMedications(selectedMedications);
+  };
+
+  // 실제 약물 등록 함수
+  const registerMedications = async (medsToRegister: MedicationWithTimes[]) => {
     try {
-      for (const med of medications) {
+      let prescriptionId: number | undefined;
+
+      // 1. 처방전 이미지 업로드 (이미지가 있는 경우에만)
+      if (currentImageUri) {
+        const uploadResult = await prescriptionService.uploadImage(currentImageUri);
+        if (uploadResult?.prescriptionId) {
+          prescriptionId = uploadResult.prescriptionId;
+          console.log('[Register] Prescription uploaded, id:', prescriptionId);
+
+          // 2. 스캔 결과의 메타정보로 처방전 업데이트
+          if (currentScanResult) {
+            await prescriptionService.update(prescriptionId, {
+              patientName: currentScanResult.patientName || undefined,
+              hospitalName: currentScanResult.hospitalName || undefined,
+              diagnosis: currentScanResult.diagnosis || undefined,
+              durationDays: currentScanResult.durationDays || undefined,
+            });
+            console.log('[Register] Prescription metadata updated');
+          }
+        }
+      }
+
+      // 3. 약물 등록 (처방전 ID와 연결)
+      for (const med of medsToRegister) {
         await addMedication({
           drugItemSeq: med.drugItemSeq,
           customDrugName: med.drugItemSeq ? undefined : med.name,
@@ -294,6 +396,7 @@ export default function ResultScreen() {
           durationDays: med.durationDays,
           totalCount: med.totalCount,
           startDate: new Date().toISOString().split('T')[0],
+          prescriptionId,
         });
       }
 
@@ -315,6 +418,13 @@ export default function ResultScreen() {
         },
       ]);
     }
+  };
+
+  // 중복 확인 후 등록 진행
+  const handleConfirmDuplicate = async () => {
+    setShowDuplicateModal(false);
+    const selectedMedications = medications.filter((_, index) => checkedItems[index]);
+    await registerMedications(selectedMedications);
   };
 
   if (!currentScanResult || medications.length === 0) {
@@ -349,8 +459,47 @@ export default function ResultScreen() {
           인식된 약 정보
         </Typography>
 
-        {medications.map((med, index) => (
-          <Card key={index} style={styles.medicationCard} variant="elevated">
+        {medications.map((med, index) => {
+          const duplicateInfo = getDuplicateInfo(med.drugItemSeq);
+          const isChecked = checkedItems[index];
+
+          return (
+          <Card key={index} style={isChecked ? styles.medicationCard : [styles.medicationCard, styles.medicationCardUnchecked]} variant="elevated">
+            {/* 체크박스 + 중복 뱃지 영역 */}
+            <View style={styles.cardTopRow}>
+              {/* 체크박스 */}
+              <TouchableOpacity
+                style={styles.checkboxContainer}
+                onPress={() => toggleCheck(index)}
+              >
+                <View style={[styles.checkbox, isChecked && styles.checkboxChecked]}>
+                  {isChecked && (
+                    <Typography variant="caption" color="#FFFFFF">
+                      ✓
+                    </Typography>
+                  )}
+                </View>
+              </TouchableOpacity>
+
+              {/* 중복 뱃지 */}
+              {duplicateInfo && (
+                <View style={styles.duplicateBadge}>
+                  <Typography variant="caption" color="#FFFFFF" style={styles.duplicateBadgeText}>
+                    복용 중
+                  </Typography>
+                </View>
+              )}
+            </View>
+
+            {/* 중복 약물 상세 정보 */}
+            {duplicateInfo && (
+              <View style={styles.duplicateInfo}>
+                <Typography variant="caption" color={Colors.warning}>
+                  이미 복용 중인 약물입니다 (남은 수량: {duplicateInfo.remainingCount}개, 남은 일수: {duplicateInfo.daysLeft}일)
+                </Typography>
+              </View>
+            )}
+
             {/* 상단: 이미지 + 이름 + 효능 */}
             <View style={styles.drugHeader}>
               <View style={styles.drugImageContainer}>
@@ -479,7 +628,8 @@ export default function ResultScreen() {
               />
             </View>
           </Card>
-        ))}
+          );
+        })}
 
         {/* 약 추가하기 버튼 */}
         <TouchableOpacity style={styles.addMedicationButton} onPress={addNewMedication}>
@@ -502,6 +652,50 @@ export default function ResultScreen() {
           loading={isLoading}
         />
       </View>
+
+      {/* 중복 확인 모달 */}
+      <Modal
+        visible={showDuplicateModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDuplicateModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Typography variant="h3" style={styles.modalTitle}>
+              중복 약물 확인
+            </Typography>
+            <Typography variant="body" style={styles.modalMessage}>
+              {(() => {
+                const dups = getSelectedDuplicates();
+                if (dups.length === 0) return '';
+                if (dups.length === 1) {
+                  return `"${dups[0].drugName}"은(는) 이미 복용 중인 약물입니다.\n그래도 등록하시겠습니까?`;
+                }
+                return `"${dups[0].drugName}" 외 ${dups.length - 1}개의 약물이 이미 복용 중입니다.\n그래도 등록하시겠습니까?`;
+              })()}
+            </Typography>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={() => setShowDuplicateModal(false)}
+              >
+                <Typography variant="body" color={Colors.textSecondary}>
+                  취소
+                </Typography>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonConfirm]}
+                onPress={handleConfirmDuplicate}
+              >
+                <Typography variant="body" color="#FFFFFF">
+                  확인
+                </Typography>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
     </GestureHandlerRootView>
   );
@@ -717,5 +911,98 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
+  },
+  // 체크박스 관련 스타일
+  cardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 12,
+  },
+  checkboxContainer: {
+    padding: 4,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  medicationCardUnchecked: {
+    opacity: 0.5,
+    backgroundColor: Colors.backgroundSecondary,
+  },
+  // 중복 뱃지 스타일
+  duplicateBadge: {
+    backgroundColor: Colors.warning,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  duplicateBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  duplicateInfo: {
+    backgroundColor: '#FFF8E1',
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.warning,
+  },
+  // 모달 스타일
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: Colors.background,
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+    color: Colors.textSecondary,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalButtonCancel: {
+    backgroundColor: Colors.backgroundSecondary,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  modalButtonConfirm: {
+    backgroundColor: Colors.primary,
   },
 });

@@ -15,7 +15,13 @@ import { useFocusEffect } from 'expo-router';
 import { Card, Typography } from '../../components/ui';
 import { Colors, API_BASE_URL } from '../../constants';
 import { prescriptionService } from '../../services';
-import { Prescription, PrescriptionDetail } from '../../types';
+import {
+  Prescription,
+  PrescriptionDetail,
+  PrescriptionStatus,
+  PRESCRIPTION_STATUS_LABELS,
+  PRESCRIPTION_STATUS_COLORS,
+} from '../../types';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 60) / 2;
@@ -41,39 +47,57 @@ interface PrescriptionCardProps {
   onPress: () => void;
 }
 
-const PrescriptionCard = memo(({ prescription, onPress }: PrescriptionCardProps) => (
-  <TouchableOpacity
-    style={styles.prescriptionCard}
-    onPress={onPress}
-    activeOpacity={0.8}
-  >
-    <Image
-      source={{ uri: getImageUrl(prescription.imageUrl) }}
-      style={styles.thumbnailImage}
-      contentFit="cover"
-      cachePolicy="memory-disk"
-      transition={200}
-      placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
-    />
-    <View style={styles.cardInfo}>
-      <Typography variant="bodySmall" numberOfLines={1}>
-        {formatDate(prescription.prescriptionDate)}
-      </Typography>
-      {prescription.hospitalName && (
-        <Typography
-          variant="caption"
-          color={Colors.textSecondary}
-          numberOfLines={1}
-        >
-          {prescription.hospitalName}
+const PrescriptionCard = memo(({ prescription, onPress }: PrescriptionCardProps) => {
+  const status = prescription.status || 'IN_PROGRESS';
+  const statusColors = PRESCRIPTION_STATUS_COLORS[status];
+  const statusLabel = PRESCRIPTION_STATUS_LABELS[status];
+
+  return (
+    <TouchableOpacity
+      style={styles.prescriptionCard}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      <View style={styles.imageContainer}>
+        <Image
+          source={{ uri: getImageUrl(prescription.imageUrl) }}
+          style={styles.thumbnailImage}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={200}
+          placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+        />
+        {/* 복용 상태 뱃지 */}
+        <View style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}>
+          <Typography
+            variant="caption"
+            style={{ fontSize: 10, fontWeight: '600' }}
+            color={statusColors.text}
+          >
+            {statusLabel}
+          </Typography>
+        </View>
+      </View>
+      <View style={styles.cardInfo}>
+        <Typography variant="bodySmall" numberOfLines={1}>
+          {formatDate(prescription.prescriptionDate)}
         </Typography>
-      )}
-      <Typography variant="caption" color={Colors.primary}>
-        약 {prescription.medicationCount}개
-      </Typography>
-    </View>
-  </TouchableOpacity>
-));
+        {prescription.hospitalName && (
+          <Typography
+            variant="caption"
+            color={Colors.textSecondary}
+            numberOfLines={1}
+          >
+            {prescription.hospitalName}
+          </Typography>
+        )}
+        <Typography variant="caption" color={Colors.primary}>
+          약 {prescription.medicationCount}개
+        </Typography>
+      </View>
+    </TouchableOpacity>
+  );
+});
 
 export default function PrescriptionScreen() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
@@ -225,6 +249,7 @@ export default function PrescriptionScreen() {
 
           {selectedPrescription && (
             <ScrollView style={styles.modalContent}>
+              {/* 처방전 이미지 */}
               <Image
                 source={{ uri: getImageUrl(selectedPrescription.imageUrl) }}
                 style={styles.detailImage}
@@ -232,9 +257,31 @@ export default function PrescriptionScreen() {
                 cachePolicy="memory-disk"
               />
 
+              {/* 처방전 정보 */}
               <View style={styles.detailInfo}>
+                {/* 복용 상태 뱃지 */}
+                {selectedPrescription.status && (
+                  <View style={styles.statusRow}>
+                    <View
+                      style={[
+                        styles.detailStatusBadge,
+                        { backgroundColor: PRESCRIPTION_STATUS_COLORS[selectedPrescription.status].bg },
+                      ]}
+                    >
+                      <Typography
+                        variant="bodySmall"
+                        style={{ fontWeight: '600' }}
+                        color={PRESCRIPTION_STATUS_COLORS[selectedPrescription.status].text}
+                      >
+                        {PRESCRIPTION_STATUS_LABELS[selectedPrescription.status]}
+                      </Typography>
+                    </View>
+                  </View>
+                )}
+
+                {/* 처방일 */}
                 <View style={styles.infoRow}>
-                  <Typography variant="body" color={Colors.textSecondary}>
+                  <Typography variant="body" style={styles.infoLabel}>
                     처방일
                   </Typography>
                   <Typography variant="body">
@@ -242,10 +289,23 @@ export default function PrescriptionScreen() {
                   </Typography>
                 </View>
 
+                {/* 환자명 */}
+                {selectedPrescription.patientName && (
+                  <View style={styles.infoRow}>
+                    <Typography variant="body" style={styles.infoLabel}>
+                      환자명
+                    </Typography>
+                    <Typography variant="body">
+                      {selectedPrescription.patientName}
+                    </Typography>
+                  </View>
+                )}
+
+                {/* 병원명 */}
                 {selectedPrescription.hospitalName && (
                   <View style={styles.infoRow}>
-                    <Typography variant="body" color={Colors.textSecondary}>
-                      병원명
+                    <Typography variant="body" style={styles.infoLabel}>
+                      병원
                     </Typography>
                     <Typography variant="body">
                       {selectedPrescription.hospitalName}
@@ -253,27 +313,121 @@ export default function PrescriptionScreen() {
                   </View>
                 )}
 
+                {/* 처방의사 */}
+                {selectedPrescription.doctorName && (
+                  <View style={styles.infoRow}>
+                    <Typography variant="body" style={styles.infoLabel}>
+                      처방의사
+                    </Typography>
+                    <Typography variant="body">
+                      {selectedPrescription.doctorName}
+                    </Typography>
+                  </View>
+                )}
+
+                {/* 진단명 */}
+                {selectedPrescription.diagnosis && (
+                  <View style={styles.infoRow}>
+                    <Typography variant="body" style={styles.infoLabel}>
+                      진단명
+                    </Typography>
+                    <Typography variant="body" style={styles.infoValue}>
+                      {selectedPrescription.diagnosis}
+                    </Typography>
+                  </View>
+                )}
+
+                {/* 복용기간 */}
+                {selectedPrescription.durationDays && (
+                  <View style={styles.infoRow}>
+                    <Typography variant="body" style={styles.infoLabel}>
+                      복용기간
+                    </Typography>
+                    <Typography variant="body">
+                      {selectedPrescription.durationDays}일
+                    </Typography>
+                  </View>
+                )}
+
+                {/* 메모 */}
                 {selectedPrescription.notes && (
                   <View style={styles.infoRow}>
-                    <Typography variant="body" color={Colors.textSecondary}>
+                    <Typography variant="body" style={styles.infoLabel}>
                       메모
                     </Typography>
-                    <Typography variant="body">{selectedPrescription.notes}</Typography>
+                    <Typography variant="body" style={styles.infoValue}>
+                      {selectedPrescription.notes}
+                    </Typography>
                   </View>
                 )}
               </View>
 
+              {/* 연결된 약품 목록 */}
               {selectedPrescription.medications.length > 0 && (
                 <View style={styles.medicationsSection}>
                   <Typography variant="h3" style={styles.sectionTitle}>
                     연결된 약품 ({selectedPrescription.medications.length})
                   </Typography>
                   {selectedPrescription.medications.map((med) => (
-                    <Card key={med.id} style={styles.medicationCard}>
-                      <Typography variant="body">{med.drugName}</Typography>
-                      <Typography variant="caption" color={Colors.textSecondary}>
-                        {med.dosage}정 · 하루 {med.frequency}회 · {med.durationDays}일분
-                      </Typography>
+                    <Card key={med.id} style={styles.medicationCard} variant="outlined">
+                      <View style={styles.medCardHeader}>
+                        {med.imageUrl ? (
+                          <Image
+                            source={{ uri: med.imageUrl }}
+                            style={styles.medImage}
+                            contentFit="cover"
+                            cachePolicy="memory-disk"
+                          />
+                        ) : (
+                          <View style={styles.medImagePlaceholder}>
+                            <Typography variant="caption" color={Colors.textSecondary}>
+                              💊
+                            </Typography>
+                          </View>
+                        )}
+                        <View style={styles.medInfo}>
+                          <Typography variant="body" style={{ fontWeight: '600' }} numberOfLines={2}>
+                            {med.displayName || med.drugName}
+                          </Typography>
+                          <Typography variant="caption" color={Colors.textSecondary}>
+                            {med.dosage} · 하루 {med.frequency}회
+                            {med.durationDays ? ` · ${med.durationDays}일분` : ''}
+                          </Typography>
+                        </View>
+                      </View>
+                      {/* 잔여량 및 알림 정보 */}
+                      <View style={styles.medDetails}>
+                        {med.remainingCount !== undefined && (
+                          <View style={styles.medDetailItem}>
+                            <Typography variant="caption" color={Colors.textSecondary}>
+                              남은 약
+                            </Typography>
+                            <Typography variant="bodySmall" color={Colors.primary}>
+                              {med.remainingCount}개
+                            </Typography>
+                          </View>
+                        )}
+                        {med.daysLeft !== undefined && med.daysLeft > 0 && (
+                          <View style={styles.medDetailItem}>
+                            <Typography variant="caption" color={Colors.textSecondary}>
+                              남은 일수
+                            </Typography>
+                            <Typography variant="bodySmall" color={Colors.primary}>
+                              {med.daysLeft}일
+                            </Typography>
+                          </View>
+                        )}
+                        {med.reminders && med.reminders.length > 0 && (
+                          <View style={styles.medDetailItem}>
+                            <Typography variant="caption" color={Colors.textSecondary}>
+                              알림
+                            </Typography>
+                            <Typography variant="bodySmall" color={Colors.primary}>
+                              {med.reminders.filter((r) => r.enabled).map((r) => r.time).join(', ')}
+                            </Typography>
+                          </View>
+                        )}
+                      </View>
                     </Card>
                   ))}
                 </View>
@@ -332,10 +486,25 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  imageContainer: {
+    position: 'relative',
+  },
   thumbnailImage: {
     width: '100%',
     height: CARD_WIDTH * 0.75,
     backgroundColor: Colors.backgroundSecondary,
+  },
+  statusBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: '600',
   },
   cardInfo: {
     padding: 12,
@@ -364,12 +533,31 @@ const styles = StyleSheet.create({
     padding: 20,
     backgroundColor: Colors.white,
   },
+  statusRow: {
+    marginBottom: 12,
+  },
+  detailStatusBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: Colors.divider,
+  },
+  infoLabel: {
+    fontWeight: '600',
+    color: Colors.textSecondary,
+    minWidth: 80,
+  },
+  infoValue: {
+    flex: 1,
+    textAlign: 'right',
   },
   medicationsSection: {
     padding: 20,
@@ -378,7 +566,40 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   medicationCard: {
-    marginBottom: 8,
-    padding: 12,
+    marginBottom: 12,
+    padding: 16,
+  },
+  medCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  medImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: Colors.backgroundSecondary,
+  },
+  medImagePlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    backgroundColor: Colors.backgroundSecondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  medInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  medDetails: {
+    flexDirection: 'row',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.divider,
+    gap: 16,
+  },
+  medDetailItem: {
+    alignItems: 'center',
   },
 });

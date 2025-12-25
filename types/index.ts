@@ -288,6 +288,11 @@ export interface ScanResult {
   confidence: 'high' | 'medium' | 'low';
   medications: ScannedMedication[];
   notes: string | null;
+  // 처방전 메타정보 (AI 추출)
+  patientName?: string | null;
+  hospitalName?: string | null;
+  diagnosis?: string | null;
+  durationDays?: number | null;
 }
 
 export interface ScannedMedication {
@@ -319,26 +324,61 @@ export interface CreateMedicationRequest {
   reminderTimes?: string[]; // 알림 시간 목록
 }
 
+// 처방전 복용 상태
+export type PrescriptionStatus = 'UPCOMING' | 'IN_PROGRESS' | 'COMPLETED';
+
+// 처방전 복용 상태 라벨
+export const PRESCRIPTION_STATUS_LABELS: Record<PrescriptionStatus, string> = {
+  UPCOMING: '복용 예정',
+  IN_PROGRESS: '복용 중',
+  COMPLETED: '복용 완료',
+};
+
+// 처방전 복용 상태 색상
+export const PRESCRIPTION_STATUS_COLORS: Record<PrescriptionStatus, { bg: string; text: string }> = {
+  UPCOMING: { bg: '#EEF2FF', text: '#4F46E5' },       // 인디고
+  IN_PROGRESS: { bg: '#DCFCE7', text: '#16A34A' },   // 초록
+  COMPLETED: { bg: '#F3F4F6', text: '#6B7280' },     // 회색
+};
+
 // 처방전
 export interface Prescription {
   id: number;
   imageUrl: string;
   prescriptionDate: string;
+  patientName?: string;
   hospitalName?: string;
+  doctorName?: string;
+  diagnosis?: string;
+  durationDays?: number;
+  endDate?: string;
+  status?: PrescriptionStatus;
   notes?: string;
   medicationCount: number;
   createdAt: string;
 }
 
+// 처방전 약품 요약 (리마인더 포함)
+export interface PrescriptionMedicationSummary {
+  id: number;
+  drugName: string;
+  displayName?: string;
+  imageUrl?: string;
+  dosage: string;
+  frequency: number;
+  durationDays?: number;
+  remainingCount?: number;
+  daysLeft?: number;
+  reminders?: {
+    id: number;
+    time: string;
+    enabled: boolean;
+  }[];
+}
+
 // 처방전 상세 (연결된 약품 포함)
 export interface PrescriptionDetail extends Prescription {
-  medications: {
-    id: number;
-    drugName: string;
-    dosage: string;
-    frequency: number;
-    durationDays: number;
-  }[];
+  medications: PrescriptionMedicationSummary[];
 }
 
 // 처방전 목록 응답
@@ -483,4 +523,26 @@ export interface SnoozeResponse {
   id: number;
   snoozeUntil: string;
   snoozeMinutes: number;
+}
+
+// ========== 중복 약물 체크 관련 타입 ==========
+
+// 중복 약물 체크 요청
+export interface DuplicateCheckRequest {
+  drugItemSeqs: string[];
+}
+
+// 중복된 약물 정보
+export interface DuplicateMedication {
+  drugItemSeq: string;
+  drugName: string;
+  existingMedicationId: number;
+  remainingCount: number;
+  daysLeft: number;
+}
+
+// 중복 약물 체크 응답
+export interface DuplicateCheckResponse {
+  duplicates: DuplicateMedication[];
+  duplicateCount: number;
 }
