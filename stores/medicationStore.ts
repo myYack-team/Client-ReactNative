@@ -39,7 +39,7 @@ interface MedicationState {
   cacheExpiry: Map<string, number>;
   isLoadingSchedule: boolean;
 
-  // 월별 요약 캐시
+  // 월별 복약 상태 캐시 (캘린더용)
   monthlySummaryCache: Map<string, MonthlySummaryResponse>;
   monthlySummaryCacheExpiry: Map<string, number>;
 
@@ -319,7 +319,7 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
     set({ scheduleCache: newCache, cacheExpiry: newExpiry });
   },
 
-  // 월별 요약 가져오기 (캐시 적용)
+  // 월별 복약 상태 가져오기 (캐시 적용, 캘린더용)
   fetchMonthlySummary: async (year: number, month: number) => {
     const { monthlySummaryCache, monthlySummaryCacheExpiry } = get();
     const now = Date.now();
@@ -356,7 +356,7 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
     }
   },
 
-  // 월별 요약 캐시 무효화
+  // 월별 복약 상태 캐시 무효화
   invalidateMonthlySummary: (yearMonth?: string) => {
     const { monthlySummaryCache, monthlySummaryCacheExpiry } = get();
     const newCache = new Map(monthlySummaryCache);
