@@ -12,6 +12,7 @@ import {
   DrugInfo,
   MonthlySummaryResponse,
   DaySummary,
+  DuplicateCheckResponse,
 } from '../types';
 
 // 현재 날짜 형식
@@ -321,6 +322,29 @@ export const mockMedicationService = {
   async getTodaySchedule(): Promise<TodayResponse> {
     await delay(300);
     return mockTodayResponse;
+  },
+
+  async checkDuplicates(drugItemSeqs: string[]): Promise<DuplicateCheckResponse> {
+    await delay(300);
+    // Mock: 첫 번째 약물이 중복되었다고 가정
+    const duplicates = drugItemSeqs
+      .filter(seq => mockMedicationsList.some(med =>
+        mockMedications[med.id]?.drugInfo?.itemSeq === seq
+      ))
+      .map(seq => {
+        const med = Object.values(mockMedications).find(m => m.drugInfo?.itemSeq === seq);
+        return {
+          drugItemSeq: seq,
+          drugName: med?.drugName || '알 수 없는 약',
+          existingMedicationId: med?.id || 0,
+          remainingCount: med?.remainingCount || 0,
+          daysLeft: Math.ceil((med?.remainingCount || 0) / ((med?.frequency || 1) * (med?.dosage || 1))),
+        };
+      });
+    return {
+      duplicates,
+      duplicateCount: duplicates.length,
+    };
   },
 };
 

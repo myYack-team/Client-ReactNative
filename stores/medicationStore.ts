@@ -21,6 +21,8 @@ interface MedicationState {
   todayData: TodayResponse | null;
   // 처방전 스캔 결과
   currentScanResult: ScanResult | null;
+  // 스캔한 이미지 URI (등록 시 업로드용)
+  currentImageUri: string | null;
   // 현재 처리 중인 처방전 ID
   currentPrescriptionId: number | null;
   // 로딩/에러 상태
@@ -59,6 +61,7 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
   medications: [],
   todayData: null,
   currentScanResult: null,
+  currentImageUri: null,
   currentPrescriptionId: null,
   isLoading: false,
   error: null,
@@ -107,18 +110,14 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
     set({ isLoading: true, error: null, scanError: null });
 
     try {
-      // 1. 처방전 이미지를 서버에 업로드 (저장용)
-      const uploadResult = await prescriptionService.uploadImage(imageUri);
-      if (!uploadResult?.prescriptionId) {
-        throw new Error('이미지 업로드에 실패했습니다.');
-      }
-      const prescriptionId = uploadResult.prescriptionId;
-      set({ currentPrescriptionId: prescriptionId });
-      console.log('[Store] Prescription uploaded, id:', prescriptionId);
-
-      // 2. 이미지 분석 (AI 스캔)
+      // AI 스캔만 수행 (이미지 업로드는 등록 시점에 수행)
       const result = await medicationService.scanPrescription(imageUri);
-      set({ currentScanResult: result, isLoading: false });
+      set({
+        currentScanResult: result,
+        currentImageUri: imageUri,  // 나중에 등록할 때 사용
+        isLoading: false,
+      });
+      console.log('[Store] Scan completed, imageUri saved for later upload');
       return result;
     } catch (error: any) {
       const message = error.message || '처방전 스캔에 실패했습니다.';
@@ -134,8 +133,8 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
 
-      // 현재 처방전 ID가 있으면 약품에 연결
-      const prescriptionId = get().currentPrescriptionId;
+      // medication에 prescriptionId가 있으면 그것을 사용, 없으면 store의 currentPrescriptionId 사용
+      const prescriptionId = medication.prescriptionId ?? get().currentPrescriptionId;
       const medicationWithPrescription = prescriptionId
         ? { ...medication, prescriptionId }
         : medication;
@@ -244,7 +243,7 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
     }
   },
 
-  clearScanResult: () => set({ currentScanResult: null, currentPrescriptionId: null }),
+  clearScanResult: () => set({ currentScanResult: null, currentImageUri: null, currentPrescriptionId: null }),
   clearError: () => set({ error: null }),
   clearScanError: () => set({ scanError: null }),
   clearNeedsRefresh: () => set({ needsRefresh: false }),

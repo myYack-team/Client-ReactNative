@@ -72,7 +72,15 @@ export const prescriptionService = {
   // 처방전 정보 수정
   async update(
     prescriptionId: number,
-    data: { prescriptionDate?: string; hospitalName?: string; notes?: string }
+    data: {
+      prescriptionDate?: string;
+      patientName?: string;
+      hospitalName?: string;
+      doctorName?: string;
+      diagnosis?: string;
+      durationDays?: number;
+      notes?: string;
+    }
   ): Promise<Prescription> {
     const response = await api.patch<ApiResponse<Prescription>>(`/prescriptions/${prescriptionId}`, data);
     return response.data.result!;

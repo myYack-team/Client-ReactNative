@@ -6,6 +6,7 @@ import {
   CreateMedicationRequest,
   ScanResult,
   TodayResponse,
+  DuplicateCheckResponse,
 } from '../types';
 
 export const medicationService = {
@@ -96,5 +97,25 @@ export const medicationService = {
   async getTodaySchedule(): Promise<TodayResponse> {
     const response = await api.get<ApiResponse<TodayResponse>>('/today');
     return response.data.result!;
+  },
+
+  // 중복 약물 체크
+  async checkDuplicates(drugItemSeqs: string[]): Promise<DuplicateCheckResponse> {
+    console.log('[checkDuplicates] Checking duplicates for:', drugItemSeqs);
+    try {
+      const response = await api.post<ApiResponse<DuplicateCheckResponse>>(
+        '/medications/check-duplicates',
+        { drugItemSeqs }
+      );
+      console.log('[checkDuplicates] Response:', JSON.stringify(response.data, null, 2));
+      return response.data.result!;
+    } catch (error: any) {
+      console.error('[checkDuplicates] Error:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      throw error;
+    }
   },
 };
