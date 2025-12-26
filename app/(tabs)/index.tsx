@@ -92,6 +92,9 @@ export default function HomeScreen() {
   const [selectedMedForSnooze, setSelectedMedForSnooze] = useState<ScheduleMedication | null>(null);
   const [selectedTiming, setSelectedTiming] = useState<MedicationTiming | null>(null);
 
+  // 중복 클릭 방지용 처리 중인 약물 ID 추적
+  const [processingMeds, setProcessingMeds] = useState<Set<number>>(new Set());
+
   // 선택된 날짜의 스케줄 데이터
   const [selectedDateSchedules, setSelectedDateSchedules] = useState<TodaySchedule[]>([]);
 
@@ -309,12 +312,19 @@ export default function HomeScreen() {
 
   // 개별 약물 복용 처리
   const handleTakeMedication = async (med: ScheduleMedication, timing: MedicationTiming) => {
-    if (med.taken) return;
+    if (med.taken || processingMeds.has(med.id)) return;
+
+    setProcessingMeds(prev => new Set(prev).add(med.id));
     try {
       await recordIntake([med.id], timing);
-      // 로컬 상태는 recordIntake에서 낙관적 업데이트되므로 월별 요약 재로드 불필요
     } catch (error) {
       console.error('Failed to record intake:', error);
+    } finally {
+      setProcessingMeds(prev => {
+        const next = new Set(prev);
+        next.delete(med.id);
+        return next;
+      });
     }
   };
 
@@ -342,14 +352,20 @@ export default function HomeScreen() {
 
   // 누락 처리
   const handleMissMedication = async (med: ScheduleMedication, timing: MedicationTiming) => {
-    if (med.taken) return;
+    if (med.taken || processingMeds.has(med.id)) return;
+
+    setProcessingMeds(prev => new Set(prev).add(med.id));
     try {
-      // 누락 상태로 기록 (MISSED)
       await intakeService.recordMissed(med.id, timing);
       fetchTodaySchedule();
-      // 로컬 상태 업데이트로 충분, 월별 요약 재로드 불필요
     } catch (error) {
       console.error('Failed to record missed:', error);
+    } finally {
+      setProcessingMeds(prev => {
+        const next = new Set(prev);
+        next.delete(med.id);
+        return next;
+      });
     }
   };
 
@@ -645,6 +661,7 @@ export default function HomeScreen() {
                         onSkip={() => handleSkipMedication(med, schedule.timing)}
                         onMiss={() => handleMissMedication(med, schedule.timing)}
                         onTakeNow={() => handleTakeMedication(med, schedule.timing)}
+                        disabled={processingMeds.has(med.id)}
                       />
                     )}
                   </View>
