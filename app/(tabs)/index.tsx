@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Modal, FlatList, Dimensions, Image } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Modal, FlatList, Dimensions, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
@@ -304,9 +304,9 @@ export default function HomeScreen() {
         notTakenMeds.map((m) => m.id),
         schedule.timing
       );
-      // 로컬 상태는 recordIntake에서 낙관적 업데이트되므로 월별 요약 재로드 불필요
     } catch (error) {
       console.error('Failed to record intake:', error);
+      Alert.alert('오류', '복용 기록에 실패했습니다. 다시 시도해주세요.');
     }
   };
 
@@ -319,6 +319,7 @@ export default function HomeScreen() {
       await recordIntake([med.id], timing);
     } catch (error) {
       console.error('Failed to record intake:', error);
+      Alert.alert('오류', '복용 기록에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setProcessingMeds(prev => {
         const next = new Set(prev);
@@ -343,10 +344,10 @@ export default function HomeScreen() {
       setShowSnoozeModal(false);
       setSelectedMedForSnooze(null);
       setSelectedTiming(null);
-      // 새로고침
       fetchTodaySchedule();
     } catch (error) {
       console.error('Failed to snooze:', error);
+      Alert.alert('오류', '알림 미루기에 실패했습니다. 다시 시도해주세요.');
     }
   };
 
@@ -360,6 +361,7 @@ export default function HomeScreen() {
       fetchTodaySchedule();
     } catch (error) {
       console.error('Failed to record missed:', error);
+      Alert.alert('오류', '누락 기록에 실패했습니다. 다시 시도해주세요.');
     } finally {
       setProcessingMeds(prev => {
         const next = new Set(prev);
