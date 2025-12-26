@@ -19,17 +19,10 @@ import DraggableFlatList, {
 } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Button, Card, Typography } from '../../components/ui';
-import { Colors } from '../../constants';
+import { Colors, DEFAULT_TIMES } from '../../constants';
 import { useMedicationStore } from '../../stores';
 import { ScannedMedication, DuplicateMedication, TimingWithTime, PrescriptionRegisterRequest, RegisterMedicationInfo, MedicationTiming } from '../../types';
 import { medicationService, prescriptionService } from '../../services';
-
-// 시간 기본값 설정
-const DEFAULT_TIMES: Record<number, string[]> = {
-  1: ['08:00'],
-  2: ['08:00', '18:30'],
-  3: ['08:00', '12:30', '18:30'],
-};
 
 // 시간 옵션 생성 (00:00 ~ 23:30, 30분 간격)
 const TIME_OPTIONS: string[] = [];

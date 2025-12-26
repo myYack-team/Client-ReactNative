@@ -8,6 +8,7 @@ import { Colors } from '../../constants';
 import { useMedicationStore } from '../../stores';
 import { intakeService, reminderService } from '../../services';
 import { MedicationTiming, TodaySchedule, DaySummary, DayStatus, ScheduleMedication, IntakesResponse } from '../../types';
+import { getMedDisplayName } from '../../utils';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DAY_ITEM_WIDTH = (SCREEN_WIDTH - 40) / 7; // 양쪽 padding 20씩 빼고 7등분
@@ -387,11 +388,6 @@ export default function HomeScreen() {
   // 표시할 스케줄 (선택된 날짜 기준)
   const schedules = selectedDateSchedules;
   const summary = isSelectedDateToday ? todayData?.summary : null;
-
-  // 약 이름 가져오기 (displayName 우선)
-  const getMedDisplayName = (med: ScheduleMedication): string => {
-    return med.displayName || med.name;
-  };
 
   // 선택된 날짜의 요약 정보
   const selectedDaySummary = monthlySummary.find((d) => d.date === selectedDate);

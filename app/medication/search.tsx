@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -27,12 +27,33 @@ export default function MedicationSearchScreen() {
   const [totalCount, setTotalCount] = useState(0);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
+  // 화면 이탈 시 요청 취소를 위한 AbortController
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // 컴포넌트 언마운트 시 진행 중인 요청 취소
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   const searchDrugs = async (query: string, pageNum: number = 0, append: boolean = false) => {
     if (!query.trim()) {
       setDrugs([]);
       setTotalCount(0);
       return;
     }
+
+    // 이전 요청 취소
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // 새 AbortController 생성
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
 
     if (pageNum === 0) {
       setIsLoading(true);
@@ -47,6 +68,11 @@ export default function MedicationSearchScreen() {
         size: 20,
       });
 
+      // 요청이 취소된 경우 상태 업데이트하지 않음
+      if (abortController.signal.aborted) {
+        return;
+      }
+
       if (append) {
         setDrugs((prev) => [...prev, ...result.drugs]);
       } else {
@@ -56,10 +82,17 @@ export default function MedicationSearchScreen() {
       setHasNext(result.hasNext);
       setTotalCount(result.totalCount);
     } catch (error) {
+      // 요청 취소로 인한 에러는 무시
+      if (abortController.signal.aborted) {
+        return;
+      }
       console.error('약 검색 실패:', error);
     } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
+      // 현재 controller가 여전히 활성 상태일 때만 로딩 상태 해제
+      if (!abortController.signal.aborted) {
+        setIsLoading(false);
+        setIsLoadingMore(false);
+      }
     }
   };
 

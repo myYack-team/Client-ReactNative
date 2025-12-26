@@ -85,3 +85,14 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+/**
+ * API 응답에서 result를 안전하게 추출합니다.
+ * result가 없으면 에러를 throw합니다.
+ */
+export function extractResult<T>(response: { data: ApiResponse<T> }, errorMessage?: string): T {
+  if (!response.data.result) {
+    throw new Error(errorMessage || '서버 응답이 올바르지 않습니다.');
+  }
+  return response.data.result;
+}
