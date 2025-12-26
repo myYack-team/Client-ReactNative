@@ -9,7 +9,7 @@ import { useMedicationStore } from '../../stores';
 import { MedicationListItem, Reminder } from '../../types';
 
 export default function MedicationsScreen() {
-  const { medications, fetchMedications, deleteMedication, isLoading, error, needsRefresh, clearNeedsRefresh } = useMedicationStore();
+  const { medications, fetchMedications, deleteMedicationsBatch, isLoading, error, needsRefresh, clearNeedsRefresh } = useMedicationStore();
 
   // 선택 모드 상태
   const [isSelectMode, setIsSelectMode] = useState(false);
@@ -81,16 +81,13 @@ export default function MedicationsScreen() {
   // 삭제 실행
   const handleDeleteConfirm = async () => {
     const idsToDelete = Array.from(selectedIds);
-    const deleteCount = idsToDelete.length;
 
     try {
-      // 순차적으로 삭제
-      for (const id of idsToDelete) {
-        await deleteMedication(id);
-      }
+      // 일괄 삭제 API 호출
+      const result = await deleteMedicationsBatch(idsToDelete);
 
       // 토스트 표시
-      setToastMessage(`${deleteCount}개 삭제됨`);
+      setToastMessage(`${result.deletedCount}개 삭제됨`);
       setShowToast(true);
 
       // 선택 모드 종료

@@ -212,17 +212,18 @@ export default function PrescriptionScreen() {
   // 다중 삭제 실행
   const handleBulkDeleteConfirm = async () => {
     const idsToDelete = Array.from(selectedIds);
-    const deleteCount = idsToDelete.length;
 
     try {
-      // 순차적으로 삭제
+      // 일괄 삭제 API 호출
+      const result = await prescriptionService.deleteBatch(idsToDelete);
+
+      // 캐시에서 삭제된 항목 제거
       for (const id of idsToDelete) {
-        await prescriptionService.delete(id);
         detailCacheRef.current.delete(id);
       }
 
       // 토스트 표시
-      setToastMessage(`${deleteCount}개 삭제됨`);
+      setToastMessage(`${result.deletedCount}개 삭제됨`);
       setShowToast(true);
 
       // 선택 모드 종료

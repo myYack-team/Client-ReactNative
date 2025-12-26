@@ -7,6 +7,7 @@ import {
   ScanResult,
   TodayResponse,
   DuplicateCheckResponse,
+  BatchDeleteResult,
 } from '../types';
 
 export const medicationService = {
@@ -117,5 +118,15 @@ export const medicationService = {
       });
       throw error;
     }
+  },
+
+  // 약 일괄 삭제
+  async deleteMedicationsBatch(ids: number[]): Promise<BatchDeleteResult> {
+    console.log('[deleteMedicationsBatch] Deleting medications:', ids);
+    const response = await api.delete<ApiResponse<BatchDeleteResult>>('/medications/batch', {
+      data: { ids },
+    });
+    console.log('[deleteMedicationsBatch] Response:', JSON.stringify(response.data, null, 2));
+    return response.data.result!;
   },
 };

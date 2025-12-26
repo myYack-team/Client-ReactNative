@@ -594,3 +594,11 @@ export interface DuplicateCheckResponse {
   duplicates: DuplicateMedication[];
   duplicateCount: number;
 }
+
+// ========== 일괄 삭제 관련 타입 ==========
+
+// 일괄 삭제 결과
+export interface BatchDeleteResult {
+  requestedCount: number;
+  deletedCount: number;
+}
