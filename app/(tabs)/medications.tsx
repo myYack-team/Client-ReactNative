@@ -7,6 +7,7 @@ import { Button, Card, Typography, DeleteConfirmModal, Toast } from '../../compo
 import { Colors } from '../../constants';
 import { useMedicationStore } from '../../stores';
 import { MedicationListItem, Reminder } from '../../types';
+import { getMedDisplayName } from '../../utils';
 
 export default function MedicationsScreen() {
   const { medications, fetchMedications, deleteMedicationsBatch, isLoading, error, needsRefresh, clearNeedsRefresh } = useMedicationStore();
@@ -101,12 +102,7 @@ export default function MedicationsScreen() {
   const getFirstSelectedName = (): string | undefined => {
     const firstId = Array.from(selectedIds)[0];
     const firstMed = medications.find(m => m.id === firstId);
-    return firstMed ? getDrugDisplayName(firstMed) : undefined;
-  };
-
-  // 약 이름 가져오기 (displayName 우선)
-  const getDrugDisplayName = (medication: MedicationListItem): string => {
-    return medication.displayName || medication.drugName;
+    return firstMed ? getMedDisplayName(firstMed) : undefined;
   };
 
   // 알림 시간 태그 렌더링
@@ -245,7 +241,7 @@ export default function MedicationsScreen() {
                   <View style={styles.medicationContent}>
                     <View style={styles.medicationHeader}>
                       <Typography variant="body" style={styles.drugName} numberOfLines={1}>
-                        {getDrugDisplayName(medication)}
+                        {getMedDisplayName(medication)}
                       </Typography>
                       <Typography variant="caption" color={Colors.textSecondary}>
                         1회 {medication.dosage}정 / 하루 {medication.frequency}회{medication.ingredientKr ? ` · ${medication.ingredientKr}` : ''}

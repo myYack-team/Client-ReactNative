@@ -10,7 +10,10 @@ export const authService = {
   // 카카오 로그인 URL 가져오기 (추후 구현)
   async getKakaoLoginUrl(): Promise<string> {
     const response = await api.get<ApiResponse<{ url: string }>>('/auth/kakao');
-    return response.data.result!.url;
+    if (!response.data.result) {
+      throw new Error('카카오 로그인 URL을 가져오는데 실패했습니다.');
+    }
+    return response.data.result.url;
   },
 
   // 카카오 인증 코드로 JWT 발급 (추후 구현)
@@ -19,7 +22,10 @@ export const authService = {
       '/auth/kakao/callback',
       { code }
     );
-    return response.data.result!;
+    if (!response.data.result) {
+      throw new Error('카카오 로그인에 실패했습니다.');
+    }
+    return response.data.result;
   },
 
   // Access Token 갱신 (추후 구현)
@@ -27,7 +33,10 @@ export const authService = {
     const response = await api.post<ApiResponse<AuthTokens>>('/auth/refresh', {
       refreshToken,
     });
-    return response.data.result!;
+    if (!response.data.result) {
+      throw new Error('토큰 갱신에 실패했습니다.');
+    }
+    return response.data.result;
   },
 
   // 로그아웃 (추후 구현)

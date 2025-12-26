@@ -17,18 +17,10 @@ import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Typography, Card, Button } from '../../components/ui';
 import { DrugTypeBadge } from '../../components/ui';
-import { Colors } from '../../constants';
+import { Colors, DEFAULT_TIMES } from '../../constants';
 import { drugService } from '../../services/drug';
 import { medicationService } from '../../services';
 import { DrugInfo, MedicationTiming, TIMING_LABELS, TIMING_OPTIONS } from '../../types';
-
-// 기본 알림 시간 (복용 횟수별)
-const DEFAULT_TIMES: Record<number, string[]> = {
-  1: ['08:00'],
-  2: ['08:00', '20:00'],
-  3: ['08:00', '13:00', '20:00'],
-  4: ['08:00', '12:00', '18:00', '22:00'],
-};
 
 export default function MedicationRegisterScreen() {
   const { itemSeq } = useLocalSearchParams<{ itemSeq: string }>();

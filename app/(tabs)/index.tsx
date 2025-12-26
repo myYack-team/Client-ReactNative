@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Modal, FlatList, Dimensions, Image } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Modal, FlatList, Dimensions, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
@@ -8,6 +8,7 @@ import { Colors } from '../../constants';
 import { useMedicationStore } from '../../stores';
 import { intakeService, reminderService } from '../../services';
 import { MedicationTiming, TodaySchedule, DaySummary, DayStatus, ScheduleMedication, IntakesResponse } from '../../types';
+import { getMedDisplayName } from '../../utils';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DAY_ITEM_WIDTH = (SCREEN_WIDTH - 40) / 7; // 양쪽 padding 20씩 빼고 7등분
@@ -91,6 +92,9 @@ export default function HomeScreen() {
   const [showSnoozeModal, setShowSnoozeModal] = useState(false);
   const [selectedMedForSnooze, setSelectedMedForSnooze] = useState<ScheduleMedication | null>(null);
   const [selectedTiming, setSelectedTiming] = useState<MedicationTiming | null>(null);
+
+  // 중복 클릭 방지용 처리 중인 약물 ID 추적
+  const [processingMeds, setProcessingMeds] = useState<Set<number>>(new Set());
 
   // 선택된 날짜의 스케줄 데이터
   const [selectedDateSchedules, setSelectedDateSchedules] = useState<TodaySchedule[]>([]);
@@ -301,20 +305,28 @@ export default function HomeScreen() {
         notTakenMeds.map((m) => m.id),
         schedule.timing
       );
-      // 로컬 상태는 recordIntake에서 낙관적 업데이트되므로 월별 요약 재로드 불필요
     } catch (error) {
       console.error('Failed to record intake:', error);
+      Alert.alert('오류', '복용 기록에 실패했습니다. 다시 시도해주세요.');
     }
   };
 
   // 개별 약물 복용 처리
   const handleTakeMedication = async (med: ScheduleMedication, timing: MedicationTiming) => {
-    if (med.taken) return;
+    if (med.taken || processingMeds.has(med.id)) return;
+
+    setProcessingMeds(prev => new Set(prev).add(med.id));
     try {
       await recordIntake([med.id], timing);
-      // 로컬 상태는 recordIntake에서 낙관적 업데이트되므로 월별 요약 재로드 불필요
     } catch (error) {
       console.error('Failed to record intake:', error);
+      Alert.alert('오류', '복용 기록에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setProcessingMeds(prev => {
+        const next = new Set(prev);
+        next.delete(med.id);
+        return next;
+      });
     }
   };
 
@@ -333,23 +345,30 @@ export default function HomeScreen() {
       setShowSnoozeModal(false);
       setSelectedMedForSnooze(null);
       setSelectedTiming(null);
-      // 새로고침
       fetchTodaySchedule();
     } catch (error) {
       console.error('Failed to snooze:', error);
+      Alert.alert('오류', '알림 미루기에 실패했습니다. 다시 시도해주세요.');
     }
   };
 
   // 누락 처리
   const handleMissMedication = async (med: ScheduleMedication, timing: MedicationTiming) => {
-    if (med.taken) return;
+    if (med.taken || processingMeds.has(med.id)) return;
+
+    setProcessingMeds(prev => new Set(prev).add(med.id));
     try {
-      // 누락 상태로 기록 (MISSED)
       await intakeService.recordMissed(med.id, timing);
       fetchTodaySchedule();
-      // 로컬 상태 업데이트로 충분, 월별 요약 재로드 불필요
     } catch (error) {
       console.error('Failed to record missed:', error);
+      Alert.alert('오류', '누락 기록에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setProcessingMeds(prev => {
+        const next = new Set(prev);
+        next.delete(med.id);
+        return next;
+      });
     }
   };
 
@@ -369,11 +388,6 @@ export default function HomeScreen() {
   // 표시할 스케줄 (선택된 날짜 기준)
   const schedules = selectedDateSchedules;
   const summary = isSelectedDateToday ? todayData?.summary : null;
-
-  // 약 이름 가져오기 (displayName 우선)
-  const getMedDisplayName = (med: ScheduleMedication): string => {
-    return med.displayName || med.name;
-  };
 
   // 선택된 날짜의 요약 정보
   const selectedDaySummary = monthlySummary.find((d) => d.date === selectedDate);
@@ -645,6 +659,7 @@ export default function HomeScreen() {
                         onSkip={() => handleSkipMedication(med, schedule.timing)}
                         onMiss={() => handleMissMedication(med, schedule.timing)}
                         onTakeNow={() => handleTakeMedication(med, schedule.timing)}
+                        disabled={processingMeds.has(med.id)}
                       />
                     )}
                   </View>
