@@ -9,6 +9,7 @@ import {
   MedicationTiming,
   IntakesResponse,
   MonthlySummaryResponse,
+  BatchDeleteResult,
 } from '../types';
 import { medicationService, intakeService, prescriptionService } from '../services';
 
@@ -53,6 +54,7 @@ interface MedicationState {
   addMedication: (medication: CreateMedicationRequest) => Promise<void>;
   updateMedication: (id: number, data: Partial<CreateMedicationRequest>) => Promise<void>;
   deleteMedication: (id: number) => Promise<void>;
+  deleteMedicationsBatch: (ids: number[]) => Promise<BatchDeleteResult>;
   recordIntake: (medicationIds: number[], timing: MedicationTiming) => Promise<void>;
   clearScanResult: () => void;
   clearError: () => void;
@@ -214,6 +216,26 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
       await get().fetchTodaySchedule();
     } catch (error) {
       const message = error instanceof Error ? error.message : '약 삭제에 실패했습니다.';
+      set({ isLoading: false, error: message });
+      throw error;
+    }
+  },
+
+  deleteMedicationsBatch: async (ids: number[]) => {
+    try {
+      set({ isLoading: true, error: null });
+      const result = await medicationService.deleteMedicationsBatch(ids);
+      // 로컬 상태에서 삭제된 항목 제거
+      set((state) => ({
+        medications: state.medications.filter((m) => !ids.includes(m.id)),
+        isLoading: false,
+      }));
+      // 오늘 스케줄 새로고침
+      set({ todayDataExpiry: 0 });
+      await get().fetchTodaySchedule();
+      return result;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '약 일괄 삭제에 실패했습니다.';
       set({ isLoading: false, error: message });
       throw error;
     }

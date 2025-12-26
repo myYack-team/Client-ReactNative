@@ -1,15 +1,26 @@
-import React, { useCallback } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import { Button, Card, Typography } from '../../components/ui';
+import { Button, Card, Typography, DeleteConfirmModal, Toast } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useMedicationStore } from '../../stores';
 import { MedicationListItem, Reminder } from '../../types';
 
 export default function MedicationsScreen() {
-  const { medications, fetchMedications, isLoading, error, needsRefresh, clearNeedsRefresh } = useMedicationStore();
+  const { medications, fetchMedications, deleteMedicationsBatch, isLoading, error, needsRefresh, clearNeedsRefresh } = useMedicationStore();
+
+  // 선택 모드 상태
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  // 삭제 확인 모달 상태
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // 토스트 상태
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   // 탭이 실제로 포커스될 때 조건부 데이터 로드
   // - 데이터가 없거나 needsRefresh 플래그가 true일 때만 로드
@@ -24,6 +35,74 @@ export default function MedicationsScreen() {
       }
     }, [needsRefresh])
   );
+
+  // 선택 모드 종료 시 상태 초기화
+  const exitSelectMode = () => {
+    setIsSelectMode(false);
+    setSelectedIds(new Set());
+  };
+
+  // Long Press로 선택 모드 진입
+  const handleLongPress = (id: number) => {
+    if (!isSelectMode) {
+      setIsSelectMode(true);
+      setSelectedIds(new Set([id]));
+    }
+  };
+
+  // 아이템 선택/해제 토글
+  const toggleSelect = (id: number) => {
+    if (!isSelectMode) return;
+
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+
+    // 선택된 항목이 없으면 선택 모드 종료
+    if (newSelected.size === 0) {
+      setIsSelectMode(false);
+    }
+  };
+
+  // 전체 선택/해제
+  const toggleSelectAll = () => {
+    if (selectedIds.size === medications.length) {
+      setSelectedIds(new Set());
+      setIsSelectMode(false);
+    } else {
+      setSelectedIds(new Set(medications.map(m => m.id)));
+    }
+  };
+
+  // 삭제 실행
+  const handleDeleteConfirm = async () => {
+    const idsToDelete = Array.from(selectedIds);
+
+    try {
+      // 일괄 삭제 API 호출
+      const result = await deleteMedicationsBatch(idsToDelete);
+
+      // 토스트 표시
+      setToastMessage(`${result.deletedCount}개 삭제됨`);
+      setShowToast(true);
+
+      // 선택 모드 종료
+      exitSelectMode();
+    } catch (err) {
+      console.error('Failed to delete medications:', err);
+    }
+  };
+
+  // 선택된 첫 번째 약 이름 가져오기
+  const getFirstSelectedName = (): string | undefined => {
+    const firstId = Array.from(selectedIds)[0];
+    const firstMed = medications.find(m => m.id === firstId);
+    return firstMed ? getDrugDisplayName(firstMed) : undefined;
+  };
 
   // 약 이름 가져오기 (displayName 우선)
   const getDrugDisplayName = (medication: MedicationListItem): string => {
@@ -65,12 +144,47 @@ export default function MedicationsScreen() {
           />
         }
       >
+        {/* 헤더 */}
         <View style={styles.header}>
-          <Typography variant="h2">약 목록 💊</Typography>
-          <Typography variant="body" color={Colors.textSecondary}>
-            등록된 약 {medications.length}개
-          </Typography>
+          <View style={styles.headerLeft}>
+            {isSelectMode ? (
+              <TouchableOpacity onPress={exitSelectMode}>
+                <Typography variant="body" color={Colors.primary}>취소</Typography>
+              </TouchableOpacity>
+            ) : (
+              <>
+                <Typography variant="h2">약 목록</Typography>
+                <Typography variant="body" color={Colors.textSecondary}>
+                  등록된 약 {medications.length}개
+                </Typography>
+              </>
+            )}
+          </View>
+          {isSelectMode && (
+            <TouchableOpacity onPress={() => setShowDeleteModal(true)}>
+              <Typography variant="body" color={Colors.error} style={styles.deleteButton}>
+                삭제
+              </Typography>
+            </TouchableOpacity>
+          )}
         </View>
+
+        {/* 전체 선택 체크박스 (선택 모드일 때만) */}
+        {isSelectMode && medications.length > 0 && (
+          <TouchableOpacity style={styles.selectAllContainer} onPress={toggleSelectAll}>
+            <View style={[styles.checkbox, selectedIds.size === medications.length && styles.checkboxChecked]}>
+              {selectedIds.size === medications.length && (
+                <Typography variant="caption" color={Colors.white}>✓</Typography>
+              )}
+            </View>
+            <Typography variant="body">
+              전체 선택
+            </Typography>
+            <Typography variant="body" color={Colors.textSecondary} style={styles.selectCount}>
+              {selectedIds.size}/{medications.length}개
+            </Typography>
+          </TouchableOpacity>
+        )}
 
         {error && (
           <Card style={styles.errorCard} variant="elevated">
@@ -91,13 +205,35 @@ export default function MedicationsScreen() {
           </Card>
         ) : (
           medications.map((medication) => (
-            <TouchableOpacity
+            <Pressable
               key={medication.id}
-              onPress={() => router.push(`/medication/${medication.id}`)}
-              activeOpacity={0.8}
+              onPress={() => {
+                if (isSelectMode) {
+                  toggleSelect(medication.id);
+                } else {
+                  router.push(`/medication/${medication.id}`);
+                }
+              }}
+              onLongPress={() => handleLongPress(medication.id)}
+              delayLongPress={500}
             >
-              <Card style={styles.medicationCard} variant="elevated">
+              <Card
+                style={[
+                  styles.medicationCard,
+                  isSelectMode && selectedIds.has(medication.id) && styles.selectedCard
+                ]}
+                variant="elevated"
+              >
                 <View style={styles.medicationRow}>
+                  {/* 선택 모드일 때 체크박스 표시 */}
+                  {isSelectMode && (
+                    <View style={[styles.checkbox, selectedIds.has(medication.id) && styles.checkboxChecked]}>
+                      {selectedIds.has(medication.id) && (
+                        <Typography variant="caption" color={Colors.white}>✓</Typography>
+                      )}
+                    </View>
+                  )}
+
                   {/* 약물 이미지 썸네일 */}
                   {medication.imageUrl ? (
                     <Image source={{ uri: medication.imageUrl }} style={styles.medThumbnail} resizeMode="cover" />
@@ -144,18 +280,37 @@ export default function MedicationsScreen() {
                   </View>
                 </View>
               </Card>
-            </TouchableOpacity>
+            </Pressable>
           ))
         )}
 
-        <Button
-          title="+ 약/영양제 추가하기"
-          variant="secondary"
-          size="large"
-          onPress={() => router.push('/medication/add')}
-          style={styles.addButton}
-        />
+        {!isSelectMode && (
+          <Button
+            title="+ 약/영양제 추가하기"
+            variant="secondary"
+            size="large"
+            onPress={() => router.push('/medication/add')}
+            style={styles.addButton}
+          />
+        )}
       </ScrollView>
+
+      {/* 삭제 확인 모달 */}
+      <DeleteConfirmModal
+        visible={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteConfirm}
+        itemCount={selectedIds.size}
+        itemType="medication"
+        firstItemName={getFirstSelectedName()}
+      />
+
+      {/* 삭제 완료 토스트 */}
+      <Toast
+        visible={showToast}
+        message={toastMessage}
+        onHide={() => setShowToast(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -173,7 +328,42 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 24,
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  deleteButton: {
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  selectAllContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    marginBottom: 12,
+    gap: 12,
+  },
+  selectCount: {
+    marginLeft: 'auto',
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.white,
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   emptyCard: {
     alignItems: 'center',
@@ -188,9 +378,14 @@ const styles = StyleSheet.create({
   medicationCard: {
     marginBottom: 12,
   },
+  selectedCard: {
+    borderColor: Colors.primary,
+    borderWidth: 2,
+  },
   medicationRow: {
     flexDirection: 'row',
     gap: 12,
+    alignItems: 'center',
   },
   medThumbnail: {
     width: 60,

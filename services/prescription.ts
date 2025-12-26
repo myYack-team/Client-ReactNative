@@ -7,6 +7,7 @@ import {
   PrescriptionUploadResponse,
   PrescriptionRegisterRequest,
   PrescriptionRegisterResponse,
+  BatchDeleteResult,
 } from '../types';
 import { API_BASE_URL, TEMP_USER_ID } from '../constants';
 
@@ -142,5 +143,15 @@ export const prescriptionService = {
     }
 
     return data.result;
+  },
+
+  // 처방전 일괄 삭제
+  async deleteBatch(ids: number[]): Promise<BatchDeleteResult> {
+    console.log('[deletePrescriptionsBatch] Deleting prescriptions:', ids);
+    const response = await api.delete<ApiResponse<BatchDeleteResult>>('/prescriptions/batch', {
+      data: { ids },
+    });
+    console.log('[deletePrescriptionsBatch] Response:', JSON.stringify(response.data, null, 2));
+    return response.data.result!;
   },
 };

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, memo, useRef } from 'react';
+import React, { useState, useCallback, memo, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,17 +8,17 @@ import {
   Dimensions,
   Modal,
   Alert,
+  Pressable,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
-import { Card, Typography } from '../../components/ui';
+import { Card, Typography, DeleteConfirmModal, Toast } from '../../components/ui';
 import { Colors, API_BASE_URL } from '../../constants';
 import { prescriptionService } from '../../services';
 import {
   Prescription,
   PrescriptionDetail,
-  PrescriptionStatus,
   PRESCRIPTION_STATUS_LABELS,
   PRESCRIPTION_STATUS_COLORS,
 } from '../../types';
@@ -45,18 +45,22 @@ const formatDate = (dateString: string): string => {
 interface PrescriptionCardProps {
   prescription: Prescription;
   onPress: () => void;
+  onLongPress: () => void;
+  isSelectMode: boolean;
+  isSelected: boolean;
 }
 
-const PrescriptionCard = memo(({ prescription, onPress }: PrescriptionCardProps) => {
+const PrescriptionCard = memo(({ prescription, onPress, onLongPress, isSelectMode, isSelected }: PrescriptionCardProps) => {
   const status = prescription.status || 'IN_PROGRESS';
   const statusColors = PRESCRIPTION_STATUS_COLORS[status];
   const statusLabel = PRESCRIPTION_STATUS_LABELS[status];
 
   return (
-    <TouchableOpacity
-      style={styles.prescriptionCard}
+    <Pressable
+      style={[styles.prescriptionCard, isSelectMode && isSelected && styles.selectedCard]}
       onPress={onPress}
-      activeOpacity={0.8}
+      onLongPress={onLongPress}
+      delayLongPress={500}
     >
       <View style={styles.imageContainer}>
         <Image
@@ -67,16 +71,26 @@ const PrescriptionCard = memo(({ prescription, onPress }: PrescriptionCardProps)
           transition={200}
           placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
         />
+        {/* 선택 모드일 때 체크박스 */}
+        {isSelectMode && (
+          <View style={[styles.selectCheckbox, isSelected && styles.selectCheckboxChecked]}>
+            {isSelected && (
+              <Typography variant="caption" color={Colors.white}>✓</Typography>
+            )}
+          </View>
+        )}
         {/* 복용 상태 뱃지 */}
-        <View style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}>
-          <Typography
-            variant="caption"
-            style={{ fontSize: 10, fontWeight: '600' }}
-            color={statusColors.text}
-          >
-            {statusLabel}
-          </Typography>
-        </View>
+        {!isSelectMode && (
+          <View style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}>
+            <Typography
+              variant="caption"
+              style={{ fontSize: 10, fontWeight: '600' }}
+              color={statusColors.text}
+            >
+              {statusLabel}
+            </Typography>
+          </View>
+        )}
       </View>
       <View style={styles.cardInfo}>
         <Typography variant="bodySmall" numberOfLines={1}>
@@ -95,7 +109,7 @@ const PrescriptionCard = memo(({ prescription, onPress }: PrescriptionCardProps)
           약 {prescription.medicationCount}개
         </Typography>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 });
 
@@ -109,6 +123,17 @@ export default function PrescriptionScreen() {
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [selectedPrescription, setSelectedPrescription] = useState<PrescriptionDetail | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+
+  // 선택 모드 상태
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+
+  // 삭제 확인 모달 상태
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  // 토스트 상태
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   // 처방전 상세 캐시 (최대 5개, LRU 방식)
   const detailCacheRef = useRef<Map<number, PrescriptionDetail>>(new Map());
@@ -143,6 +168,81 @@ export default function PrescriptionScreen() {
   const handleRefresh = useCallback(() => {
     loadPrescriptions(true);
   }, [loadPrescriptions]);
+
+  // 선택 모드 종료 시 상태 초기화
+  const exitSelectMode = () => {
+    setIsSelectMode(false);
+    setSelectedIds(new Set());
+  };
+
+  // Long Press로 선택 모드 진입
+  const handleLongPress = (id: number) => {
+    if (!isSelectMode) {
+      setIsSelectMode(true);
+      setSelectedIds(new Set([id]));
+    }
+  };
+
+  // 아이템 선택/해제 토글
+  const toggleSelect = (id: number) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+
+    // 선택된 항목이 없으면 선택 모드 종료
+    if (newSelected.size === 0) {
+      setIsSelectMode(false);
+    }
+  };
+
+  // 전체 선택/해제
+  const toggleSelectAll = () => {
+    if (selectedIds.size === prescriptions.length) {
+      setSelectedIds(new Set());
+      setIsSelectMode(false);
+    } else {
+      setSelectedIds(new Set(prescriptions.map(p => p.id)));
+    }
+  };
+
+  // 다중 삭제 실행
+  const handleBulkDeleteConfirm = async () => {
+    const idsToDelete = Array.from(selectedIds);
+
+    try {
+      // 일괄 삭제 API 호출
+      const result = await prescriptionService.deleteBatch(idsToDelete);
+
+      // 캐시에서 삭제된 항목 제거
+      for (const id of idsToDelete) {
+        detailCacheRef.current.delete(id);
+      }
+
+      // 토스트 표시
+      setToastMessage(`${result.deletedCount}개 삭제됨`);
+      setShowToast(true);
+
+      // 선택 모드 종료
+      exitSelectMode();
+
+      // 목록 새로고침
+      loadPrescriptions();
+    } catch (error) {
+      console.error('Failed to delete prescriptions:', error);
+      Alert.alert('오류', '처방전 삭제에 실패했습니다.');
+    }
+  };
+
+  // 선택된 첫 번째 처방전 이름 가져오기
+  const getFirstSelectedName = (): string | undefined => {
+    const firstId = Array.from(selectedIds)[0];
+    const firstPres = prescriptions.find(p => p.id === firstId);
+    return firstPres ? formatDate(firstPres.prescriptionDate) : undefined;
+  };
 
   const openDetail = async (prescription: Prescription) => {
     const cache = detailCacheRef.current;
@@ -225,12 +325,47 @@ export default function PrescriptionScreen() {
           />
         }
       >
+        {/* 헤더 */}
         <View style={styles.header}>
-          <Typography variant="h2">처방 기록</Typography>
-          <Typography variant="body" color={Colors.textSecondary}>
-            스캔한 처방전을 모아볼 수 있어요
-          </Typography>
+          <View style={styles.headerLeft}>
+            {isSelectMode ? (
+              <TouchableOpacity onPress={exitSelectMode}>
+                <Typography variant="body" color={Colors.primary}>취소</Typography>
+              </TouchableOpacity>
+            ) : (
+              <>
+                <Typography variant="h2">처방 기록</Typography>
+                <Typography variant="body" color={Colors.textSecondary}>
+                  스캔한 처방전을 모아볼 수 있어요
+                </Typography>
+              </>
+            )}
+          </View>
+          {isSelectMode && (
+            <TouchableOpacity onPress={() => setShowDeleteModal(true)}>
+              <Typography variant="body" color={Colors.error} style={styles.deleteButton}>
+                삭제
+              </Typography>
+            </TouchableOpacity>
+          )}
         </View>
+
+        {/* 전체 선택 체크박스 (선택 모드일 때만) */}
+        {isSelectMode && prescriptions.length > 0 && (
+          <TouchableOpacity style={styles.selectAllContainer} onPress={toggleSelectAll}>
+            <View style={[styles.checkbox, selectedIds.size === prescriptions.length && styles.checkboxChecked]}>
+              {selectedIds.size === prescriptions.length && (
+                <Typography variant="caption" color={Colors.white}>✓</Typography>
+              )}
+            </View>
+            <Typography variant="body">
+              전체 선택
+            </Typography>
+            <Typography variant="body" color={Colors.textSecondary} style={styles.selectCount}>
+              {selectedIds.size}/{prescriptions.length}개
+            </Typography>
+          </TouchableOpacity>
+        )}
 
         {prescriptions.length === 0 ? (
           <Card style={styles.emptyCard} variant="elevated">
@@ -250,12 +385,38 @@ export default function PrescriptionScreen() {
               <PrescriptionCard
                 key={prescription.id}
                 prescription={prescription}
-                onPress={() => openDetail(prescription)}
+                onPress={() => {
+                  if (isSelectMode) {
+                    toggleSelect(prescription.id);
+                  } else {
+                    openDetail(prescription);
+                  }
+                }}
+                onLongPress={() => handleLongPress(prescription.id)}
+                isSelectMode={isSelectMode}
+                isSelected={selectedIds.has(prescription.id)}
               />
             ))}
           </View>
         )}
       </ScrollView>
+
+      {/* 삭제 확인 모달 */}
+      <DeleteConfirmModal
+        visible={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleBulkDeleteConfirm}
+        itemCount={selectedIds.size}
+        itemType="prescription"
+        firstItemName={getFirstSelectedName()}
+      />
+
+      {/* 삭제 완료 토스트 */}
+      <Toast
+        visible={showToast}
+        message={toastMessage}
+        onHide={() => setShowToast(false)}
+      />
 
       {/* 처방전 상세 모달 */}
       <Modal
@@ -487,7 +648,42 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 24,
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  deleteButton: {
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  selectAllContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    marginBottom: 12,
+    gap: 12,
+  },
+  selectCount: {
+    marginLeft: 'auto',
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.white,
+  },
+  checkboxChecked: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   emptyCard: {
     alignItems: 'center',
@@ -520,6 +716,10 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  selectedCard: {
+    borderColor: Colors.primary,
+    borderWidth: 2,
+  },
   imageContainer: {
     position: 'relative',
   },
@@ -527,6 +727,23 @@ const styles = StyleSheet.create({
     width: '100%',
     height: CARD_WIDTH * 0.75,
     backgroundColor: Colors.backgroundSecondary,
+  },
+  selectCheckbox: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: Colors.white,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectCheckboxChecked: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   statusBadge: {
     position: 'absolute',
