@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
@@ -6,11 +6,13 @@ import * as Notifications from 'expo-notifications';
 import { useAuthStore, useSettingsStore } from '../stores';
 import { notificationService } from '../services';
 import { Colors } from '../constants';
+import SplashScreen from '../components/SplashScreen';
 
 export default function RootLayout() {
   const router = useRouter();
   const { initialize: initAuth, isLoading: authLoading } = useAuthStore();
   const { initialize: initSettings, isLoading: settingsLoading } = useSettingsStore();
+  const [showSplash, setShowSplash] = useState(true);
 
   const notificationListener = useRef<Notifications.Subscription | null>(null);
   const responseListener = useRef<Notifications.Subscription | null>(null);
@@ -50,6 +52,17 @@ export default function RootLayout() {
     };
   }, []);
 
+  // 스플래시 스크린 표시
+  if (showSplash) {
+    return (
+      <>
+        <SplashScreen onFinish={() => setShowSplash(false)} />
+        <StatusBar style="dark" />
+      </>
+    );
+  }
+
+  // 초기화 로딩 중
   if (authLoading || settingsLoading) {
     return (
       <View style={styles.loading}>

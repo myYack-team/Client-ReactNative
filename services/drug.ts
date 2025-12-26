@@ -2,13 +2,13 @@ import api from './api';
 import { ApiResponse, DrugInfo, DrugSearchPageResponse } from '../types';
 
 export const drugService = {
-  // 약 검색 (페이징)
+  // 약 검색 (캐시 기반 빠른 검색)
   async searchDrugs(params: {
     name: string;
     page?: number;
     size?: number;
   }): Promise<DrugSearchPageResponse> {
-    const response = await api.get<ApiResponse<DrugSearchPageResponse>>('/drugs/search/page', {
+    const response = await api.get<ApiResponse<DrugSearchPageResponse>>('/drugs/search/fast', {
       params: {
         name: params.name,
         page: params.page ?? 0,

@@ -99,7 +99,7 @@ export default function MedicationSearchScreen() {
   const debouncedSearch = useCallback(
     debounce((query: string) => {
       searchDrugs(query, 0, false);
-    }, 500),
+    }, 300),
     []
   );
 
