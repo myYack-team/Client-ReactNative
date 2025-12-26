@@ -621,7 +621,13 @@ export default function HomeScreen() {
                       </View>
                       <View style={styles.medicationInfo}>
                         <View style={styles.medicationNameRow}>
-                          <Typography variant="body" style={styles.medicationName}>
+                          <Typography
+                            variant="body"
+                            style={styles.medicationName}
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                            minimumFontScale={0.8}
+                          >
                             {getMedDisplayName(med)}
                           </Typography>
                           {med.drugType && (
@@ -629,7 +635,7 @@ export default function HomeScreen() {
                           )}
                         </View>
                         <Typography variant="caption" color={Colors.textSecondary}>
-                          {med.dosage}정{med.ingredientKr ? ` · 성분 : ${med.ingredientKr}` : ''}
+                          {med.dosage}정
                         </Typography>
                       </View>
                     </View>
@@ -853,6 +859,8 @@ const styles = StyleSheet.create({
   },
   medicationName: {
     fontWeight: '500',
+    flex: 1,
+    flexShrink: 1,
   },
   medThumbnailContainer: {
     position: 'relative',
