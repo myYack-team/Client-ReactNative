@@ -1,4 +1,4 @@
-import React, { useState, useCallback, memo, useRef } from 'react';
+import React, { useState, useCallback, memo, useRef, useEffect } from 'react';
 import {
   View,
   StyleSheet,
@@ -9,6 +9,7 @@ import {
   Modal,
   Alert,
   Pressable,
+  ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -48,19 +49,25 @@ interface PrescriptionCardProps {
   onLongPress: () => void;
   isSelectMode: boolean;
   isSelected: boolean;
+  isLoading?: boolean;
 }
 
-const PrescriptionCard = memo(({ prescription, onPress, onLongPress, isSelectMode, isSelected }: PrescriptionCardProps) => {
+const PrescriptionCard = memo(({ prescription, onPress, onLongPress, isSelectMode, isSelected, isLoading }: PrescriptionCardProps) => {
   const status = prescription.status || 'IN_PROGRESS';
   const statusColors = PRESCRIPTION_STATUS_COLORS[status];
   const statusLabel = PRESCRIPTION_STATUS_LABELS[status];
 
   return (
     <Pressable
-      style={[styles.prescriptionCard, isSelectMode && isSelected && styles.selectedCard]}
+      style={[
+        styles.prescriptionCard,
+        isSelectMode && isSelected && styles.selectedCard,
+        isLoading && styles.loadingCard,
+      ]}
       onPress={onPress}
       onLongPress={onLongPress}
       delayLongPress={500}
+      disabled={isLoading}
     >
       <View style={styles.imageContainer}>
         <Image
@@ -71,6 +78,12 @@ const PrescriptionCard = memo(({ prescription, onPress, onLongPress, isSelectMod
           transition={200}
           placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
         />
+        {/* 로딩 오버레이 */}
+        {isLoading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="small" color={Colors.white} />
+          </View>
+        )}
         {/* 선택 모드일 때 체크박스 */}
         {isSelectMode && (
           <View style={[styles.selectCheckbox, isSelected && styles.selectCheckboxChecked]}>
@@ -80,7 +93,7 @@ const PrescriptionCard = memo(({ prescription, onPress, onLongPress, isSelectMod
           </View>
         )}
         {/* 복용 상태 뱃지 */}
-        {!isSelectMode && (
+        {!isSelectMode && !isLoading && (
           <View style={[styles.statusBadge, { backgroundColor: statusColors.bg }]}>
             <Typography
               variant="caption"
@@ -137,6 +150,30 @@ export default function PrescriptionScreen() {
 
   // 처방전 상세 캐시 (최대 5개, LRU 방식)
   const detailCacheRef = useRef<Map<number, PrescriptionDetail>>(new Map());
+
+  // 상세 조회 로딩 상태 (로딩 중인 처방전 ID 추적)
+  const [loadingPrescriptionId, setLoadingPrescriptionId] = useState<number | null>(null);
+
+  // 화면 포커스 상태 추적 (API 취소용)
+  const isFocusedRef = useRef(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  // 화면 포커스/블러 시 상태 업데이트
+  useFocusEffect(
+    useCallback(() => {
+      isFocusedRef.current = true;
+
+      return () => {
+        isFocusedRef.current = false;
+        // 화면 벗어날 때 진행 중인 API 요청 취소
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+          abortControllerRef.current = null;
+        }
+        setLoadingPrescriptionId(null);
+      };
+    }, [])
+  );
 
   const loadPrescriptions = useCallback(async (isRefresh = false) => {
     try {
@@ -245,6 +282,11 @@ export default function PrescriptionScreen() {
   };
 
   const openDetail = async (prescription: Prescription) => {
+    // 이미 로딩 중이면 중복 호출 방지
+    if (loadingPrescriptionId !== null) {
+      return;
+    }
+
     const cache = detailCacheRef.current;
 
     // 캐시에서 먼저 확인
@@ -259,8 +301,21 @@ export default function PrescriptionScreen() {
     }
 
     // 캐시에 없으면 API 호출
+    setLoadingPrescriptionId(prescription.id);
+
+    // 이전 요청 취소
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     try {
       const detail = await prescriptionService.getDetail(prescription.id);
+
+      // 화면이 포커스 상태가 아니면 모달 열지 않음
+      if (!isFocusedRef.current) {
+        return;
+      }
 
       // 캐시 크기 제한 (LRU: 가장 오래된 항목 제거)
       if (cache.size >= MAX_CACHE_SIZE) {
@@ -275,9 +330,18 @@ export default function PrescriptionScreen() {
 
       setSelectedPrescription(detail);
       setIsModalVisible(true);
-    } catch (error) {
+    } catch (error: any) {
+      // AbortError는 무시 (의도적 취소)
+      if (error?.name === 'AbortError' || error?.message === 'Aborted') {
+        return;
+      }
       console.error('Failed to load prescription detail:', error);
-      Alert.alert('오류', '처방전 정보를 불러올 수 없습니다.');
+      if (isFocusedRef.current) {
+        Alert.alert('오류', '처방전 정보를 불러올 수 없습니다.');
+      }
+    } finally {
+      setLoadingPrescriptionId(null);
+      abortControllerRef.current = null;
     }
   };
 
@@ -395,6 +459,7 @@ export default function PrescriptionScreen() {
                 onLongPress={() => handleLongPress(prescription.id)}
                 isSelectMode={isSelectMode}
                 isSelected={selectedIds.has(prescription.id)}
+                isLoading={loadingPrescriptionId === prescription.id}
               />
             ))}
           </View>
@@ -720,6 +785,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     borderWidth: 2,
   },
+  loadingCard: {
+    opacity: 0.7,
+  },
   imageContainer: {
     position: 'relative',
   },
@@ -727,6 +795,12 @@ const styles = StyleSheet.create({
     width: '100%',
     height: CARD_WIDTH * 0.75,
     backgroundColor: Colors.backgroundSecondary,
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   selectCheckbox: {
     position: 'absolute',
