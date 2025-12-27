@@ -28,5 +28,5 @@ const getApiBaseUrl = (): string => {
 
 export const API_BASE_URL = getApiBaseUrl();
 
-// 임시 사용자 ID (카카오 로그인 구현 전까지 사용)
-export const TEMP_USER_ID = 1;
+// 카카오 로그인 설정
+export const KAKAO_REST_API_KEY = '***REMOVED***';

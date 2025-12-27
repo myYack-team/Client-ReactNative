@@ -1,6 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
-import { API_BASE_URL, TEMP_USER_ID } from '../constants';
+import { API_BASE_URL } from '../constants';
 import { ApiResponse } from '../types';
 
 console.log('[API] Initializing with base URL:', API_BASE_URL);
@@ -13,18 +13,12 @@ const api = axios.create({
   },
 });
 
-// Request 인터셉터: userId 파라미터 추가 (임시, 카카오 로그인 구현 후 제거)
+// Request 인터셉터: JWT 토큰 추가
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    // 임시: userId 쿼리 파라미터 추가
-    config.params = {
-      ...config.params,
-      userId: TEMP_USER_ID,
-    };
-
     console.log('[API Request]', config.method?.toUpperCase(), config.url, config.params);
 
-    // 나중에 JWT 토큰 추가할 때 사용
+    // JWT 토큰 추가
     const token = await SecureStore.getItemAsync('accessToken');
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;

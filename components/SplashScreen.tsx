@@ -53,7 +53,7 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
         ]}
       >
         <Image
-          source={require('../assets/logo-transparent.png')}
+          source={require('../assets/logo.png')}
           style={styles.logo}
           resizeMode="contain"
         />

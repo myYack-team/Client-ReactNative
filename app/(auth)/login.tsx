@@ -1,25 +1,103 @@
-import React from 'react';
-import { View, StyleSheet, Image, Dimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, Image, Dimensions, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import { Button, Typography } from '../../components/ui';
-import { Colors } from '../../constants';
+import { Colors, API_BASE_URL } from '../../constants';
+import { useAuthStore } from '../../stores/authStore';
 
 const { width } = Dimensions.get('window');
 
+// WebBrowser 세션 완료 처리 (iOS에서 필요)
+WebBrowser.maybeCompleteAuthSession();
+
 export default function LoginScreen() {
-  // TODO: 나중에 실제 카카오 로그인 구현
-  const handleKakaoLogin = () => {
-    // 임시로 바로 홈 화면으로 이동
-    router.replace('/(tabs)');
+  const { handleOAuthCallback, isLoading, error, clearError } = useAuthStore();
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+
+  // 딥링크 처리
+  useEffect(() => {
+    const handleDeepLink = async (event: { url: string }) => {
+      const { url } = event;
+      console.log('[Login] Deep link received:', url);
+
+      // myyak://oauth/callback?accessToken=...&refreshToken=...&isNewUser=...
+      if (url.includes('oauth/callback')) {
+        setIsAuthenticating(true);
+        try {
+          const parsed = Linking.parse(url);
+          const { accessToken, refreshToken, isNewUser, error: authError } = parsed.queryParams || {};
+
+          if (authError) {
+            throw new Error(authError as string);
+          }
+
+          if (accessToken && refreshToken) {
+            await handleOAuthCallback(
+              accessToken as string,
+              refreshToken as string,
+              isNewUser === 'true'
+            );
+            router.replace('/(tabs)');
+          }
+        } catch (err) {
+          console.error('[Login] OAuth callback error:', err);
+          Alert.alert('로그인 실패', '로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
+        } finally {
+          setIsAuthenticating(false);
+        }
+      }
+    };
+
+    // 이미 열려있는 URL 확인 (앱이 닫혀있다가 딥링크로 열린 경우)
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleDeepLink({ url });
+      }
+    });
+
+    // 딥링크 리스너 등록
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  // 에러 표시
+  useEffect(() => {
+    if (error) {
+      Alert.alert('로그인 실패', error);
+      clearError();
+    }
+  }, [error]);
+
+  const handleKakaoLogin = async () => {
+    try {
+      setIsAuthenticating(true);
+      // 서버의 카카오 로그인 URL로 WebBrowser 열기
+      const authUrl = `${API_BASE_URL}/auth/kakao/login`;
+      console.log('[Login] Opening auth URL:', authUrl);
+
+      await WebBrowser.openAuthSessionAsync(authUrl, 'myyak://oauth/callback');
+    } catch (err) {
+      console.error('[Login] WebBrowser error:', err);
+      Alert.alert('로그인 실패', '브라우저를 열 수 없습니다.');
+    } finally {
+      setIsAuthenticating(false);
+    }
   };
+
+  const showLoading = isLoading || isAuthenticating;
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.logoSection}>
           <Image
-            source={require('../../assets/logo-transparent.png')}
+            source={require('../../assets/logo.png')}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -29,19 +107,30 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.buttonSection}>
-          <Button
-            title="카카오로 시작하기"
-            variant="kakao"
-            onPress={handleKakaoLogin}
-          />
+          {showLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+              <Typography variant="body" color={Colors.textSecondary} style={styles.loadingText}>
+                로그인 중...
+              </Typography>
+            </View>
+          ) : (
+            <>
+              <Button
+                title="카카오로 시작하기"
+                variant="kakao"
+                onPress={handleKakaoLogin}
+              />
 
-          <Typography
-            variant="caption"
-            color={Colors.textSecondary}
-            style={styles.terms}
-          >
-            로그인하면 이용약관에 동의하는 것으로 간주합니다
-          </Typography>
+              <Typography
+                variant="caption"
+                color={Colors.textSecondary}
+                style={styles.terms}
+              >
+                로그인하면 이용약관에 동의하는 것으로 간주합니다
+              </Typography>
+            </>
+          )}
         </View>
       </View>
     </SafeAreaView>
@@ -75,6 +164,13 @@ const styles = StyleSheet.create({
   },
   buttonSection: {
     paddingBottom: 40,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loadingText: {
+    marginTop: 12,
   },
   terms: {
     textAlign: 'center',

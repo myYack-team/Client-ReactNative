@@ -1,4 +1,6 @@
+import axios from 'axios';
 import api from './api';
+import { API_BASE_URL } from '../constants';
 import { ApiResponse, User } from '../types';
 
 export interface AuthTokens {
@@ -6,41 +8,92 @@ export interface AuthTokens {
   refreshToken: string;
 }
 
-export const authService = {
-  // 카카오 로그인 URL 가져오기 (추후 구현)
-  async getKakaoLoginUrl(): Promise<string> {
-    const response = await api.get<ApiResponse<{ url: string }>>('/auth/kakao');
-    if (!response.data.result) {
-      throw new Error('카카오 로그인 URL을 가져오는데 실패했습니다.');
-    }
-    return response.data.result.url;
-  },
+// 로그인 응답 (서버 AuthResponseDTO.LoginResponse)
+interface LoginResponse {
+  accessToken: string;
+  refreshToken: string;
+  accessTokenExpiresIn: number;
+  user: {
+    id: number;
+    kakaoId: string;
+    nickname: string;
+    profileImage?: string;
+    email?: string;
+    gender?: 'MALE' | 'FEMALE';
+    birthDate?: string;
+  };
+  isNewUser: boolean;
+}
 
-  // 카카오 인증 코드로 JWT 발급 (추후 구현)
-  async loginWithKakao(code: string): Promise<AuthTokens & { user: User }> {
-    const response = await api.post<ApiResponse<AuthTokens & { user: User }>>(
-      '/auth/kakao/callback',
-      { code }
+// 토큰 갱신 응답 (서버 AuthResponseDTO.TokenResponse)
+interface TokenResponse {
+  accessToken: string;
+  refreshToken: string;
+  accessTokenExpiresIn: number;
+}
+
+export const authService = {
+  /**
+   * 카카오 액세스 토큰으로 서버 로그인
+   * @param kakaoAccessToken 카카오에서 받은 액세스 토큰
+   */
+  async loginWithKakao(kakaoAccessToken: string): Promise<AuthTokens & { user: User; isNewUser: boolean }> {
+    // 인증 API는 JWT 없이 호출해야 하므로 별도 axios 인스턴스 사용
+    const response = await axios.post<ApiResponse<LoginResponse>>(
+      `${API_BASE_URL}/auth/kakao`,
+      { accessToken: kakaoAccessToken },
+      { headers: { 'Content-Type': 'application/json' } }
     );
+
     if (!response.data.result) {
       throw new Error('카카오 로그인에 실패했습니다.');
     }
-    return response.data.result;
+
+    const { accessToken, refreshToken, user, isNewUser } = response.data.result;
+
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        kakaoId: user.kakaoId,
+        name: user.nickname,
+        profileImage: user.profileImage,
+        fontSize: 'MEDIUM', // 기본값
+        createdAt: new Date().toISOString(),
+      },
+      isNewUser,
+    };
   },
 
-  // Access Token 갱신 (추후 구현)
+  /**
+   * Access Token 갱신
+   */
   async refreshToken(refreshToken: string): Promise<AuthTokens> {
-    const response = await api.post<ApiResponse<AuthTokens>>('/auth/refresh', {
-      refreshToken,
-    });
+    const response = await axios.post<ApiResponse<TokenResponse>>(
+      `${API_BASE_URL}/auth/refresh`,
+      { refreshToken },
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+
     if (!response.data.result) {
       throw new Error('토큰 갱신에 실패했습니다.');
     }
-    return response.data.result;
+
+    return {
+      accessToken: response.data.result.accessToken,
+      refreshToken: response.data.result.refreshToken,
+    };
   },
 
-  // 로그아웃 (추후 구현)
+  /**
+   * 로그아웃
+   */
   async logout(): Promise<void> {
-    await api.post('/auth/logout');
+    try {
+      await api.post('/auth/logout');
+    } catch {
+      // 서버 로그아웃 실패해도 무시 (로컬 토큰은 삭제됨)
+    }
   },
 };

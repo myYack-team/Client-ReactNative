@@ -45,6 +45,12 @@ export const notificationService = {
     try {
       const projectId = Constants.expoConfig?.extra?.eas?.projectId;
 
+      // projectId가 유효하지 않으면 개발 환경으로 간주하고 스킵
+      if (!projectId || projectId === 'your-project-id') {
+        console.log('[Notification] 개발 환경 - Expo projectId 미설정, 푸시 알림 스킵');
+        return null;
+      }
+
       const token = await Notifications.getExpoPushTokenAsync({
         projectId: projectId,
       });
@@ -64,7 +70,8 @@ export const notificationService = {
 
       return token.data;
     } catch (error) {
-      console.error('[Notification] 토큰 발급 실패:', error);
+      // 개발 환경에서의 에러는 조용히 무시
+      console.log('[Notification] 토큰 발급 스킵 (개발 환경)');
       return null;
     }
   },
