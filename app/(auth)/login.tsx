@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
+import * as AuthSession from 'expo-auth-session';
 import { Button, Typography } from '../../components/ui';
 import { Colors, API_BASE_URL } from '../../constants';
 import { useAuthStore } from '../../stores/authStore';
@@ -77,14 +78,42 @@ export default function LoginScreen() {
   const handleKakaoLogin = async () => {
     try {
       setIsAuthenticating(true);
-      // 서버의 카카오 로그인 URL로 WebBrowser 열기
-      const authUrl = `${API_BASE_URL}/auth/kakao/login`;
+
+      // Expo Go/Development Build에서 동적으로 redirect URI 생성
+      // Expo Go: exp://192.168.x.x:8081/--/oauth/callback
+      // Production: myyak://oauth/callback
+      const redirectUri = AuthSession.makeRedirectUri({
+        scheme: 'myyak',
+        path: 'oauth/callback',
+      });
+      console.log('[Login] Redirect URI:', redirectUri);
+
+      // 서버에 redirect_uri를 쿼리 파라미터로 전달
+      const authUrl = `${API_BASE_URL}/auth/kakao/login?app_redirect_uri=${encodeURIComponent(redirectUri)}`;
       console.log('[Login] Opening auth URL:', authUrl);
 
-      await WebBrowser.openAuthSessionAsync(authUrl, 'myyak://oauth/callback');
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+      console.log('[Login] WebBrowser result:', result);
+
+      // 결과 URL에서 토큰 파싱
+      if (result.type === 'success' && result.url) {
+        const parsed = Linking.parse(result.url);
+        const { accessToken, refreshToken, isNewUser, error: authError } = parsed.queryParams || {};
+
+        if (authError) {
+          throw new Error(authError as string);
+        }
+
+        if (accessToken && refreshToken) {
+          await handleOAuthCallback(accessToken as string, refreshToken as string, isNewUser === 'true');
+          router.replace('/(tabs)');
+        }
+      } else if (result.type === 'cancel') {
+        console.log('[Login] User cancelled');
+      }
     } catch (err) {
       console.error('[Login] WebBrowser error:', err);
-      Alert.alert('로그인 실패', '브라우저를 열 수 없습니다.');
+      Alert.alert('로그인 실패', '로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
     } finally {
       setIsAuthenticating(false);
     }
