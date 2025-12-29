@@ -81,7 +81,7 @@ export const mockMedicationsList: MedicationListItem[] = [
     imageUrl: undefined,
     dosage: 1,
     frequency: 2,
-    timings: ['AFTER_BREAKFAST', 'AFTER_DINNER'],
+    timings: ['MORNING', 'EVENING'],
     remainingCount: 58,
     daysLeft: 29,
   },
@@ -91,7 +91,7 @@ export const mockMedicationsList: MedicationListItem[] = [
     imageUrl: undefined,
     dosage: 1,
     frequency: 2,
-    timings: ['AFTER_BREAKFAST', 'AFTER_DINNER'],
+    timings: ['MORNING', 'EVENING'],
     remainingCount: 56,
     daysLeft: 28,
   },
@@ -101,7 +101,7 @@ export const mockMedicationsList: MedicationListItem[] = [
     imageUrl: undefined,
     dosage: 1,
     frequency: 1,
-    timings: ['BEFORE_BED'],
+    timings: ['EVENING'],
     remainingCount: 28,
     daysLeft: 28,
   },
@@ -115,7 +115,7 @@ export const mockMedications: Record<number, Medication> = {
     imageUrl: undefined,
     dosage: 1,
     frequency: 2,
-    timings: ['AFTER_BREAKFAST', 'AFTER_DINNER'],
+    timings: ['MORNING', 'EVENING'],
     durationDays: 30,
     totalCount: 60,
     remainingCount: 58,
@@ -124,8 +124,8 @@ export const mockMedications: Record<number, Medication> = {
     memo: undefined,
     drugInfo: mockDrugInfos['200808876'],
     reminders: [
-      { id: 1, time: '08:00', timing: 'AFTER_BREAKFAST', timingLabel: '아침 식후', enabled: true },
-      { id: 2, time: '18:30', timing: 'AFTER_DINNER', timingLabel: '저녁 식후', enabled: true },
+      { id: 1, time: '08:00', timing: 'MORNING', timingLabel: '아침', enabled: true },
+      { id: 2, time: '18:30', timing: 'EVENING', timingLabel: '저녁', enabled: true },
     ],
   },
   2: {
@@ -134,7 +134,7 @@ export const mockMedications: Record<number, Medication> = {
     imageUrl: undefined,
     dosage: 1,
     frequency: 2,
-    timings: ['AFTER_BREAKFAST', 'AFTER_DINNER'],
+    timings: ['MORNING', 'EVENING'],
     durationDays: 30,
     totalCount: 60,
     remainingCount: 56,
@@ -143,8 +143,8 @@ export const mockMedications: Record<number, Medication> = {
     memo: undefined,
     drugInfo: mockDrugInfos['200404413'],
     reminders: [
-      { id: 3, time: '08:00', timing: 'AFTER_BREAKFAST', timingLabel: '아침 식후', enabled: true },
-      { id: 4, time: '18:30', timing: 'AFTER_DINNER', timingLabel: '저녁 식후', enabled: true },
+      { id: 3, time: '08:00', timing: 'MORNING', timingLabel: '아침', enabled: true },
+      { id: 4, time: '18:30', timing: 'EVENING', timingLabel: '저녁', enabled: true },
     ],
   },
   3: {
@@ -153,7 +153,7 @@ export const mockMedications: Record<number, Medication> = {
     imageUrl: undefined,
     dosage: 1,
     frequency: 1,
-    timings: ['BEFORE_BED'],
+    timings: ['EVENING'],
     durationDays: 30,
     totalCount: 30,
     remainingCount: 28,
@@ -162,7 +162,7 @@ export const mockMedications: Record<number, Medication> = {
     memo: undefined,
     drugInfo: mockDrugInfos['200409401'],
     reminders: [
-      { id: 5, time: '22:00', timing: 'BEFORE_BED', timingLabel: '취침 전', enabled: true },
+      { id: 5, time: '22:00', timing: 'EVENING', timingLabel: '저녁', enabled: true },
     ],
   },
 };
@@ -173,8 +173,8 @@ export const mockTodayResponse: TodayResponse = {
   dayOfWeek: dayOfWeekKorean[today.getDay()],
   schedules: [
     {
-      timing: 'AFTER_BREAKFAST',
-      timingLabel: '아침 식후',
+      timing: 'MORNING',
+      timingLabel: '아침',
       scheduledTime: '08:00',
       medications: [
         { id: 1, name: '아스피린프로텍트100mg', dosage: 1, taken: true, takenAt: '2024-12-05T08:05:00' },
@@ -183,20 +183,12 @@ export const mockTodayResponse: TodayResponse = {
       allTaken: false,
     },
     {
-      timing: 'AFTER_DINNER',
-      timingLabel: '저녁 식후',
+      timing: 'EVENING',
+      timingLabel: '저녁',
       scheduledTime: '18:30',
       medications: [
         { id: 1, name: '아스피린프로텍트100mg', dosage: 1, taken: false, takenAt: null },
         { id: 2, name: '메트포르민500mg', dosage: 1, taken: false, takenAt: null },
-      ],
-      allTaken: false,
-    },
-    {
-      timing: 'BEFORE_BED',
-      timingLabel: '취침 전',
-      scheduledTime: '22:00',
-      medications: [
         { id: 3, name: '리피토10mg', dosage: 1, taken: false, takenAt: null },
       ],
       allTaken: false,
@@ -223,11 +215,11 @@ export const mockIntakesResponse: IntakesResponse = {
 // Mock 알림 목록
 export const mockRemindersResponse: RemindersResponse = {
   reminders: [
-    { id: 1, medicationId: 1, medicationName: '아스피린프로텍트100mg', time: '08:00', timing: 'AFTER_BREAKFAST', timingLabel: '아침 식후', enabled: true },
-    { id: 2, medicationId: 1, medicationName: '아스피린프로텍트100mg', time: '18:30', timing: 'AFTER_DINNER', timingLabel: '저녁 식후', enabled: true },
-    { id: 3, medicationId: 2, medicationName: '메트포르민500mg', time: '08:00', timing: 'AFTER_BREAKFAST', timingLabel: '아침 식후', enabled: true },
-    { id: 4, medicationId: 2, medicationName: '메트포르민500mg', time: '18:30', timing: 'AFTER_DINNER', timingLabel: '저녁 식후', enabled: true },
-    { id: 5, medicationId: 3, medicationName: '리피토10mg', time: '22:00', timing: 'BEFORE_BED', timingLabel: '취침 전', enabled: true },
+    { id: 1, medicationId: 1, medicationName: '아스피린프로텍트100mg', time: '08:00', timing: 'MORNING', timingLabel: '아침', enabled: true },
+    { id: 2, medicationId: 1, medicationName: '아스피린프로텍트100mg', time: '18:30', timing: 'EVENING', timingLabel: '저녁', enabled: true },
+    { id: 3, medicationId: 2, medicationName: '메트포르민500mg', time: '08:00', timing: 'MORNING', timingLabel: '아침', enabled: true },
+    { id: 4, medicationId: 2, medicationName: '메트포르민500mg', time: '18:30', timing: 'EVENING', timingLabel: '저녁', enabled: true },
+    { id: 5, medicationId: 3, medicationName: '리피토10mg', time: '22:00', timing: 'EVENING', timingLabel: '저녁', enabled: true },
   ],
   totalCount: 5,
 };
@@ -242,7 +234,7 @@ export const mockScanResult: ScanResult = {
       drugItemSeq: '200808876',
       dosage: 1,
       frequency: 2,
-      timings: ['AFTER_BREAKFAST', 'AFTER_DINNER'],
+      timings: ['MORNING', 'EVENING'],
       durationDays: 30,
       totalCount: 60,
       efficacy: '혈전 예방제 / 심혈관 질환 예방',
@@ -254,7 +246,7 @@ export const mockScanResult: ScanResult = {
       drugItemSeq: '200404413',
       dosage: 1,
       frequency: 2,
-      timings: ['AFTER_BREAKFAST', 'AFTER_DINNER'],
+      timings: ['MORNING', 'EVENING'],
       durationDays: 30,
       totalCount: 60,
       efficacy: '당뇨병 치료제 / 혈당 조절',
