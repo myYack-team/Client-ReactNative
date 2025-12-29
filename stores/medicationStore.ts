@@ -213,6 +213,9 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
         medications: state.medications.filter((m) => m.id !== id),
         isLoading: false,
       }));
+      // 캐시 무효화 후 새로고침
+      get().invalidateCache();
+      set({ todayDataExpiry: 0 });
       await get().fetchTodaySchedule();
     } catch (error) {
       const message = error instanceof Error ? error.message : '약 삭제에 실패했습니다.';
