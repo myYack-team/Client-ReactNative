@@ -40,8 +40,10 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "your-project-id"
-      }
-    }
+        "projectId": "94c8d55d-4f20-4970-aad8-dc5e61604ef3"
+      },
+      "router": {}
+    },
+    "owner": "myyak_song"
   }
 }
