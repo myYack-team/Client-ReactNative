@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useAuthStore, useSettingsStore } from '../stores';
-import { notificationService } from '../services';
+import { notificationService, NOTIFICATION_ACTIONS } from '../services';
 import { Colors } from '../constants';
 import SplashScreen from '../components/SplashScreen';
 
@@ -31,12 +31,32 @@ export default function RootLayout() {
       }
     );
 
-    // 알림 응답 리스너 (알림 클릭 시)
+    // 알림 응답 리스너 (알림 클릭 또는 액션 버튼 클릭 시)
     responseListener.current = notificationService.addNotificationResponseListener(
-      (response) => {
-        console.log('[Notification] 알림 클릭:', response.notification.request.content);
-        // 알림 클릭 시 홈 화면으로 이동
-        router.push('/(tabs)');
+      async (response) => {
+        const actionId = notificationService.getActionIdentifier(response);
+        const data = response.notification.request.content.data;
+
+        console.log('[Notification] 알림 응답:', {
+          action: actionId || 'TAP',
+          data,
+        });
+
+        // 액션 버튼 처리 (Development Build에서만 동작)
+        if (actionId === NOTIFICATION_ACTIONS.TAKE) {
+          // 복용 버튼 클릭
+          console.log('[Notification] 복용 버튼 클릭');
+          // TODO: 복용 기록 API 호출 (data에서 medicationId, timing 등 추출)
+          // 현재는 서버에서 data를 포함하지 않으므로 추후 구현
+        } else if (actionId === NOTIFICATION_ACTIONS.SKIP) {
+          // 건너뛰기 버튼 클릭
+          console.log('[Notification] 건너뛰기 버튼 클릭');
+          // TODO: 건너뛰기 기록 API 호출
+        } else {
+          // 알림 자체를 클릭한 경우 - 홈 화면으로 이동
+          router.push('/(tabs)');
+        }
+
         // 배지 초기화
         notificationService.clearBadge();
       }
