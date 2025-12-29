@@ -24,4 +24,9 @@ export const userService = {
     const response = await api.patch<ApiResponse<UpdateUserResponse>>('/users/me', data);
     return response.data.result!;
   },
+
+  // 회원 탈퇴
+  async deleteMe(): Promise<void> {
+    await api.delete<ApiResponse<void>>('/users/me');
+  },
 };
