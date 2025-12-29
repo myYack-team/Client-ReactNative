@@ -20,7 +20,7 @@ import { DrugTypeBadge } from '../../components/ui';
 import { Colors, DEFAULT_TIMES } from '../../constants';
 import { drugService } from '../../services/drug';
 import { medicationService } from '../../services';
-import { DrugInfo, MedicationTiming, TIMING_LABELS, TIMING_OPTIONS } from '../../types';
+import { DrugInfo } from '../../types';
 
 export default function MedicationRegisterScreen() {
   const { itemSeq } = useLocalSearchParams<{ itemSeq: string }>();
@@ -34,7 +34,6 @@ export default function MedicationRegisterScreen() {
   const [frequency, setFrequency] = useState(3);
   const [durationDays, setDurationDays] = useState(7);
   const [totalCount, setTotalCount] = useState(21);
-  const [selectedTimings, setSelectedTimings] = useState<MedicationTiming[]>(['AFTER_BREAKFAST', 'AFTER_LUNCH', 'AFTER_DINNER']);
   const [reminderTimes, setReminderTimes] = useState<string[]>(DEFAULT_TIMES[3]);
   const [startDate, setStartDate] = useState(new Date());
   const [memo, setMemo] = useState('');
@@ -73,16 +72,6 @@ export default function MedicationRegisterScreen() {
     }
   };
 
-  const handleTimingToggle = (timing: MedicationTiming) => {
-    setSelectedTimings((prev) => {
-      if (prev.includes(timing)) {
-        return prev.filter((t) => t !== timing);
-      } else {
-        return [...prev, timing];
-      }
-    });
-  };
-
   const handleTimeEdit = (index: number) => {
     setEditingTimeIndex(index);
     setShowTimePicker(true);
@@ -106,18 +95,19 @@ export default function MedicationRegisterScreen() {
   const handleSubmit = async () => {
     if (!drug) return;
 
-    if (selectedTimings.length === 0) {
-      Alert.alert('오류', '복용 시간대를 선택해주세요.');
+    if (reminderTimes.length === 0) {
+      Alert.alert('오류', '알림 시간을 설정해주세요.');
       return;
     }
 
     setIsSubmitting(true);
     try {
+      // timings는 서버에서 reminderTimes 기반으로 자동 계산
       await medicationService.createMedication({
         drugItemSeq: drug.itemSeq,
         dosage,
         frequency,
-        timings: selectedTimings,
+        timings: [],  // 서버에서 reminderTimes 기반으로 계산
         durationDays,
         totalCount,
         startDate: startDate.toISOString().split('T')[0],
@@ -281,32 +271,6 @@ export default function MedicationRegisterScreen() {
               <Typography variant="body" color={Colors.primary} style={styles.totalValue}>
                 {totalCount}정
               </Typography>
-            </View>
-          </View>
-
-          {/* 복용 시간대 선택 */}
-          <View style={styles.section}>
-            <Typography variant="h4" style={styles.sectionTitle}>
-              복용 시간대
-            </Typography>
-            <View style={styles.timingsGrid}>
-              {TIMING_OPTIONS.map((timing) => (
-                <TouchableOpacity
-                  key={timing}
-                  style={[
-                    styles.timingChip,
-                    selectedTimings.includes(timing) && styles.timingChipSelected,
-                  ]}
-                  onPress={() => handleTimingToggle(timing)}
-                >
-                  <Typography
-                    variant="bodySmall"
-                    color={selectedTimings.includes(timing) ? Colors.white : Colors.textSecondary}
-                  >
-                    {TIMING_LABELS[timing]}
-                  </Typography>
-                </TouchableOpacity>
-              ))}
             </View>
           </View>
 
@@ -484,20 +448,6 @@ const styles = StyleSheet.create({
   },
   totalValue: {
     fontWeight: '700',
-  },
-  timingsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  timingChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    backgroundColor: Colors.backgroundSecondary,
-  },
-  timingChipSelected: {
-    backgroundColor: Colors.primary,
   },
   timesContainer: {
     flexDirection: 'row',

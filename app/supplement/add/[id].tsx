@@ -31,7 +31,7 @@ export default function AddUserSupplementScreen() {
   // 폼 상태
   const [dosage, setDosage] = useState('1정');
   const [frequency, setFrequency] = useState(1);
-  const [selectedTimings, setSelectedTimings] = useState<MedicationTiming[]>(['AFTER_BREAKFAST']);
+  const [selectedTimings, setSelectedTimings] = useState<MedicationTiming[]>(['MORNING']);
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [memo, setMemo] = useState('');
 
