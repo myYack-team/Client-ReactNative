@@ -3,7 +3,7 @@ import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Modal, 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
-import { Button, Card, Typography, MedicationActionButtons, SnoozeModal, DrugTypeBadge } from '../../components/ui';
+import { Button, Card, Typography, MedicationActionButtons, SnoozeModal, DrugTypeBadge, SupplementTagBadge } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useMedicationStore } from '../../stores';
 import { intakeService, reminderService } from '../../services';
@@ -644,9 +644,11 @@ export default function HomeScreen() {
                           >
                             {getMedDisplayName(med)}
                           </Typography>
-                          {med.drugType && (
+                          {med.isSupplement && med.supplementTag ? (
+                            <SupplementTagBadge tag={med.supplementTag} size="small" />
+                          ) : med.drugType ? (
                             <DrugTypeBadge type={med.drugType} size="small" />
-                          )}
+                          ) : null}
                         </View>
                         <Typography variant="caption" color={Colors.textSecondary}>
                           {med.dosage}정
