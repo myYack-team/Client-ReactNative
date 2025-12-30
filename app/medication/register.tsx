@@ -102,12 +102,10 @@ export default function MedicationRegisterScreen() {
 
     setIsSubmitting(true);
     try {
-      // timings는 서버에서 reminderTimes 기반으로 자동 계산
       await medicationService.createMedication({
         drugItemSeq: drug.itemSeq,
         dosage,
         frequency,
-        timings: [],  // 서버에서 reminderTimes 기반으로 계산
         durationDays,
         totalCount,
         startDate: startDate.toISOString().split('T')[0],

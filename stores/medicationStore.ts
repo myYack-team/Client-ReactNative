@@ -166,11 +166,13 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
         : medication;
 
       await medicationService.createMedication(medicationWithPrescription);
-      // medications 목록은 탭 포커스 시 로드되므로 여기서는 호출 불필요
-      // 오늘 스케줄만 갱신 (홈 화면에서 바로 보이도록)
-      await get().fetchTodaySchedule();
-      // 데이터 변경 플래그 설정 (medications 탭에서 조건부 로드용)
-      set({ isLoading: false, needsRefresh: true });
+      // 캐시 무효화 및 데이터 갱신
+      get().invalidateCache();
+      await Promise.all([
+        get().fetchMedications(),
+        get().fetchTodaySchedule(),
+      ]);
+      set({ isLoading: false });
     } catch (error) {
       const message = error instanceof Error ? error.message : '약 등록에 실패했습니다.';
       set({ isLoading: false, error: message });

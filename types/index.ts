@@ -303,13 +303,12 @@ export interface CreateMedicationRequest {
   customDrugName?: string;  // 직접 입력한 약 이름 (API에 없는 경우)
   dosage: number;
   frequency: number;
-  timings: MedicationTiming[];
   durationDays: number;
   totalCount: number;
   startDate: string;
   memo?: string;            // 사용자 메모
   prescriptionId?: number;  // 처방전 ID (처방전에서 등록된 경우)
-  reminderTimes?: string[]; // 알림 시간 목록
+  reminderTimes: string[];  // 알림 시간 목록 (필수)
 }
 
 // 처방전 복용 상태
