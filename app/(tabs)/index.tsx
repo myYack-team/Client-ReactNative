@@ -623,7 +623,9 @@ export default function HomeScreen() {
                           <Image source={{ uri: med.imageUrl }} style={styles.medThumbnail} resizeMode="cover" />
                         ) : (
                           <View style={[styles.medThumbnail, styles.medThumbnailPlaceholder]}>
-                            <Typography variant="caption" color={Colors.textSecondary}>💊</Typography>
+                            <Typography variant="caption" color={Colors.textSecondary}>
+                              {med.isSupplement ? '🍀' : '💊'}
+                            </Typography>
                           </View>
                         )}
                         {/* 복용 상태 표시 */}
