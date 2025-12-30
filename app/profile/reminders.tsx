@@ -1,39 +1,48 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Switch } from 'react-native';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, StyleSheet, Switch, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from 'expo-router';
 import { Card, Typography } from '../../components/ui';
 import { Colors } from '../../constants';
-
-const NOTIFICATION_ENABLED_KEY = 'notification_enabled';
+import { userService } from '../../services/user';
 
 export default function RemindersScreen() {
   const [notificationEnabled, setNotificationEnabled] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  useEffect(() => {
-    loadNotificationSetting();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadNotificationSettings();
+    }, [])
+  );
 
-  const loadNotificationSetting = async () => {
+  const loadNotificationSettings = async () => {
     try {
-      const value = await AsyncStorage.getItem(NOTIFICATION_ENABLED_KEY);
-      if (value !== null) {
-        setNotificationEnabled(value === 'true');
-      }
+      setIsLoading(true);
+      const settings = await userService.getNotificationSettings();
+      setNotificationEnabled(settings.notificationEnabled);
     } catch (error) {
-      console.error('Failed to load notification setting:', error);
+      console.error('Failed to load notification settings:', error);
+      Alert.alert('오류', '알림 설정을 불러오는데 실패했습니다.');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleToggle = async (value: boolean) => {
+    const previousValue = notificationEnabled;
     setNotificationEnabled(value);
+    setIsUpdating(true);
+
     try {
-      await AsyncStorage.setItem(NOTIFICATION_ENABLED_KEY, value.toString());
+      await userService.updateNotificationSettings({ notificationEnabled: value });
     } catch (error) {
       console.error('Failed to save notification setting:', error);
+      setNotificationEnabled(previousValue);
+      Alert.alert('오류', '알림 설정을 저장하는데 실패했습니다.');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -66,6 +75,7 @@ export default function RemindersScreen() {
             <Switch
               value={notificationEnabled}
               onValueChange={handleToggle}
+              disabled={isUpdating}
               trackColor={{ false: Colors.border, true: Colors.primaryLight }}
               thumbColor={notificationEnabled ? Colors.primary : Colors.textSecondary}
             />

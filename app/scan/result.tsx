@@ -315,7 +315,7 @@ export default function ResultScreen() {
       name: '',
       dosage: 1,
       frequency: 3,
-      timings: ['AFTER_BREAKFAST'],
+      timings: ['MORNING', 'AFTERNOON', 'EVENING'],
       durationDays: 7,
       totalCount: 21,
       times: DEFAULT_TIMES[3],
@@ -365,7 +365,7 @@ export default function ResultScreen() {
       const medications: RegisterMedicationInfo[] = medsToRegister.map((med) => {
         // times 배열과 timings 배열을 매핑하여 TimingWithTime 배열 생성
         const timingsWithTime: TimingWithTime[] = med.times.map((time, idx) => ({
-          timing: med.timings[idx] || med.timings[0] || 'AFTER_BREAKFAST' as MedicationTiming,
+          timing: med.timings[idx] || med.timings[0] || 'MORNING' as MedicationTiming,
           time: time,
         }));
 

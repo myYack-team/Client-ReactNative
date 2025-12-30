@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, ActivityIndicator, TouchableOpacity, LayoutAnimation, Platform, UIManager, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,53 @@ import { Button, Card, Typography } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useMedicationStore } from '../../stores';
 import { Medication, TIMING_LABELS, MedicationTiming } from '../../types';
+
+// Android에서 LayoutAnimation 활성화
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+// 더보기/접기 가능한 텍스트 컴포넌트
+interface ExpandableTextProps {
+  text: string;
+  numberOfLines?: number;
+}
+
+function ExpandableText({ text, numberOfLines = 3 }: ExpandableTextProps) {
+  const [expanded, setExpanded] = useState(false);
+  const [shouldShowButton, setShouldShowButton] = useState(false);
+
+  const handleTextLayout = (e: any) => {
+    // 텍스트가 numberOfLines를 초과하는지 확인
+    if (!shouldShowButton && e.nativeEvent.lines.length > numberOfLines) {
+      setShouldShowButton(true);
+    }
+  };
+
+  const toggleExpanded = () => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpanded(!expanded);
+  };
+
+  return (
+    <View>
+      <Text
+        style={styles.descriptionText}
+        numberOfLines={expanded ? undefined : numberOfLines}
+        onTextLayout={handleTextLayout}
+      >
+        {text}
+      </Text>
+      {shouldShowButton && (
+        <TouchableOpacity onPress={toggleExpanded} style={styles.expandButton}>
+          <Typography variant="bodySmall" color={Colors.primary}>
+            {expanded ? '접기' : '더보기'}
+          </Typography>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
 
 export default function MedicationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -107,9 +154,7 @@ export default function MedicationDetailScreen() {
             <Typography variant="h3" style={styles.sectionTitle}>
               효능/용도
             </Typography>
-            <Typography variant="body" style={styles.descriptionText}>
-              {drugInfo.efficacy}
-            </Typography>
+            <ExpandableText text={drugInfo.efficacy} numberOfLines={3} />
           </Card>
         )}
 
@@ -119,9 +164,7 @@ export default function MedicationDetailScreen() {
             <Typography variant="h3" style={styles.sectionTitle}>
               용법/용량
             </Typography>
-            <Typography variant="body" style={styles.descriptionText}>
-              {drugInfo.useMethod}
-            </Typography>
+            <ExpandableText text={drugInfo.useMethod} numberOfLines={3} />
           </Card>
         )}
 
@@ -159,14 +202,12 @@ export default function MedicationDetailScreen() {
               주의사항
             </Typography>
             {drugInfo.warning && (
-              <Typography variant="body" style={styles.descriptionText}>
-                {drugInfo.warning}
-              </Typography>
+              <ExpandableText text={drugInfo.warning} numberOfLines={3} />
             )}
             {drugInfo.caution && (
-              <Typography variant="body" style={styles.descriptionTextWithMargin}>
-                {drugInfo.caution}
-              </Typography>
+              <View style={styles.cautionContainer}>
+                <ExpandableText text={drugInfo.caution} numberOfLines={3} />
+              </View>
             )}
           </Card>
         )}
@@ -177,9 +218,7 @@ export default function MedicationDetailScreen() {
             <Typography variant="h3" style={styles.sectionTitle}>
               부작용
             </Typography>
-            <Typography variant="body" style={styles.descriptionText}>
-              {drugInfo.sideEffect}
-            </Typography>
+            <ExpandableText text={drugInfo.sideEffect} numberOfLines={3} />
           </Card>
         )}
 
@@ -324,11 +363,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   descriptionText: {
-    lineHeight: 24,
+    lineHeight: 22,
+    fontSize: 14,
+    color: Colors.text,
   },
-  descriptionTextWithMargin: {
-    lineHeight: 24,
+  expandButton: {
     marginTop: 8,
+    paddingVertical: 4,
+  },
+  cautionContainer: {
+    marginTop: 12,
   },
   infoRow: {
     flexDirection: 'row',

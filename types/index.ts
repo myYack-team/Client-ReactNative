@@ -10,13 +10,9 @@ export interface ApiResponse<T> {
 export type FontSize = 'SMALL' | 'MEDIUM' | 'LARGE';
 
 export type MedicationTiming =
-  | 'BEFORE_BREAKFAST'
-  | 'AFTER_BREAKFAST'
-  | 'BEFORE_LUNCH'
-  | 'AFTER_LUNCH'
-  | 'BEFORE_DINNER'
-  | 'AFTER_DINNER'
-  | 'BEFORE_BED'
+  | 'MORNING'
+  | 'AFTERNOON'
+  | 'EVENING'
   | 'AS_NEEDED';
 
 export type IntakeStatus = 'TAKEN' | 'MISSED' | 'SKIPPED';
@@ -101,25 +97,17 @@ export const SUPPLEMENT_TAG_OPTIONS: SupplementTag[] = [
 
 // Timing 라벨 매핑
 export const TIMING_LABELS: Record<MedicationTiming, string> = {
-  BEFORE_BREAKFAST: '아침 식전',
-  AFTER_BREAKFAST: '아침 식후',
-  BEFORE_LUNCH: '점심 식전',
-  AFTER_LUNCH: '점심 식후',
-  BEFORE_DINNER: '저녁 식전',
-  AFTER_DINNER: '저녁 식후',
-  BEFORE_BED: '취침 전',
+  MORNING: '아침',
+  AFTERNOON: '점심',
+  EVENING: '저녁',
   AS_NEEDED: '필요시',
 };
 
 // Timing 옵션 배열
 export const TIMING_OPTIONS: MedicationTiming[] = [
-  'BEFORE_BREAKFAST',
-  'AFTER_BREAKFAST',
-  'BEFORE_LUNCH',
-  'AFTER_LUNCH',
-  'BEFORE_DINNER',
-  'AFTER_DINNER',
-  'BEFORE_BED',
+  'MORNING',
+  'AFTERNOON',
+  'EVENING',
   'AS_NEEDED',
 ];
 
@@ -315,13 +303,12 @@ export interface CreateMedicationRequest {
   customDrugName?: string;  // 직접 입력한 약 이름 (API에 없는 경우)
   dosage: number;
   frequency: number;
-  timings: MedicationTiming[];
   durationDays: number;
   totalCount: number;
   startDate: string;
   memo?: string;            // 사용자 메모
   prescriptionId?: number;  // 처방전 ID (처방전에서 등록된 경우)
-  reminderTimes?: string[]; // 알림 시간 목록
+  reminderTimes: string[];  // 알림 시간 목록 (필수)
 }
 
 // 처방전 복용 상태

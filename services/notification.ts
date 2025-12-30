@@ -4,6 +4,19 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import api from './api';
 
+// 푸시 액션 식별자
+export const NOTIFICATION_ACTIONS = {
+  TAKE: 'TAKE_MEDICATION',
+  SKIP: 'SKIP_MEDICATION',
+} as const;
+
+// 알림 카테고리 식별자
+export const NOTIFICATION_CATEGORY = 'MEDICATION_REMINDER';
+
+// Development Build 여부 확인
+// Expo Go에서는 Constants.appOwnership이 'expo'이고, Development Build에서는 undefined 또는 'standalone'
+const isDevelopmentBuild = Constants.appOwnership !== 'expo';
+
 // 포그라운드에서 알림 표시 설정
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -89,13 +102,50 @@ export const notificationService = {
   },
 
   /**
-   * 푸시 알림 초기화 (권한 요청 + 토큰 발급 + 서버 등록)
+   * 알림 카테고리 설정 (복용/건너뛰기 액션 버튼)
+   * Development Build에서만 활성화됨
+   */
+  setupNotificationCategories: async (): Promise<void> => {
+    // Expo Go에서는 카테고리 액션이 지원되지 않음
+    if (!isDevelopmentBuild) {
+      console.log('[Notification] Expo Go 환경 - 알림 액션 버튼 비활성화');
+      return;
+    }
+
+    try {
+      await Notifications.setNotificationCategoryAsync(NOTIFICATION_CATEGORY, [
+        {
+          identifier: NOTIFICATION_ACTIONS.TAKE,
+          buttonTitle: '복용',
+          options: {
+            opensAppToForeground: false,
+          },
+        },
+        {
+          identifier: NOTIFICATION_ACTIONS.SKIP,
+          buttonTitle: '건너뛰기',
+          options: {
+            opensAppToForeground: false,
+          },
+        },
+      ]);
+      console.log('[Notification] 알림 카테고리 설정 완료');
+    } catch (error) {
+      console.error('[Notification] 알림 카테고리 설정 실패:', error);
+    }
+  },
+
+  /**
+   * 푸시 알림 초기화 (권한 요청 + 토큰 발급 + 서버 등록 + 카테고리 설정)
    */
   initialize: async (): Promise<void> => {
     const token = await notificationService.registerForPushNotifications();
     if (token) {
       await notificationService.registerTokenToServer(token);
     }
+
+    // 알림 카테고리 설정 (Development Build에서만 동작)
+    await notificationService.setupNotificationCategories();
   },
 
   /**
@@ -117,6 +167,15 @@ export const notificationService = {
   },
 
   /**
+   * 알림 액션 식별자 추출
+   */
+  getActionIdentifier: (response: Notifications.NotificationResponse): string | null => {
+    return response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER
+      ? response.actionIdentifier
+      : null;
+  },
+
+  /**
    * 배지 수 초기화
    */
   clearBadge: async (): Promise<void> => {
@@ -129,9 +188,11 @@ export const notificationService = {
   sendTestNotification: async (): Promise<void> => {
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: '복약 알림',
+        title: '마이약',
         body: '테스트 알림입니다. 약을 복용할 시간입니다!',
         sound: 'default',
+        // Development Build에서만 카테고리 적용
+        ...(isDevelopmentBuild && { categoryIdentifier: NOTIFICATION_CATEGORY }),
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
