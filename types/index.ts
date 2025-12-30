@@ -203,7 +203,9 @@ export interface ScheduleMedication {
   taken: boolean;
   takenAt?: string | null;
   reminderId?: number;       // 알림 ID (스누즈용)
-  drugType?: DrugType;       // 전문/일반/영양제 구분
+  drugType?: DrugType;       // 전문/일반 구분 (약물인 경우)
+  supplementTag?: SupplementTag;  // 영양제 태그 (영양제인 경우)
+  isSupplement?: boolean;    // 영양제 여부
   imageUrl?: string;         // 약 이미지
 }
 
