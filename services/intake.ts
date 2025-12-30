@@ -71,7 +71,7 @@ export const intakeService = {
     });
   },
 
-  // 월별 복약 요약 조회
+  // 복용 달력 데이터 조회
   async getMonthlySummary(year: number, month: number): Promise<MonthlySummaryResponse> {
     const response = await api.get<ApiResponse<MonthlySummaryResponse>>('/intakes/monthly-summary', {
       params: { year, month },

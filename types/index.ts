@@ -440,7 +440,7 @@ export interface DaySummary {
   status: DayStatus;
 }
 
-// 월별 복약 요약 응답
+// 복용 달력 데이터 응답
 export interface MonthlySummaryResponse {
   year: number;
   month: number;
