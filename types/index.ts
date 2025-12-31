@@ -591,3 +591,28 @@ export interface BatchDeleteResult {
   requestedCount: number;
   deletedCount: number;
 }
+
+// ========== 약물+영양제 통합 목록 타입 ==========
+
+// 통합 목록 아이템 (약물 + 영양제)
+export interface MedicationListItemUnified {
+  id: number;
+  type: 'medication' | 'supplement';
+
+  // 공통 필드
+  name: string;
+  displayName?: string;
+  dosage: string;
+  frequency: number;
+  imageUrl?: string;
+  reminders?: Reminder[];
+
+  // 약물 전용 필드
+  remainingCount?: number;
+  daysLeft?: number;
+  drugType?: DrugType;
+  ingredientKr?: string;
+
+  // 영양제 전용 필드
+  supplementTag?: SupplementTag;
+}

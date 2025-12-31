@@ -1,20 +1,46 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import { Button, Card, Typography, DeleteConfirmModal, Toast } from '../../components/ui';
+import { Button, Card, Typography, DeleteConfirmModal, Toast, SupplementTagBadge } from '../../components/ui';
 import { Colors } from '../../constants';
-import { useMedicationStore } from '../../stores';
-import { MedicationListItem, Reminder } from '../../types';
-import { getMedDisplayName } from '../../utils';
+import { useMedicationStore, useSupplementStore } from '../../stores';
+import { MedicationListItemUnified, Reminder } from '../../types';
+import { getMedDisplayName, mergeAndSortItems } from '../../utils';
 
 export default function MedicationsScreen() {
-  const { medications, fetchMedications, deleteMedicationsBatch, isLoading, error, needsRefresh, clearNeedsRefresh } = useMedicationStore();
+  // 약물 Store
+  const {
+    medications,
+    fetchMedications,
+    deleteMedicationsBatch,
+    isLoading: isMedLoading,
+    needsRefresh: medNeedsRefresh,
+    clearNeedsRefresh: clearMedRefresh,
+  } = useMedicationStore();
+
+  // 영양제 Store
+  const {
+    userSupplements,
+    fetchUserSupplements,
+    deleteUserSupplementsBatch,
+    isLoading: isSuppLoading,
+    needsRefresh: suppNeedsRefresh,
+    clearNeedsRefresh: clearSuppRefresh,
+  } = useSupplementStore();
+
+  // 통합 목록
+  const allItems = useMemo(
+    () => mergeAndSortItems(medications, userSupplements),
+    [medications, userSupplements]
+  );
+
+  const isLoading = isMedLoading || isSuppLoading;
 
   // 선택 모드 상태
   const [isSelectMode, setIsSelectMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // 삭제 확인 모달 상태
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -23,19 +49,32 @@ export default function MedicationsScreen() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
-  // 탭이 실제로 포커스될 때 조건부 데이터 로드
-  // - 데이터가 없거나 needsRefresh 플래그가 true일 때만 로드
+  // 탭 포커스 시 데이터 로드
   useFocusEffect(
     useCallback(() => {
-      if (medications.length === 0 || needsRefresh) {
-        fetchMedications().then(() => {
-          clearNeedsRefresh();
-        }).catch((err) => {
-          console.error('Failed to fetch medications:', err);
-        });
-      }
-    }, [needsRefresh])
+      const loadData = async () => {
+        const promises: Promise<void>[] = [];
+
+        if (medications.length === 0 || medNeedsRefresh) {
+          promises.push(fetchMedications().then(() => clearMedRefresh()));
+        }
+        if (userSupplements.length === 0 || suppNeedsRefresh) {
+          promises.push(fetchUserSupplements().then(() => clearSuppRefresh()));
+        }
+
+        await Promise.all(promises);
+      };
+
+      loadData().catch((err) => {
+        console.error('Failed to load data:', err);
+      });
+    }, [medNeedsRefresh, suppNeedsRefresh])
   );
+
+  // 새로고침
+  const handleRefresh = async () => {
+    await Promise.all([fetchMedications(), fetchUserSupplements()]);
+  };
 
   // 선택 모드 종료 시 상태 초기화
   const exitSelectMode = () => {
@@ -44,22 +83,23 @@ export default function MedicationsScreen() {
   };
 
   // Long Press로 선택 모드 진입
-  const handleLongPress = (id: number) => {
+  const handleLongPress = (item: MedicationListItemUnified) => {
     if (!isSelectMode) {
       setIsSelectMode(true);
-      setSelectedIds(new Set([id]));
+      setSelectedIds(new Set([`${item.type}-${item.id}`]));
     }
   };
 
   // 아이템 선택/해제 토글
-  const toggleSelect = (id: number) => {
+  const toggleSelect = (item: MedicationListItemUnified) => {
     if (!isSelectMode) return;
 
+    const key = `${item.type}-${item.id}`;
     const newSelected = new Set(selectedIds);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
+    if (newSelected.has(key)) {
+      newSelected.delete(key);
     } else {
-      newSelected.add(id);
+      newSelected.add(key);
     }
     setSelectedIds(newSelected);
 
@@ -71,38 +111,72 @@ export default function MedicationsScreen() {
 
   // 전체 선택/해제
   const toggleSelectAll = () => {
-    if (selectedIds.size === medications.length) {
+    if (selectedIds.size === allItems.length) {
       setSelectedIds(new Set());
       setIsSelectMode(false);
     } else {
-      setSelectedIds(new Set(medications.map(m => m.id)));
+      setSelectedIds(new Set(allItems.map(item => `${item.type}-${item.id}`)));
     }
   };
 
   // 삭제 실행
   const handleDeleteConfirm = async () => {
-    const idsToDelete = Array.from(selectedIds);
+    const selectedItems = allItems.filter(item =>
+      selectedIds.has(`${item.type}-${item.id}`)
+    );
+
+    // 약물과 영양제 분리
+    const medIds = selectedItems
+      .filter(item => item.type === 'medication')
+      .map(item => item.id);
+    const suppIds = selectedItems
+      .filter(item => item.type === 'supplement')
+      .map(item => item.id);
 
     try {
-      // 일괄 삭제 API 호출
-      const result = await deleteMedicationsBatch(idsToDelete);
+      const promises: Promise<{ deletedCount: number } | void>[] = [];
+      if (medIds.length > 0) {
+        promises.push(deleteMedicationsBatch(medIds));
+      }
+      if (suppIds.length > 0) {
+        promises.push(deleteUserSupplementsBatch(suppIds));
+      }
+
+      const results = await Promise.all(promises);
+      const totalDeleted = results.reduce(
+        (sum, r) => sum + ((r as { deletedCount: number })?.deletedCount || 0),
+        0
+      );
 
       // 토스트 표시
-      setToastMessage(`${result.deletedCount}개 삭제됨`);
+      setToastMessage(`${totalDeleted}개 삭제됨`);
       setShowToast(true);
 
       // 선택 모드 종료
       exitSelectMode();
     } catch (err) {
-      console.error('Failed to delete medications:', err);
+      console.error('Failed to delete items:', err);
     }
   };
 
-  // 선택된 첫 번째 약 이름 가져오기
+  // 선택된 첫 번째 아이템 이름 가져오기
   const getFirstSelectedName = (): string | undefined => {
-    const firstId = Array.from(selectedIds)[0];
-    const firstMed = medications.find(m => m.id === firstId);
-    return firstMed ? getMedDisplayName(firstMed) : undefined;
+    const firstKey = Array.from(selectedIds)[0];
+    const firstItem = allItems.find(item => `${item.type}-${item.id}` === firstKey);
+    return firstItem ? (firstItem.displayName || firstItem.name) : undefined;
+  };
+
+  // 아이템 클릭 처리
+  const handleItemPress = (item: MedicationListItemUnified) => {
+    if (isSelectMode) {
+      toggleSelect(item);
+    } else {
+      if (item.type === 'medication') {
+        router.push(`/medication/${item.id}`);
+      } else {
+        router.push(`/supplement/my/${item.id}`);
+      }
+    }
   };
 
   // 알림 시간 태그 렌더링
@@ -127,6 +201,99 @@ export default function MedicationsScreen() {
     );
   };
 
+  // 아이템 렌더링
+  const renderItem = (item: MedicationListItemUnified) => {
+    const key = `${item.type}-${item.id}`;
+    const isSelected = selectedIds.has(key);
+
+    return (
+      <Pressable
+        key={key}
+        onPress={() => handleItemPress(item)}
+        onLongPress={() => handleLongPress(item)}
+        delayLongPress={500}
+      >
+        <Card
+          style={[
+            styles.medicationCard,
+            isSelectMode && isSelected && styles.selectedCard
+          ]}
+          variant="elevated"
+        >
+          <View style={styles.medicationRow}>
+            {/* 선택 모드일 때 체크박스 표시 */}
+            {isSelectMode && (
+              <View style={[styles.checkbox, isSelected && styles.checkboxChecked]}>
+                {isSelected && (
+                  <Typography variant="caption" color={Colors.white}>✓</Typography>
+                )}
+              </View>
+            )}
+
+            {/* 아이콘/이미지 */}
+            {item.imageUrl ? (
+              <Image source={{ uri: item.imageUrl }} style={styles.medThumbnail} resizeMode="cover" />
+            ) : (
+              <View style={[styles.medThumbnail, styles.medThumbnailPlaceholder]}>
+                <Typography variant="body" color={Colors.textSecondary}>
+                  {item.type === 'supplement' ? '🍀' : '💊'}
+                </Typography>
+              </View>
+            )}
+
+            <View style={styles.medicationContent}>
+              <View style={styles.medicationHeader}>
+                <View style={styles.nameRow}>
+                  <Typography variant="body" style={styles.drugName} numberOfLines={1}>
+                    {item.displayName || item.name}
+                  </Typography>
+                  {/* 영양제 태그 뱃지 */}
+                  {item.type === 'supplement' && item.supplementTag && (
+                    <SupplementTagBadge tag={item.supplementTag} size="small" />
+                  )}
+                </View>
+                <Typography variant="caption" color={Colors.textSecondary}>
+                  1회 {item.dosage}{item.type === 'medication' ? '정' : ''} / 하루 {item.frequency}회
+                  {item.ingredientKr ? ` · ${item.ingredientKr}` : ''}
+                </Typography>
+              </View>
+
+              <View style={styles.medicationInfo}>
+                {/* 알림 시간 */}
+                <View style={styles.infoItem}>
+                  <Typography variant="caption" color={Colors.textSecondary}>
+                    알림 시간
+                  </Typography>
+                  {renderReminderTimeTags(item.reminders)}
+                </View>
+
+                {/* 남은 약 (약물만) */}
+                {item.type === 'medication' && (
+                  <View style={styles.infoItem}>
+                    <Typography variant="caption" color={Colors.textSecondary}>
+                      남은 약
+                    </Typography>
+                    <Typography
+                      variant="caption"
+                      color={
+                        (item.daysLeft || 0) <= 3
+                          ? Colors.warning
+                          : Colors.textPrimary
+                      }
+                    >
+                      {item.remainingCount}개 ({item.daysLeft}일분)
+                      {(item.daysLeft || 0) <= 3 && ' ⚠️'}
+                    </Typography>
+                  </View>
+                )}
+              </View>
+            </View>
+          </View>
+        </Card>
+      </Pressable>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
@@ -135,7 +302,7 @@ export default function MedicationsScreen() {
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
-            onRefresh={fetchMedications}
+            onRefresh={handleRefresh}
             colors={[Colors.primary]}
           />
         }
@@ -151,7 +318,7 @@ export default function MedicationsScreen() {
               <>
                 <Typography variant="h2">약 목록</Typography>
                 <Typography variant="body" color={Colors.textSecondary}>
-                  등록된 약 {medications.length}개
+                  등록된 약 {allItems.length}개
                 </Typography>
               </>
             )}
@@ -166,10 +333,10 @@ export default function MedicationsScreen() {
         </View>
 
         {/* 전체 선택 체크박스 (선택 모드일 때만) */}
-        {isSelectMode && medications.length > 0 && (
+        {isSelectMode && allItems.length > 0 && (
           <TouchableOpacity style={styles.selectAllContainer} onPress={toggleSelectAll}>
-            <View style={[styles.checkbox, selectedIds.size === medications.length && styles.checkboxChecked]}>
-              {selectedIds.size === medications.length && (
+            <View style={[styles.checkbox, selectedIds.size === allItems.length && styles.checkboxChecked]}>
+              {selectedIds.size === allItems.length && (
                 <Typography variant="caption" color={Colors.white}>✓</Typography>
               )}
             </View>
@@ -177,20 +344,12 @@ export default function MedicationsScreen() {
               전체 선택
             </Typography>
             <Typography variant="body" color={Colors.textSecondary} style={styles.selectCount}>
-              {selectedIds.size}/{medications.length}개
+              {selectedIds.size}/{allItems.length}개
             </Typography>
           </TouchableOpacity>
         )}
 
-        {error && (
-          <Card style={styles.errorCard} variant="elevated">
-            <Typography variant="body" color={Colors.error}>
-              오류: {error}
-            </Typography>
-          </Card>
-        )}
-
-        {medications.length === 0 && !error ? (
+        {allItems.length === 0 ? (
           <Card style={styles.emptyCard} variant="elevated">
             <Typography variant="body" style={styles.emptyText}>
               등록된 약이 없어요
@@ -200,84 +359,7 @@ export default function MedicationsScreen() {
             </Typography>
           </Card>
         ) : (
-          medications.map((medication) => (
-            <Pressable
-              key={medication.id}
-              onPress={() => {
-                if (isSelectMode) {
-                  toggleSelect(medication.id);
-                } else {
-                  router.push(`/medication/${medication.id}`);
-                }
-              }}
-              onLongPress={() => handleLongPress(medication.id)}
-              delayLongPress={500}
-            >
-              <Card
-                style={[
-                  styles.medicationCard,
-                  isSelectMode && selectedIds.has(medication.id) && styles.selectedCard
-                ]}
-                variant="elevated"
-              >
-                <View style={styles.medicationRow}>
-                  {/* 선택 모드일 때 체크박스 표시 */}
-                  {isSelectMode && (
-                    <View style={[styles.checkbox, selectedIds.has(medication.id) && styles.checkboxChecked]}>
-                      {selectedIds.has(medication.id) && (
-                        <Typography variant="caption" color={Colors.white}>✓</Typography>
-                      )}
-                    </View>
-                  )}
-
-                  {/* 약물 이미지 썸네일 */}
-                  {medication.imageUrl ? (
-                    <Image source={{ uri: medication.imageUrl }} style={styles.medThumbnail} resizeMode="cover" />
-                  ) : (
-                    <View style={[styles.medThumbnail, styles.medThumbnailPlaceholder]}>
-                      <Typography variant="body" color={Colors.textSecondary}>💊</Typography>
-                    </View>
-                  )}
-                  <View style={styles.medicationContent}>
-                    <View style={styles.medicationHeader}>
-                      <Typography variant="body" style={styles.drugName} numberOfLines={1}>
-                        {getMedDisplayName(medication)}
-                      </Typography>
-                      <Typography variant="caption" color={Colors.textSecondary}>
-                        1회 {medication.dosage}정 / 하루 {medication.frequency}회{medication.ingredientKr ? ` · ${medication.ingredientKr}` : ''}
-                      </Typography>
-                    </View>
-
-                    <View style={styles.medicationInfo}>
-                      <View style={styles.infoItem}>
-                        <Typography variant="caption" color={Colors.textSecondary}>
-                          알림 시간
-                        </Typography>
-                        {renderReminderTimeTags(medication.reminders)}
-                      </View>
-
-                      <View style={styles.infoItem}>
-                        <Typography variant="caption" color={Colors.textSecondary}>
-                          남은 약
-                        </Typography>
-                        <Typography
-                          variant="caption"
-                          color={
-                            medication.daysLeft <= 3
-                              ? Colors.warning
-                              : Colors.textPrimary
-                          }
-                        >
-                          {medication.remainingCount}개 ({medication.daysLeft}일분)
-                          {medication.daysLeft <= 3 && ' ⚠️'}
-                        </Typography>
-                      </View>
-                    </View>
-                  </View>
-                </View>
-              </Card>
-            </Pressable>
-          ))
+          allItems.map(renderItem)
         )}
 
         {!isSelectMode && (
@@ -398,6 +480,12 @@ const styles = StyleSheet.create({
   },
   medicationHeader: {
     marginBottom: 8,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
   },
   medicationInfo: {
     flexDirection: 'row',
