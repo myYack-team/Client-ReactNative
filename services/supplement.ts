@@ -93,4 +93,16 @@ export const supplementService = {
   async deleteUserSupplement(id: number): Promise<void> {
     await api.delete(`/supplements/my/${id}`);
   },
+
+  // 내 영양제 일괄 삭제
+  async deleteUserSupplementsBatch(ids: number[]): Promise<{
+    requestedCount: number;
+    deletedCount: number;
+    failedCount: number;
+  }> {
+    const response = await api.delete<
+      ApiResponse<{ requestedCount: number; deletedCount: number; failedCount: number }>
+    >('/supplements/my/batch', { data: { ids } });
+    return response.data.result!;
+  },
 };
