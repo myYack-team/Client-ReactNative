@@ -1,4 +1,6 @@
 import api from './api';
+import { API_BASE_URL } from '../constants';
+import * as SecureStore from 'expo-secure-store';
 import {
   ApiResponse,
   Supplement,
@@ -20,6 +22,51 @@ export const supplementService = {
   async createSupplement(data: CreateSupplementRequest): Promise<Supplement> {
     const response = await api.post<ApiResponse<Supplement>>('/supplements', data);
     return response.data.result!;
+  },
+
+  // 영양제 등록 (이미지 포함)
+  async createSupplementWithImage(data: {
+    name: string;
+    description?: string;
+    tag: SupplementTag;
+    imageUri?: string;
+  }): Promise<Supplement> {
+    const formData = new FormData();
+    formData.append('name', data.name);
+    formData.append('tag', data.tag);
+
+    if (data.description) {
+      formData.append('description', data.description);
+    }
+
+    if (data.imageUri) {
+      const filename = data.imageUri.split('/').pop() || 'image.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+      formData.append('image', {
+        uri: data.imageUri,
+        name: filename,
+        type,
+      } as unknown as Blob);
+    }
+
+    const token = await SecureStore.getItemAsync('accessToken');
+    const response = await fetch(`${API_BASE_URL}/supplements/with-image`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || '영양제 등록에 실패했습니다.');
+    }
+
+    const result: ApiResponse<Supplement> = await response.json();
+    return result.result!;
   },
 
   // 영양제 검색 (페이징)
