@@ -7,3 +7,4 @@ export { SnoozeModal } from './SnoozeModal';
 export { MedicationActionButtons } from './MedicationActionButtons';
 export { DeleteConfirmModal } from './DeleteConfirmModal';
 export { Toast } from './Toast';
+export { RecentSearchList } from './RecentSearchList';

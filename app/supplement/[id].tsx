@@ -133,7 +133,21 @@ export default function SupplementDetailScreen() {
           title="내 영양제에 추가하기"
           variant="primary"
           size="large"
-          onPress={() => router.push(`/supplement/add/${supplement.id}`)}
+          onPress={() => {
+            // 이미 로드된 데이터를 params로 전달하여 중복 API 호출 방지
+            router.push({
+              pathname: `/supplement/add/${supplement.id}`,
+              params: {
+                supplementData: JSON.stringify({
+                  id: supplement.id,
+                  name: supplement.name,
+                  tag: supplement.tag,
+                  tagLabel: supplement.tagLabel,
+                  description: supplement.description,
+                }),
+              },
+            });
+          }}
         />
       </View>
     </SafeAreaView>

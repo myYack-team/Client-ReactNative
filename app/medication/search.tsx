@@ -11,11 +11,18 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Typography, Card } from '../../components/ui';
+import { Typography, Card, RecentSearchList } from '../../components/ui';
 import { DrugTypeBadge } from '../../components/ui';
 import { Colors } from '../../constants';
 import { drugService } from '../../services/drug';
 import { DrugInfo } from '../../types';
+import {
+  SEARCH_HISTORY_KEYS,
+  getSearchHistory,
+  addSearchHistory,
+  removeSearchHistory,
+  clearSearchHistory,
+} from '../../utils';
 import debounce from 'lodash/debounce';
 
 export default function MedicationSearchScreen() {
@@ -26,9 +33,20 @@ export default function MedicationSearchScreen() {
   const [hasNext, setHasNext] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
   // 화면 이탈 시 요청 취소를 위한 AbortController
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // 최근 검색어 로드
+  useEffect(() => {
+    loadRecentSearches();
+  }, []);
+
+  const loadRecentSearches = async () => {
+    const history = await getSearchHistory(SEARCH_HISTORY_KEYS.MEDICATION);
+    setRecentSearches(history);
+  };
 
   // 컴포넌트 언마운트 시 진행 중인 요청 취소
   useEffect(() => {
@@ -114,12 +132,34 @@ export default function MedicationSearchScreen() {
     }
   };
 
-  const handleDrugSelect = (drug: DrugInfo) => {
+  const handleDrugSelect = async (drug: DrugInfo) => {
+    // 검색어 저장
+    if (searchQuery.trim()) {
+      await addSearchHistory(SEARCH_HISTORY_KEYS.MEDICATION, searchQuery.trim());
+    }
     // 약 등록 페이지로 이동 (약 정보 전달)
     router.push({
       pathname: '/medication/register',
       params: { itemSeq: drug.itemSeq },
     });
+  };
+
+  // 최근 검색어 선택
+  const handleRecentSearchSelect = (keyword: string) => {
+    setSearchQuery(keyword);
+    searchDrugs(keyword, 0, false);
+  };
+
+  // 최근 검색어 삭제
+  const handleRecentSearchRemove = async (keyword: string) => {
+    await removeSearchHistory(SEARCH_HISTORY_KEYS.MEDICATION, keyword);
+    loadRecentSearches();
+  };
+
+  // 최근 검색어 전체 삭제
+  const handleRecentSearchClear = async () => {
+    await clearSearchHistory(SEARCH_HISTORY_KEYS.MEDICATION);
+    setRecentSearches([]);
   };
 
   const renderDrugItem = ({ item }: { item: DrugInfo }) => (
@@ -178,11 +218,20 @@ export default function MedicationSearchScreen() {
     if (isLoading) return null;
     if (!searchQuery.trim()) {
       return (
-        <View style={styles.emptyContainer}>
-          <Ionicons name="search" size={48} color={Colors.textSecondary} />
-          <Typography variant="body" color={Colors.textSecondary} style={styles.emptyText}>
-            약 이름을 검색해주세요
-          </Typography>
+        <View style={styles.emptyWrapper}>
+          {/* 최근 검색어 */}
+          <RecentSearchList
+            searches={recentSearches}
+            onSelect={handleRecentSearchSelect}
+            onRemove={handleRecentSearchRemove}
+            onClearAll={handleRecentSearchClear}
+          />
+          <View style={styles.emptyContainer}>
+            <Ionicons name="search" size={48} color={Colors.textSecondary} />
+            <Typography variant="body" color={Colors.textSecondary} style={styles.emptyText}>
+              약 이름을 검색해주세요
+            </Typography>
+          </View>
         </View>
       );
     }
@@ -335,6 +384,9 @@ const styles = StyleSheet.create({
   loadingMore: {
     paddingVertical: 16,
     alignItems: 'center',
+  },
+  emptyWrapper: {
+    flex: 1,
   },
   emptyContainer: {
     flex: 1,

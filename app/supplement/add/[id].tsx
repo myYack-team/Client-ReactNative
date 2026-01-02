@@ -22,8 +22,17 @@ import {
   TIMING_OPTIONS,
 } from '../../../types';
 
+// 전달받는 영양제 데이터 타입 (중복 호출 방지용)
+interface CachedSupplementData {
+  id: number;
+  name: string;
+  tag: string;
+  tagLabel?: string;
+  description?: string;
+}
+
 export default function AddUserSupplementScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, supplementData } = useLocalSearchParams<{ id: string; supplementData?: string }>();
   const [supplement, setSupplement] = useState<SupplementDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -37,10 +46,36 @@ export default function AddUserSupplementScreen() {
 
   useEffect(() => {
     loadSupplementDetail();
-  }, [id]);
+  }, [id, supplementData]);
 
   const loadSupplementDetail = async () => {
     if (!id) return;
+
+    // 1. 전달받은 캐시 데이터가 있으면 우선 사용
+    if (supplementData) {
+      try {
+        const cached: CachedSupplementData = JSON.parse(supplementData);
+        // 캐시 데이터로 최소한의 정보 설정 (API 호출 없이)
+        setSupplement({
+          id: cached.id,
+          name: cached.name,
+          tag: cached.tag as SupplementDetail['tag'],
+          tagLabel: cached.tagLabel || '',
+          description: cached.description,
+          // 아래 필드들은 add 화면에서 사용하지 않으므로 기본값 설정
+          createdByName: '',
+          selectionCount: 0,
+          createdAt: '',
+          createdById: 0,
+        });
+        setIsLoading(false);
+        return;
+      } catch (e) {
+        console.warn('Failed to parse cached supplement data:', e);
+      }
+    }
+
+    // 2. 캐시 데이터가 없으면 API 호출 (fallback)
     setIsLoading(true);
     try {
       const data = await supplementService.getSupplementDetail(parseInt(id));

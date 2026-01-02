@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Typography, Card, SupplementTagBadge } from '../../components/ui';
+import { Typography, Card, SupplementTagBadge, RecentSearchList } from '../../components/ui';
 import { Colors } from '../../constants';
 import { supplementService } from '../../services';
 import {
@@ -19,6 +19,13 @@ import {
   SUPPLEMENT_TAG_LABELS,
   SUPPLEMENT_TAG_OPTIONS,
 } from '../../types';
+import {
+  SEARCH_HISTORY_KEYS,
+  getSearchHistory,
+  addSearchHistory,
+  removeSearchHistory,
+  clearSearchHistory,
+} from '../../utils';
 
 export default function SupplementSearchScreen() {
   const [searchText, setSearchText] = useState('');
@@ -28,11 +35,18 @@ export default function SupplementSearchScreen() {
   const [page, setPage] = useState(0);
   const [hasNext, setHasNext] = useState(true);
   const [showPopular, setShowPopular] = useState(true);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
-  // 초기 로드: 인기 영양제
+  // 초기 로드: 인기 영양제 + 최근 검색어
   useEffect(() => {
     loadPopularSupplements();
+    loadRecentSearches();
   }, []);
+
+  const loadRecentSearches = async () => {
+    const history = await getSearchHistory(SEARCH_HISTORY_KEYS.SUPPLEMENT);
+    setRecentSearches(history);
+  };
 
   const loadPopularSupplements = async () => {
     setIsLoading(true);
@@ -48,8 +62,9 @@ export default function SupplementSearchScreen() {
     }
   };
 
-  const searchSupplements = async (reset: boolean = false) => {
-    if (!searchText.trim() && !selectedTag) {
+  const searchSupplements = async (reset: boolean = false, keyword?: string) => {
+    const searchKeyword = keyword !== undefined ? keyword : searchText;
+    if (!searchKeyword.trim() && !selectedTag) {
       loadPopularSupplements();
       return;
     }
@@ -58,7 +73,7 @@ export default function SupplementSearchScreen() {
     setIsLoading(true);
     try {
       const result = await supplementService.searchSupplements({
-        keyword: searchText.trim() || undefined,
+        keyword: searchKeyword.trim() || undefined,
         tag: selectedTag || undefined,
         page: newPage,
         size: 10,
@@ -105,9 +120,36 @@ export default function SupplementSearchScreen() {
     }
   };
 
+  // 영양제 선택 시 검색어 저장
+  const handleSupplementSelect = async (item: Supplement) => {
+    if (searchText.trim()) {
+      await addSearchHistory(SEARCH_HISTORY_KEYS.SUPPLEMENT, searchText.trim());
+    }
+    router.push(`/supplement/${item.id}`);
+  };
+
+  // 최근 검색어 선택
+  const handleRecentSearchSelect = (keyword: string) => {
+    setSearchText(keyword);
+    setPage(0);
+    searchSupplements(true, keyword);
+  };
+
+  // 최근 검색어 삭제
+  const handleRecentSearchRemove = async (keyword: string) => {
+    await removeSearchHistory(SEARCH_HISTORY_KEYS.SUPPLEMENT, keyword);
+    loadRecentSearches();
+  };
+
+  // 최근 검색어 전체 삭제
+  const handleRecentSearchClear = async () => {
+    await clearSearchHistory(SEARCH_HISTORY_KEYS.SUPPLEMENT);
+    setRecentSearches([]);
+  };
+
   const renderSupplementItem = ({ item }: { item: Supplement }) => (
     <TouchableOpacity
-      onPress={() => router.push(`/supplement/${item.id}`)}
+      onPress={() => handleSupplementSelect(item)}
       activeOpacity={0.8}
     >
       <Card style={styles.supplementCard} variant="elevated">
@@ -193,6 +235,16 @@ export default function SupplementSearchScreen() {
           contentContainerStyle={styles.tagList}
         />
       </View>
+
+      {/* 최근 검색어 (인기 영양제 화면일 때만) */}
+      {showPopular && recentSearches.length > 0 && (
+        <RecentSearchList
+          searches={recentSearches}
+          onSelect={handleRecentSearchSelect}
+          onRemove={handleRecentSearchRemove}
+          onClearAll={handleRecentSearchClear}
+        />
+      )}
 
       {/* 섹션 제목 */}
       <View style={styles.sectionHeader}>
