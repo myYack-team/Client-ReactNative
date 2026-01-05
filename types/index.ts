@@ -9,6 +9,44 @@ export interface ApiResponse<T> {
 // Enum 타입들
 export type FontSize = 'SMALL' | 'MEDIUM' | 'LARGE';
 
+export type Gender = 'MALE' | 'FEMALE';
+
+export type SignupPurpose = 'SELF' | 'CHILD' | 'PARENT' | 'AI_REPORT';
+
+// 성별 라벨 매핑
+export const GENDER_LABELS: Record<Gender, string> = {
+  MALE: '남성',
+  FEMALE: '여성',
+};
+
+// 연령대 옵션
+export const AGE_RANGE_OPTIONS = [
+  '10대',
+  '20대',
+  '30대',
+  '40대',
+  '50대',
+  '60대 이상',
+] as const;
+
+export type AgeRange = typeof AGE_RANGE_OPTIONS[number];
+
+// 가입목적 라벨 매핑
+export const SIGNUP_PURPOSE_LABELS: Record<SignupPurpose, string> = {
+  SELF: '나의 약 관리',
+  CHILD: '자녀 약 관리',
+  PARENT: '부모님 약 관리',
+  AI_REPORT: 'AI 복약 분석 레포트',
+};
+
+// 가입목적 옵션 배열
+export const SIGNUP_PURPOSE_OPTIONS: SignupPurpose[] = [
+  'SELF',
+  'CHILD',
+  'PARENT',
+  'AI_REPORT',
+];
+
 export type MedicationTiming =
   | 'MORNING'
   | 'AFTERNOON'
