@@ -36,12 +36,14 @@ export default function LoginScreen() {
           }
 
           if (accessToken && refreshToken) {
+            const isNew = isNewUser === 'true';
             await handleOAuthCallback(
               accessToken as string,
               refreshToken as string,
-              isNewUser === 'true'
+              isNew
             );
-            router.replace('/(tabs)');
+            // 신규 가입자는 기본정보 입력 화면으로, 기존 사용자는 홈으로
+            router.replace(isNew ? '/profile-setup' : '/(tabs)');
           }
         } catch (err) {
           console.error('[Login] OAuth callback error:', err);
@@ -105,8 +107,10 @@ export default function LoginScreen() {
         }
 
         if (accessToken && refreshToken) {
-          await handleOAuthCallback(accessToken as string, refreshToken as string, isNewUser === 'true');
-          router.replace('/(tabs)');
+          const isNew = isNewUser === 'true';
+          await handleOAuthCallback(accessToken as string, refreshToken as string, isNew);
+          // 신규 가입자는 기본정보 입력 화면으로, 기존 사용자는 홈으로
+          router.replace(isNew ? '/profile-setup' : '/(tabs)');
         }
       } else if (result.type === 'cancel') {
         console.log('[Login] User cancelled');
