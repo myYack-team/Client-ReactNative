@@ -1,4 +1,10 @@
 export const Colors = {
+  // Brand Navy (로고 색상)
+  brand: '#2C3E50',
+  brandLight: '#34495E',
+  brandLightest: '#ECF0F1',
+  brandDark: '#1A252F',
+  // Primary
   primary: '#2E7D32',
   primaryLight: '#4CAF50',
   primaryLightest: '#E8F5E9',

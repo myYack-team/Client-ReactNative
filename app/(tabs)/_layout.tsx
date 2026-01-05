@@ -10,6 +10,7 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
     home: '홈',
     medications: '약',
     history: '처방',
+    analysis: '분석',
     profile: '내 정보',
   };
 
@@ -17,6 +18,7 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
     home: '🏠',
     medications: '💊',
     history: '📋',
+    analysis: '✨',
     profile: '👤',
   };
 
@@ -72,6 +74,13 @@ export default function TabLayout() {
         options={{
           title: '처방 기록',
           tabBarIcon: ({ focused }) => <TabIcon name="history" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="analysis"
+        options={{
+          title: 'AI 분석',
+          tabBarIcon: ({ focused }) => <TabIcon name="analysis" focused={focused} />,
         }}
       />
       <Tabs.Screen

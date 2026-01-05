@@ -616,3 +616,90 @@ export interface MedicationListItemUnified {
   // 영양제 전용 필드
   supplementTag?: SupplementTag;
 }
+
+// ========== AI 분석 관련 타입 ==========
+
+// 상호작용 위험도
+export type InteractionLevel = 'HIGH' | 'MEDIUM' | 'LOW';
+
+// 상호작용 위험도 라벨 매핑
+export const INTERACTION_LEVEL_LABELS: Record<InteractionLevel, string> = {
+  HIGH: '주의 필요',
+  MEDIUM: '참고',
+  LOW: '알아두기',
+};
+
+// 상호작용 위험도 색상 매핑
+export const INTERACTION_LEVEL_COLORS: Record<InteractionLevel, { bg: string; text: string }> = {
+  HIGH: { bg: '#FFEBEE', text: '#D32F2F' },
+  MEDIUM: { bg: '#FFF3E0', text: '#E65100' },
+  LOW: { bg: '#E3F2FD', text: '#1565C0' },
+};
+
+// 기전 그룹 내 약물 정보
+export interface MechanismMedication {
+  name: string;
+  ingredientName?: string;
+}
+
+// 기전(작용 메커니즘) 그룹
+export interface MechanismGroup {
+  categoryName: string;           // "혈압 조절", "당뇨 조절" 등
+  categoryIcon: string;           // 이모지 아이콘
+  description: string;            // 2~3문장 설명
+  analogy: string;                // 비유 1줄
+  medicationCount: number;        // 관련 약물 개수
+  medications?: MechanismMedication[];  // 상세 클릭 시 표시
+}
+
+// 음식 상호작용 상세
+export interface FoodInteractionDetail {
+  medicationId?: number;
+  medicationName: string;
+  reason: string;
+}
+
+// 음식 병용 정보
+export interface FoodInteraction {
+  foodName: string;
+  foodIcon: string;               // 이모지
+  interactionLevel: InteractionLevel;
+  affectedMedicationCount: number;
+  summaryReason: string;
+  details: FoodInteractionDetail[];
+}
+
+// 분석 결과 전체
+export interface AnalysisResult {
+  reportId: number;
+  analysisDate: string;
+  mechanismGroups: MechanismGroup[];
+  foodInteractions: FoodInteraction[];
+}
+
+// 레포트 요약 (목록용)
+export interface ReportSummary {
+  id: number;
+  analysisDate: string;
+  mechanismGroupCount: number;
+  foodInteractionCount: number;
+}
+
+// 레포트 목록 응답
+export interface ReportListResponse {
+  reports: ReportSummary[];
+  totalCount: number;
+}
+
+// 분석 요청 응답 (동기 방식 - 분석 완료된 결과 직접 반환)
+export interface AnalysisRequestResponse extends AnalysisResult {
+  quota?: QuotaInfo;
+}
+
+// 분석 쿼터 정보
+export interface QuotaInfo {
+  monthlyLimit: number;
+  usedCount: number;
+  remainingCount: number;
+  resetDate: string;
+}

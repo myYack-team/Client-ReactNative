@@ -8,6 +8,7 @@ export { notificationService, NOTIFICATION_ACTIONS, NOTIFICATION_CATEGORY } from
 export { prescriptionService } from './prescription';
 export { supplementService } from './supplement';
 export { drugService } from './drug';
+export { analysisService } from './analysis';
 
 // Mock 서비스 (서버 없이 테스트용)
 export {

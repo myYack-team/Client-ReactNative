@@ -1,4 +1,5 @@
 import api from './api';
+import * as SecureStore from 'expo-secure-store';
 import {
   ApiResponse,
   Prescription,
@@ -9,7 +10,7 @@ import {
   PrescriptionRegisterResponse,
   BatchDeleteResult,
 } from '../types';
-import { API_BASE_URL, TEMP_USER_ID } from '../constants';
+import { API_BASE_URL } from '../constants';
 
 export const prescriptionService = {
   // 처방전 이미지 업로드
@@ -32,13 +33,19 @@ export const prescriptionService = {
       formData.append('prescriptionDate', prescriptionDate);
     }
 
-    const uploadUrl = `${API_BASE_URL}/prescriptions/upload?userId=${TEMP_USER_ID}`;
+    const uploadUrl = `${API_BASE_URL}/prescriptions/upload`;
     console.log('[Upload] URL:', uploadUrl);
     console.log('[Upload] Image URI:', imageUri);
+
+    // JWT 토큰 가져오기
+    const token = await SecureStore.getItemAsync('accessToken');
 
     const response = await fetch(uploadUrl, {
       method: 'POST',
       body: formData,
+      headers: {
+        ...(token && { 'Authorization': `Bearer ${token}` }),
+      },
       // Content-Type 헤더는 FormData 사용 시 자동 설정됨 (boundary 포함)
     });
 
@@ -115,15 +122,19 @@ export const prescriptionService = {
     // JSON 데이터 추가 (문자열로 전송, 서버에서 파싱)
     formData.append('data', JSON.stringify(request));
 
-    const registerUrl = `${API_BASE_URL}/prescriptions/register?userId=${TEMP_USER_ID}`;
+    const registerUrl = `${API_BASE_URL}/prescriptions/register`;
     console.log('[Register] URL:', registerUrl);
     console.log('[Register] Request:', JSON.stringify(request, null, 2));
+
+    // JWT 토큰 가져오기
+    const token = await SecureStore.getItemAsync('accessToken');
 
     const response = await fetch(registerUrl, {
       method: 'POST',
       body: formData,
       headers: {
         'Accept': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` }),
       },
     });
 
