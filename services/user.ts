@@ -1,5 +1,5 @@
 import api from './api';
-import { ApiResponse, User, FontSize } from '../types';
+import { ApiResponse, User, FontSize, Gender, SignupPurpose } from '../types';
 
 export interface UpdateUserRequest {
   name?: string;
@@ -18,6 +18,19 @@ export interface NotificationSettings {
 
 export interface UpdateNotificationSettingsRequest {
   notificationEnabled: boolean;
+}
+
+export interface ProfileSetupRequest {
+  gender: Gender;
+  ageRange: string;
+  signupPurposes: SignupPurpose[];
+}
+
+export interface ProfileSetupResponse {
+  id: number;
+  gender: Gender;
+  ageRange: string;
+  signupPurposes: SignupPurpose[];
 }
 
 export const userService = {
@@ -47,6 +60,12 @@ export const userService = {
   // 알림 설정 수정
   async updateNotificationSettings(data: UpdateNotificationSettingsRequest): Promise<NotificationSettings> {
     const response = await api.patch<ApiResponse<NotificationSettings>>('/users/me/notification-settings', data);
+    return response.data.result!;
+  },
+
+  // 기본정보 설정 (신규 가입자)
+  async setupProfile(data: ProfileSetupRequest): Promise<ProfileSetupResponse> {
+    const response = await api.put<ApiResponse<ProfileSetupResponse>>('/users/me/profile-setup', data);
     return response.data.result!;
   },
 };
