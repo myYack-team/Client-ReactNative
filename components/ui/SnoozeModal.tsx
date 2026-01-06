@@ -8,6 +8,7 @@ import {
   Pressable,
 } from 'react-native';
 import { Colors } from '../../constants';
+import { useResponsive } from '../../hooks';
 
 interface SnoozeModalProps {
   visible: boolean;
@@ -22,6 +23,8 @@ const SNOOZE_OPTIONS = [
 ];
 
 export function SnoozeModal({ visible, onClose, onSelect }: SnoozeModalProps) {
+  const { modalWidth } = useResponsive();
+
   return (
     <Modal
       visible={visible}
@@ -30,7 +33,7 @@ export function SnoozeModal({ visible, onClose, onSelect }: SnoozeModalProps) {
       onRequestClose={onClose}
     >
       <Pressable style={styles.overlay} onPress={onClose}>
-        <View style={styles.container}>
+        <View style={[styles.container, { width: modalWidth }]}>
           <Text style={styles.title}>다시 알림</Text>
           <Text style={styles.subtitle}>언제 다시 알려드릴까요?</Text>
 
@@ -69,8 +72,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: 16,
     padding: 24,
-    width: '80%',
-    maxWidth: 320,
   },
   title: {
     fontSize: 20,
