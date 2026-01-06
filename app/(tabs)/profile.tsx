@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Card, Typography, Button } from '../../components/ui';
 import { Colors } from '../../constants';
+import { useResponsive } from '../../hooks';
 import { useAuthStore } from '../../stores';
 
 interface MenuItemProps {
@@ -39,6 +40,7 @@ function MenuSection({ title, children }: MenuSectionProps) {
 }
 
 export default function ProfileScreen() {
+  const { contentStyle } = useResponsive();
   const { user, logout } = useAuthStore();
 
   const handleLogout = () => {
@@ -63,7 +65,7 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, contentStyle]}
       >
         {/* 프로필 카드 */}
         <Card style={styles.profileCard} variant="elevated">
