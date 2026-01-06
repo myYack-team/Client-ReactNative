@@ -5,6 +5,7 @@ import { router, useFocusEffect } from 'expo-router';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { Button, Card, Typography, MedicationActionButtons, SnoozeModal, DrugTypeBadge, SupplementTagBadge } from '../../components/ui';
 import { Colors } from '../../constants';
+import { useResponsive } from '../../hooks';
 import { useMedicationStore } from '../../stores';
 import { intakeService, reminderService } from '../../services';
 import { MedicationTiming, TodaySchedule, DaySummary, DayStatus, ScheduleMedication, IntakesResponse } from '../../types';
@@ -76,6 +77,7 @@ const generateWeekDates = () => {
 };
 
 export default function HomeScreen() {
+  const { contentStyle } = useResponsive();
   const { todayData, fetchTodaySchedule, recordIntake, isLoading, fetchScheduleForDate, isLoadingSchedule: storeIsLoadingSchedule, fetchMonthlySummary } = useMedicationStore();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [currentMonth, setCurrentMonth] = useState({
@@ -396,7 +398,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, contentStyle]}
         onTouchStart={scrollToToday}
         refreshControl={
           <RefreshControl
