@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { Card, Typography, DeleteConfirmModal, Toast } from '../../components/ui';
 import { Colors, API_BASE_URL } from '../../constants';
+import { useResponsive } from '../../hooks';
 import { prescriptionService } from '../../services';
 import {
   Prescription,
@@ -130,6 +131,7 @@ const PrescriptionCard = memo(({ prescription, onPress, onLongPress, isSelectMod
 const MAX_CACHE_SIZE = 5;
 
 export default function PrescriptionScreen() {
+  const { contentStyle } = useResponsive();
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -380,7 +382,7 @@ export default function PrescriptionScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, contentStyle]}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
