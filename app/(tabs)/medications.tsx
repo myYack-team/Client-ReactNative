@@ -5,11 +5,14 @@ import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Button, Card, Typography, DeleteConfirmModal, Toast, SupplementTagBadge } from '../../components/ui';
 import { Colors } from '../../constants';
+import { useResponsive } from '../../hooks';
 import { useMedicationStore, useSupplementStore } from '../../stores';
 import { MedicationListItemUnified, Reminder } from '../../types';
 import { getMedDisplayName, mergeAndSortItems } from '../../utils';
 
 export default function MedicationsScreen() {
+  const { contentStyle } = useResponsive();
+
   // 약물 Store
   const {
     medications,
@@ -298,7 +301,7 @@ export default function MedicationsScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, contentStyle]}
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
