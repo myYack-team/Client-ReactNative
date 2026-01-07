@@ -10,7 +10,7 @@ import SplashScreen from '../components/SplashScreen';
 
 export default function RootLayout() {
   const router = useRouter();
-  const { initialize: initAuth, isLoading: authLoading } = useAuthStore();
+  const { initialize: initAuth, isLoading: authLoading, isAuthenticated } = useAuthStore();
   const { initialize: initSettings, isLoading: settingsLoading } = useSettingsStore();
   const [showSplash, setShowSplash] = useState(true);
 
@@ -20,9 +20,6 @@ export default function RootLayout() {
   useEffect(() => {
     initAuth();
     initSettings();
-
-    // 푸시 알림 초기화
-    notificationService.initialize();
 
     // 알림 수신 리스너 (포그라운드)
     notificationListener.current = notificationService.addNotificationReceivedListener(
@@ -71,6 +68,13 @@ export default function RootLayout() {
       }
     };
   }, []);
+
+  // 로그인 상태 변경 시 FCM 토큰 등록
+  useEffect(() => {
+    if (isAuthenticated) {
+      notificationService.initialize();
+    }
+  }, [isAuthenticated]);
 
   // 스플래시 스크린 표시
   if (showSplash) {
