@@ -12,6 +12,7 @@ import { useRouter } from 'expo-router';
 import { Typography, Button } from '../components/ui';
 import { Colors } from '../constants';
 import { userService } from '../services';
+import { useAuthStore } from '../stores';
 import {
   Gender,
   SignupPurpose,
@@ -76,6 +77,7 @@ function CheckboxOption({ label, checked, onToggle }: CheckboxOptionProps) {
 
 export default function ProfileSetupScreen() {
   const router = useRouter();
+  const completeOnboarding = useAuthStore((state) => state.completeOnboarding);
   const [gender, setGender] = useState<Gender | null>(null);
   const [ageRange, setAgeRange] = useState<AgeRange | null>(null);
   const [signupPurposes, setSignupPurposes] = useState<SignupPurpose[]>([]);
@@ -104,6 +106,7 @@ export default function ProfileSetupScreen() {
         ageRange,
         signupPurposes,
       });
+      completeOnboarding();
       router.replace('/(tabs)');
     } catch (error) {
       console.error('기본정보 설정 실패:', error);

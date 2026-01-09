@@ -8,10 +8,12 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  needsOnboarding: boolean;
 
   initialize: () => Promise<void>;
   loginWithKakao: (kakaoAccessToken: string) => Promise<void>;
   handleOAuthCallback: (accessToken: string, refreshToken: string, isNewUser: boolean) => Promise<void>;
+  completeOnboarding: () => void;
   logout: () => Promise<void>;
   clearError: () => void;
 }
@@ -21,6 +23,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: false,
   isLoading: true,
   error: null,
+  needsOnboarding: false,
 
   initialize: async () => {
     try {
@@ -75,7 +78,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const user = await userService.getMe();
 
       console.log('[Auth] OAuth callback success:', { userId: user.id, isNewUser });
-      set({ user, isAuthenticated: true, isLoading: false });
+      set({ user, isAuthenticated: true, isLoading: false, needsOnboarding: isNewUser });
     } catch (error) {
       console.error('[Auth] OAuth callback failed:', error);
       await SecureStore.deleteItemAsync('accessToken');
@@ -88,6 +91,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
+  completeOnboarding: () => {
+    set({ needsOnboarding: false });
+  },
+
   logout: async () => {
     try {
       await authService.logout();
@@ -96,7 +103,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     } finally {
       await SecureStore.deleteItemAsync('accessToken');
       await SecureStore.deleteItemAsync('refreshToken');
-      set({ user: null, isAuthenticated: false });
+      set({ user: null, isAuthenticated: false, needsOnboarding: false });
     }
   },
 
