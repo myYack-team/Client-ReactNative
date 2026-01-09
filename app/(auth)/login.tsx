@@ -2,72 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Image, Dimensions, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
-import * as Linking from 'expo-linking';
-import * as AuthSession from 'expo-auth-session';
+import * as KakaoLogin from '@react-native-seoul/kakao-login';
 import { Button, Typography } from '../../components/ui';
-import { Colors, API_BASE_URL } from '../../constants';
+import { Colors } from '../../constants';
 import { useAuthStore } from '../../stores/authStore';
+import { authService } from '../../services/auth';
 
 const { width } = Dimensions.get('window');
 
-// WebBrowser 세션 완료 처리 (iOS에서 필요)
-WebBrowser.maybeCompleteAuthSession();
-
 export default function LoginScreen() {
-  const { handleOAuthCallback, isLoading, error, clearError } = useAuthStore();
+  const { isLoading, error, clearError } = useAuthStore();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
-
-  // 딥링크 처리
-  useEffect(() => {
-    const handleDeepLink = async (event: { url: string }) => {
-      const { url } = event;
-      console.log('[Login] Deep link received:', url);
-
-      // myyak://oauth/callback?accessToken=...&refreshToken=...&isNewUser=...
-      if (url.includes('oauth/callback')) {
-        setIsAuthenticating(true);
-        try {
-          const parsed = Linking.parse(url);
-          const { accessToken, refreshToken, isNewUser, error: authError } = parsed.queryParams || {};
-
-          if (authError) {
-            throw new Error(authError as string);
-          }
-
-          if (accessToken && refreshToken) {
-            const isNew = isNewUser === 'true';
-            await handleOAuthCallback(
-              accessToken as string,
-              refreshToken as string,
-              isNew
-            );
-            // 신규 가입자는 기본정보 입력 화면으로, 기존 사용자는 홈으로
-            router.replace(isNew ? '/profile-setup' : '/(tabs)');
-          }
-        } catch (err) {
-          console.error('[Login] OAuth callback error:', err);
-          Alert.alert('로그인 실패', '로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
-        } finally {
-          setIsAuthenticating(false);
-        }
-      }
-    };
-
-    // 이미 열려있는 URL 확인 (앱이 닫혀있다가 딥링크로 열린 경우)
-    Linking.getInitialURL().then((url) => {
-      if (url) {
-        handleDeepLink({ url });
-      }
-    });
-
-    // 딥링크 리스너 등록
-    const subscription = Linking.addEventListener('url', handleDeepLink);
-
-    return () => {
-      subscription.remove();
-    };
-  }, []);
 
   // 에러 표시
   useEffect(() => {
@@ -80,43 +25,41 @@ export default function LoginScreen() {
   const handleKakaoLogin = async () => {
     try {
       setIsAuthenticating(true);
+      console.log('[Login] 카카오 네이티브 로그인 시작');
 
-      // Expo Go/Development Build에서 동적으로 redirect URI 생성
-      // Expo Go: exp://192.168.x.x:8081/--/oauth/callback
-      // Production: myyak://oauth/callback
-      const redirectUri = AuthSession.makeRedirectUri({
-        scheme: 'myyak',
-        path: 'oauth/callback',
-      });
-      console.log('[Login] Redirect URI:', redirectUri);
+      // 1. 카카오 네이티브 SDK로 로그인 → 카카오 액세스 토큰 획득
+      const kakaoToken = await KakaoLogin.login();
+      console.log('[Login] 카카오 토큰 획득:', kakaoToken.accessToken ? '성공' : '실패');
 
-      // 서버에 redirect_uri를 쿼리 파라미터로 전달
-      const authUrl = `${API_BASE_URL}/auth/kakao/login?app_redirect_uri=${encodeURIComponent(redirectUri)}`;
-      console.log('[Login] Opening auth URL:', authUrl);
-
-      const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
-      console.log('[Login] WebBrowser result:', result);
-
-      // 결과 URL에서 토큰 파싱
-      if (result.type === 'success' && result.url) {
-        const parsed = Linking.parse(result.url);
-        const { accessToken, refreshToken, isNewUser, error: authError } = parsed.queryParams || {};
-
-        if (authError) {
-          throw new Error(authError as string);
-        }
-
-        if (accessToken && refreshToken) {
-          const isNew = isNewUser === 'true';
-          await handleOAuthCallback(accessToken as string, refreshToken as string, isNew);
-          // 신규 가입자는 기본정보 입력 화면으로, 기존 사용자는 홈으로
-          router.replace(isNew ? '/profile-setup' : '/(tabs)');
-        }
-      } else if (result.type === 'cancel') {
-        console.log('[Login] User cancelled');
+      if (!kakaoToken.accessToken) {
+        throw new Error('카카오 토큰을 받지 못했습니다.');
       }
-    } catch (err) {
-      console.error('[Login] WebBrowser error:', err);
+
+      // 2. 카카오 액세스 토큰을 서버로 전송 → JWT 토큰 발급
+      console.log('[Login] 서버로 카카오 토큰 전송');
+      const result = await authService.loginWithKakao(kakaoToken.accessToken);
+      console.log('[Login] 서버 로그인 성공, isNewUser:', result.isNewUser);
+
+      // 3. 토큰 저장 (authStore의 loginWithKakao 대신 직접 처리)
+      const { useAuthStore: store } = require('../../stores/authStore');
+      await store.getState().handleOAuthCallback(
+        result.accessToken,
+        result.refreshToken,
+        result.isNewUser
+      );
+
+      // 4. 화면 이동 (신규 가입자는 프로필 설정, 기존 사용자는 홈)
+      router.replace(result.isNewUser ? '/profile-setup' : '/(tabs)');
+
+    } catch (err: any) {
+      console.error('[Login] 카카오 로그인 에러:', err);
+
+      // 사용자가 취소한 경우
+      if (err.message?.includes('cancelled') || err.message?.includes('cancel')) {
+        console.log('[Login] 사용자가 로그인 취소');
+        return;
+      }
+
       Alert.alert('로그인 실패', '로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
     } finally {
       setIsAuthenticating(false);
