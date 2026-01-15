@@ -154,6 +154,7 @@ export interface User {
   id: number;
   kakaoId: string;
   name: string;
+  email?: string;
   profileImage?: string;
   fontSize: FontSize;
   createdAt: string;

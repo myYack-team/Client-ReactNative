@@ -16,7 +16,8 @@ interface LoginResponse {
   user: {
     id: number;
     kakaoId: string;
-    nickname: string;
+    name: string;
+    nickname?: string;  // 하위 호환용 (선택적)
     profileImage?: string;
     email?: string;
     gender?: 'MALE' | 'FEMALE';
@@ -57,7 +58,8 @@ export const authService = {
       user: {
         id: user.id,
         kakaoId: user.kakaoId,
-        name: user.nickname,
+        name: user.name || user.nickname || '',
+        email: user.email,
         profileImage: user.profileImage,
         fontSize: 'MEDIUM', // 기본값
         createdAt: new Date().toISOString(),
