@@ -740,6 +740,12 @@ export const SUPPLEMENT_INTERACTION_COLORS: Record<SupplementInteractionLevel, {
   CAUTION: { bg: '#FFEBEE', text: '#D32F2F' },
 };
 
+// 영양제 상호작용 상세 (약물 정보)
+export interface SupplementInteractionDetail {
+  medicationName: string;
+  reason: string;
+}
+
 // 영양제 상호작용
 export interface SupplementInteraction {
   supplementName: string;
@@ -747,13 +753,7 @@ export interface SupplementInteraction {
   interactionLevel: SupplementInteractionLevel;
   summaryReason: string;
   source?: string;
-  details: SupplementDetail[];
-}
-
-// 영양제 상호작용 상세
-export interface SupplementDetail {
-  medicationName: string;
-  reason: string;
+  details: SupplementInteractionDetail[];
 }
 
 // 생활 팁

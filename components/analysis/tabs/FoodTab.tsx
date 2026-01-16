@@ -64,7 +64,7 @@ export function FoodTab({ result }: FoodTabProps) {
             복용 중인 약물과 함께 먹으면 좋은 음식이에요
           </Typography>
           <View style={styles.cardList}>
-            {result.foodSuggestions.map((suggestion, index) => (
+            {result.foodSuggestions?.map((suggestion, index) => (
               <FoodSuggestionCard key={index} suggestion={suggestion} />
             ))}
           </View>
