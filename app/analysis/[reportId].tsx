@@ -9,7 +9,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Typography, Button, Card } from '../../components/ui';
-import { MechanismCard, FoodInteractionCard } from '../../components/analysis';
+import { ReportTabView } from '../../components/analysis';
 import { Colors } from '../../constants';
 import { useAnalysisStore } from '../../stores';
 import { AnalysisResult } from '../../types';
@@ -104,6 +104,12 @@ export default function ReportDetailScreen() {
     );
   }
 
+  // 헤더에 표시할 통계 계산
+  const mechanismCount = result?.mechanismGroups?.length || 0;
+  const foodInteractionCount = result?.foodInteractions?.length || 0;
+  const supplementCount = result?.supplementInteractions?.length || 0;
+  const tipCount = result?.lifestyleTips?.length || 0;
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView
@@ -120,7 +126,7 @@ export default function ReportDetailScreen() {
         {/* 헤더 정보 */}
         <Card style={styles.headerCard} variant="elevated">
           <View style={styles.headerContent}>
-            <Typography variant="h2" style={styles.headerEmoji}>📊</Typography>
+            <Typography variant="h2" style={styles.headerEmoji}>&#x1F4CA;</Typography>
             <View style={styles.headerTextContainer}>
               <Typography variant="h4">
                 {result?.analysisDate ? new Date(result.analysisDate).toLocaleDateString('ko-KR', {
@@ -130,44 +136,19 @@ export default function ReportDetailScreen() {
                 }) : ''}
               </Typography>
               <Typography variant="caption" color={Colors.textSecondary}>
-                기전 {result?.mechanismGroups?.length || 0}개 · 음식 상호작용 {result?.foodInteractions?.length || 0}개
+                기전 {mechanismCount}개 · 음식 {foodInteractionCount}개 · 영양제 {supplementCount}개 · 팁 {tipCount}개
               </Typography>
             </View>
           </View>
         </Card>
 
-        {/* 기전 그룹 섹션 */}
-        {result?.mechanismGroups && result.mechanismGroups.length > 0 && (
-          <View style={styles.section}>
-            <Typography variant="h3" style={styles.sectionTitle}>
-              💊 약물 작용 기전
-            </Typography>
-            <View style={styles.cardList}>
-              {result.mechanismGroups.map((group, index) => (
-                <MechanismCard key={index} mechanism={group} />
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* 음식 상호작용 섹션 */}
-        {result?.foodInteractions && result.foodInteractions.length > 0 && (
-          <View style={styles.section}>
-            <Typography variant="h3" style={styles.sectionTitle}>
-              🍽️ 음식 상호작용
-            </Typography>
-            <View style={styles.cardList}>
-              {result.foodInteractions.map((interaction, index) => (
-                <FoodInteractionCard key={index} interaction={interaction} />
-              ))}
-            </View>
-          </View>
-        )}
+        {/* 탭 뷰로 콘텐츠 표시 */}
+        {result && <ReportTabView result={result} />}
 
         {/* 면책 조항 */}
         <View style={styles.disclaimer}>
           <Typography variant="caption" color={Colors.textTertiary} style={styles.disclaimerText}>
-            ⚠️ AI 분석 결과는 참고용이며, 의료적 판단이나 처방을 대체하지 않습니다.
+            AI 분석 결과는 참고용이며, 의료적 판단이나 처방을 대체하지 않습니다.
             복용에 관한 결정은 반드시 의사나 약사와 상담하세요.
           </Typography>
         </View>
@@ -237,16 +218,6 @@ const styles = StyleSheet.create({
   },
   headerTextContainer: {
     flex: 1,
-  },
-  // 섹션
-  section: {
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    marginBottom: 16,
-  },
-  cardList: {
-    gap: 16,
   },
   // 면책 조항
   disclaimer: {

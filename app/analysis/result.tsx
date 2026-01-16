@@ -7,7 +7,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Typography, Button } from '../../components/ui';
-import { MechanismCard, FoodInteractionCard, AnalysisLoadingModal } from '../../components/analysis';
+import { AnalysisLoadingModal, ReportTabView } from '../../components/analysis';
 import { Colors } from '../../constants';
 import { useAnalysisStore } from '../../stores';
 import { AnalysisResult } from '../../types';
@@ -156,7 +156,7 @@ export default function AnalysisResultScreen() {
         {/* 헤더 */}
         <View style={styles.header}>
           <View style={styles.headerTitleRow}>
-            <Typography variant="h2" style={styles.headerEmoji}>✨</Typography>
+            <Typography variant="h2" style={styles.headerEmoji}>&#x2728;</Typography>
             <Typography variant="h2">분석 완료</Typography>
           </View>
           <Typography variant="body" color={Colors.textSecondary}>
@@ -168,58 +168,13 @@ export default function AnalysisResultScreen() {
           </Typography>
         </View>
 
-        {/* 기전 그룹 섹션 */}
-        {result?.mechanismGroups && result.mechanismGroups.length > 0 && (
-          <View style={styles.section}>
-            <Typography variant="h3" style={styles.sectionTitle}>
-              💊 약물 작용 기전
-            </Typography>
-            <Typography variant="bodySmall" color={Colors.textSecondary} style={styles.sectionDescription}>
-              복용 중인 약물들이 어떻게 작용하는지 쉽게 설명해드려요
-            </Typography>
-            <View style={styles.cardList}>
-              {result.mechanismGroups.map((group, index) => (
-                <MechanismCard key={index} mechanism={group} />
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* 음식 상호작용 섹션 */}
-        {result?.foodInteractions && result.foodInteractions.length > 0 && (
-          <View style={styles.section}>
-            <Typography variant="h3" style={styles.sectionTitle}>
-              🍽️ 음식 상호작용
-            </Typography>
-            <Typography variant="bodySmall" color={Colors.textSecondary} style={styles.sectionDescription}>
-              약물과 함께 섭취 시 주의가 필요한 음식들이에요
-            </Typography>
-            <View style={styles.cardList}>
-              {result.foodInteractions.map((interaction, index) => (
-                <FoodInteractionCard key={index} interaction={interaction} />
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* 결과가 없는 경우 */}
-        {(!result?.mechanismGroups || result.mechanismGroups.length === 0) &&
-         (!result?.foodInteractions || result.foodInteractions.length === 0) && (
-          <View style={styles.emptyContainer}>
-            <Typography variant="h1" style={styles.emptyEmoji}>🔍</Typography>
-            <Typography variant="h3" style={styles.emptyTitle}>
-              분석 결과가 없어요
-            </Typography>
-            <Typography variant="body" color={Colors.textSecondary}>
-              등록된 약물이 없거나 분석할 정보가 부족해요
-            </Typography>
-          </View>
-        )}
+        {/* 탭 뷰로 콘텐츠 표시 */}
+        {result && <ReportTabView result={result} />}
 
         {/* 면책 조항 */}
         <View style={styles.disclaimer}>
           <Typography variant="caption" color={Colors.textTertiary} style={styles.disclaimerText}>
-            ⚠️ AI 분석 결과는 참고용이며, 의료적 판단이나 처방을 대체하지 않습니다.
+            AI 분석 결과는 참고용이며, 의료적 판단이나 처방을 대체하지 않습니다.
             복용에 관한 결정은 반드시 의사나 약사와 상담하세요.
           </Typography>
         </View>
@@ -286,30 +241,6 @@ const styles = StyleSheet.create({
   },
   headerEmoji: {
     fontSize: 28,
-  },
-  section: {
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    marginBottom: 8,
-  },
-  sectionDescription: {
-    marginBottom: 16,
-  },
-  cardList: {
-    gap: 16,
-  },
-  // 빈 결과
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyEmoji: {
-    fontSize: 60,
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    marginBottom: 8,
   },
   disclaimer: {
     marginTop: 16,
