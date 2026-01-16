@@ -4,6 +4,7 @@ export * from './colors';
 export * from './fonts';
 export * from './medication';
 export * from './responsive';
+export * from './termsContent';
 
 /**
  * 개발 환경에서 Expo 개발 서버의 IP를 자동으로 감지하여 API URL 생성

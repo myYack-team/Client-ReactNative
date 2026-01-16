@@ -742,3 +742,79 @@ export interface QuotaInfo {
   remainingCount: number;
   resetDate: string;
 }
+
+// ========== Q&A 관련 타입 ==========
+
+// Q&A 상태
+export type QnAStatus = 'PENDING' | 'ANSWERED' | 'CLOSED';
+
+// Q&A 상태 라벨 매핑
+export const QNA_STATUS_LABELS: Record<QnAStatus, string> = {
+  PENDING: '답변 대기',
+  ANSWERED: '답변 완료',
+  CLOSED: '종료됨',
+};
+
+// Q&A 상태 색상 매핑
+export const QNA_STATUS_COLORS: Record<QnAStatus, { bg: string; text: string }> = {
+  PENDING: { bg: '#FFF3E0', text: '#E65100' },
+  ANSWERED: { bg: '#E8F5E9', text: '#2E7D32' },
+  CLOSED: { bg: '#F3F4F6', text: '#6B7280' },
+};
+
+// Q&A 질문 (목록용)
+export interface QnAQuestion {
+  id: number;
+  title: string;
+  status: QnAStatus;
+  statusLabel: string;
+  replyCount: number;
+  createdAt: string;
+  hasAdminReply: boolean;
+}
+
+// Q&A 질문 상세
+export interface QnAQuestionDetail {
+  id: number;
+  title: string;
+  content: string;
+  status: QnAStatus;
+  statusLabel: string;
+  createdAt: string;
+  replies: QnAReply[];
+}
+
+// Q&A 답글
+export interface QnAReply {
+  id: number;
+  content: string;
+  isAdmin: boolean;
+  adminName?: string;
+  createdAt: string;
+}
+
+// Q&A 목록 응답
+export interface QnAListResponse {
+  questions: QnAQuestion[];
+  totalCount: number;
+  page: number;
+  totalPages: number;
+  hasNext: boolean;
+}
+
+// Q&A 답글 추가 결과
+export interface QnAReplyResult {
+  id: number;
+  content: string;
+  isAdmin: boolean;
+  createdAt: string;
+}
+
+// ========== AI 동의 관련 타입 ==========
+
+// AI 동의 상태
+export interface AiConsentStatus {
+  aiDataAgreed: boolean;
+  consentedAt?: string;
+  consentVersion?: string;
+}

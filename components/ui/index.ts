@@ -8,3 +8,6 @@ export { MedicationActionButtons } from './MedicationActionButtons';
 export { DeleteConfirmModal } from './DeleteConfirmModal';
 export { Toast } from './Toast';
 export { RecentSearchList } from './RecentSearchList';
+export { TermsModal } from './TermsModal';
+export type { TermsType } from './TermsModal';
+export { AiConsentModal } from './AiConsentModal';

@@ -124,9 +124,23 @@ export default function ProfileScreen() {
             onPress={() => router.push('/profile/font-size')}
           />
           <MenuItem
+            icon="🤖"
+            label="AI 데이터 분석 동의"
+            onPress={() => router.push('/profile/ai-consent')}
+          />
+          <MenuItem
             icon="ℹ️"
             label="앱 정보"
             onPress={() => router.push('/profile/about')}
+          />
+        </MenuSection>
+
+        {/* 고객 지원 */}
+        <MenuSection title="고객 지원">
+          <MenuItem
+            icon="💬"
+            label="문의하기"
+            onPress={() => router.push('/profile/qna')}
           />
         </MenuSection>
 

@@ -45,6 +45,18 @@ export default function ProfileLayout() {
           title: '앱 정보',
         }}
       />
+      <Stack.Screen
+        name="ai-consent"
+        options={{
+          title: 'AI 데이터 분석 동의',
+        }}
+      />
+      <Stack.Screen
+        name="qna"
+        options={{
+          headerShown: false,
+        }}
+      />
     </Stack>
   );
 }

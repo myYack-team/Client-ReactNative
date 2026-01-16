@@ -10,6 +10,7 @@ export { supplementService } from './supplement';
 export { drugService } from './drug';
 export { analysisService } from './analysis';
 export { errorReporting } from './errorReporting';
+export { qnaService } from './qna';
 
 // Mock 서비스 (서버 없이 테스트용)
 export {

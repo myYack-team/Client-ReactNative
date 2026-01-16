@@ -1,5 +1,5 @@
 import api from './api';
-import { ApiResponse, User, FontSize, Gender, SignupPurpose } from '../types';
+import { ApiResponse, User, FontSize, Gender, SignupPurpose, AiConsentStatus } from '../types';
 
 export interface UpdateUserRequest {
   name?: string;
@@ -66,6 +66,20 @@ export const userService = {
   // 기본정보 설정 (신규 가입자)
   async setupProfile(data: ProfileSetupRequest): Promise<ProfileSetupResponse> {
     const response = await api.put<ApiResponse<ProfileSetupResponse>>('/users/me/profile-setup', data);
+    return response.data.result!;
+  },
+
+  // AI 동의 상태 조회
+  async getAiConsentStatus(): Promise<AiConsentStatus> {
+    const response = await api.get<ApiResponse<AiConsentStatus>>('/users/me/ai-consent');
+    return response.data.result!;
+  },
+
+  // AI 동의 상태 업데이트
+  async updateAiConsent(aiDataAgreed: boolean): Promise<AiConsentStatus> {
+    const response = await api.patch<ApiResponse<AiConsentStatus>>('/users/me/ai-consent', {
+      aiDataAgreed,
+    });
     return response.data.result!;
   },
 };
