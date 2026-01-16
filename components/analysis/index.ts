@@ -1,5 +1,9 @@
 export { MechanismCard } from './MechanismCard';
 export { FoodInteractionCard } from './FoodInteractionCard';
+export { FoodSuggestionCard } from './FoodSuggestionCard';
+export { SupplementInteractionCard } from './SupplementInteractionCard';
+export { LifestyleTipCard } from './LifestyleTipCard';
 export { AnalysisButton } from './AnalysisButton';
 export { ReportListItem } from './ReportListItem';
 export { AnalysisLoadingModal } from './AnalysisLoadingModal';
+export { ReportTabView } from './ReportTabView';
