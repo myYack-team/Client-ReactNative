@@ -11,6 +11,7 @@ import {
   BatchDeleteResult,
 } from '../types';
 import { API_BASE_URL } from '../constants';
+import { logger } from '../utils/logger';
 
 export const prescriptionService = {
   // 처방전 이미지 업로드
@@ -34,8 +35,8 @@ export const prescriptionService = {
     }
 
     const uploadUrl = `${API_BASE_URL}/prescriptions/upload`;
-    console.log('[Upload] URL:', uploadUrl);
-    console.log('[Upload] Image URI:', imageUri);
+    logger.log('[Upload] URL:', uploadUrl);
+    logger.log('[Upload] Image URI:', imageUri);
 
     // JWT 토큰 가져오기
     const token = await SecureStore.getItemAsync('accessToken');
@@ -49,16 +50,16 @@ export const prescriptionService = {
       // Content-Type 헤더는 FormData 사용 시 자동 설정됨 (boundary 포함)
     });
 
-    console.log('[Upload] Response status:', response.status);
+    logger.log('[Upload] Response status:', response.status);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[Upload] Error response:', errorText);
+      logger.error('[Upload] Error response:', errorText);
       throw new Error('이미지 업로드에 실패했습니다.');
     }
 
     const data = await response.json() as ApiResponse<PrescriptionUploadResponse>;
-    console.log('[Upload] Response data:', JSON.stringify(data, null, 2));
+    logger.log('[Upload] Response data:', JSON.stringify(data, null, 2));
 
     if (!data.isSuccess || !data.result) {
       throw new Error(data.message || '이미지 업로드에 실패했습니다.');
@@ -123,8 +124,8 @@ export const prescriptionService = {
     formData.append('data', JSON.stringify(request));
 
     const registerUrl = `${API_BASE_URL}/prescriptions/register`;
-    console.log('[Register] URL:', registerUrl);
-    console.log('[Register] Request:', JSON.stringify(request, null, 2));
+    logger.log('[Register] URL:', registerUrl);
+    logger.log('[Register] Request:', JSON.stringify(request, null, 2));
 
     // JWT 토큰 가져오기
     const token = await SecureStore.getItemAsync('accessToken');
@@ -138,16 +139,16 @@ export const prescriptionService = {
       },
     });
 
-    console.log('[Register] Response status:', response.status);
+    logger.log('[Register] Response status:', response.status);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('[Register] Error response:', errorText);
+      logger.error('[Register] Error response:', errorText);
       throw new Error('처방전 등록에 실패했습니다.');
     }
 
     const data = await response.json() as ApiResponse<PrescriptionRegisterResponse>;
-    console.log('[Register] Response data:', JSON.stringify(data, null, 2));
+    logger.log('[Register] Response data:', JSON.stringify(data, null, 2));
 
     if (!data.isSuccess || !data.result) {
       throw new Error(data.message || '처방전 등록에 실패했습니다.');
@@ -158,11 +159,11 @@ export const prescriptionService = {
 
   // 처방전 일괄 삭제
   async deleteBatch(ids: number[]): Promise<BatchDeleteResult> {
-    console.log('[deletePrescriptionsBatch] Deleting prescriptions:', ids);
+    logger.log('[deletePrescriptionsBatch] Deleting prescriptions:', ids);
     const response = await api.delete<ApiResponse<BatchDeleteResult>>('/prescriptions/batch', {
       data: { ids },
     });
-    console.log('[deletePrescriptionsBatch] Response:', JSON.stringify(response.data, null, 2));
+    logger.log('[deletePrescriptionsBatch] Response:', JSON.stringify(response.data, null, 2));
     return response.data.result!;
   },
 };

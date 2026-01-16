@@ -3,6 +3,7 @@ import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import api from './api';
+import { logger } from '../utils/logger';
 
 // 푸시 액션 식별자
 export const NOTIFICATION_ACTIONS = {
@@ -35,7 +36,7 @@ export const notificationService = {
   registerForPushNotifications: async (): Promise<string | null> => {
     // 실제 디바이스에서만 동작
     if (!Device.isDevice) {
-      console.log('[Notification] 실제 디바이스에서만 푸시 알림이 지원됩니다.');
+      logger.log('[Notification] 실제 디바이스에서만 푸시 알림이 지원됩니다.');
       return null;
     }
 
@@ -50,7 +51,7 @@ export const notificationService = {
     }
 
     if (finalStatus !== 'granted') {
-      console.log('[Notification] 푸시 알림 권한이 거부되었습니다.');
+      logger.log('[Notification] 푸시 알림 권한이 거부되었습니다.');
       return null;
     }
 
@@ -60,7 +61,7 @@ export const notificationService = {
 
       // projectId가 유효하지 않으면 개발 환경으로 간주하고 스킵
       if (!projectId || projectId === 'your-project-id') {
-        console.log('[Notification] 개발 환경 - Expo projectId 미설정, 푸시 알림 스킵');
+        logger.log('[Notification] 개발 환경 - Expo projectId 미설정, 푸시 알림 스킵');
         return null;
       }
 
@@ -68,7 +69,7 @@ export const notificationService = {
         projectId: projectId,
       });
 
-      console.log('[Notification] FCM 토큰 발급 완료:', token.data);
+      logger.log('[Notification] FCM 토큰 발급 완료:', token.data);
 
       // Android 채널 설정
       if (Platform.OS === 'android') {
@@ -84,7 +85,7 @@ export const notificationService = {
       return token.data;
     } catch (error) {
       // 개발 환경에서의 에러는 조용히 무시
-      console.log('[Notification] 토큰 발급 스킵 (개발 환경)');
+      logger.log('[Notification] 토큰 발급 스킵 (개발 환경)');
       return null;
     }
   },
@@ -95,9 +96,9 @@ export const notificationService = {
   registerTokenToServer: async (fcmToken: string): Promise<void> => {
     try {
       await api.post('/fcm/token', { fcmToken });
-      console.log('[Notification] 서버에 FCM 토큰 등록 완료');
+      logger.log('[Notification] 서버에 FCM 토큰 등록 완료');
     } catch (error) {
-      console.error('[Notification] 서버 토큰 등록 실패:', error);
+      logger.error('[Notification] 서버 토큰 등록 실패:', error);
     }
   },
 
@@ -108,7 +109,7 @@ export const notificationService = {
   setupNotificationCategories: async (): Promise<void> => {
     // Expo Go에서는 카테고리 액션이 지원되지 않음
     if (!isDevelopmentBuild) {
-      console.log('[Notification] Expo Go 환경 - 알림 액션 버튼 비활성화');
+      logger.log('[Notification] Expo Go 환경 - 알림 액션 버튼 비활성화');
       return;
     }
 
@@ -129,9 +130,9 @@ export const notificationService = {
           },
         },
       ]);
-      console.log('[Notification] 알림 카테고리 설정 완료');
+      logger.log('[Notification] 알림 카테고리 설정 완료');
     } catch (error) {
-      console.error('[Notification] 알림 카테고리 설정 실패:', error);
+      logger.error('[Notification] 알림 카테고리 설정 실패:', error);
     }
   },
 

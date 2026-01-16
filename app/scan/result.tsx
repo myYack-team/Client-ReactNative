@@ -405,14 +405,25 @@ export default function ResultScreen() {
       ]);
     } catch (error) {
       console.error('[Register] Error:', error);
-      // 에러 시에도 스캔 결과 정리 (재시도 시 새로운 스캔 유도)
-      clearScanResult();
-      Alert.alert('오류', '약 등록에 실패했어요. 다시 촬영해주세요.', [
-        {
-          text: '확인',
-          onPress: () => router.replace('/(tabs)'),
-        },
-      ]);
+      // 에러 시 스캔 결과 유지하여 재시도 가능하게 함
+      Alert.alert(
+        '등록 실패',
+        '약 등록에 실패했어요. 다시 시도해주세요.',
+        [
+          {
+            text: '다시 시도',
+            style: 'default',
+          },
+          {
+            text: '취소',
+            style: 'cancel',
+            onPress: () => {
+              clearScanResult();
+              router.replace('/(tabs)');
+            },
+          },
+        ]
+      );
     }
   };
 

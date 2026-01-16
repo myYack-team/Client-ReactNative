@@ -12,6 +12,7 @@ import {
   BatchDeleteResult,
 } from '../types';
 import { medicationService, intakeService, prescriptionService } from '../services';
+import { logger } from '../utils/logger';
 
 // 캐시 만료 시간 (5분)
 const CACHE_DURATION = 5 * 60 * 1000;
@@ -143,7 +144,7 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
         currentImageUri: imageUri,  // 나중에 등록할 때 사용
         isLoading: false,
       });
-      console.log('[Store] Scan completed, imageUri saved for later upload');
+      logger.log('[Store] Scan completed, imageUri saved for later upload');
       return result;
     } catch (error: any) {
       const message = error.message || '처방전 스캔에 실패했습니다.';
@@ -281,7 +282,7 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
       set({ todayDataExpiry: 0 });
     } catch (error) {
       // 실패 시 롤백
-      console.error('Failed to record intake, rolling back:', error);
+      logger.error('Failed to record intake, rolling back:', error);
 
       if (previousTodayData) {
         set({ todayData: previousTodayData });
@@ -339,7 +340,7 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
       return schedules;
     } catch (error) {
       set({ isLoadingSchedule: false });
-      console.error('Failed to fetch schedule for date:', error);
+      logger.error('Failed to fetch schedule for date:', error);
       return [];
     }
   },
@@ -395,7 +396,7 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
 
       return data;
     } catch (error) {
-      console.error('Failed to fetch monthly summary:', error);
+      logger.error('Failed to fetch monthly summary:', error);
       throw error;
     }
   },

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import { User } from '../types';
 import { authService, userService } from '../services';
+import { logger } from '../utils/logger';
 
 interface AuthState {
   user: User | null;
@@ -57,7 +58,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       set({ user, isAuthenticated: true, isLoading: false });
     } catch (error) {
-      console.error('[Auth] Login failed:', error);
+      logger.error('[Auth] Login failed:', error);
       set({
         isLoading: false,
         error: '로그인에 실패했습니다. 다시 시도해주세요.',
@@ -77,10 +78,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       // 사용자 정보 조회
       const user = await userService.getMe();
 
-      console.log('[Auth] OAuth callback success:', { userId: user.id, isNewUser });
+      logger.log('[Auth] OAuth callback success:', { userId: user.id, isNewUser });
       set({ user, isAuthenticated: true, isLoading: false, needsOnboarding: isNewUser });
     } catch (error) {
-      console.error('[Auth] OAuth callback failed:', error);
+      logger.error('[Auth] OAuth callback failed:', error);
       await SecureStore.deleteItemAsync('accessToken');
       await SecureStore.deleteItemAsync('refreshToken');
       set({

@@ -2,8 +2,9 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL } from '../constants';
 import { ApiResponse } from '../types';
+import { logger } from '../utils/logger';
 
-console.log('[API] Initializing with base URL:', API_BASE_URL);
+logger.log('[API] Initializing with base URL:', API_BASE_URL);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -16,7 +17,7 @@ const api = axios.create({
 // Request 인터셉터: JWT 토큰 추가
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    console.log('[API Request]', config.method?.toUpperCase(), config.url, config.params);
+    logger.log('[API Request]', config.method?.toUpperCase(), config.url, config.params);
 
     // JWT 토큰 추가
     const token = await SecureStore.getItemAsync('accessToken');
@@ -26,7 +27,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('[API Request Error]', error);
+    logger.error('[API Request Error]', error);
     return Promise.reject(error);
   }
 );

@@ -9,11 +9,12 @@ import {
   DuplicateCheckResponse,
   BatchDeleteResult,
 } from '../types';
+import { logger } from '../utils/logger';
 
 export const medicationService = {
   // 처방전 스캔
   async scanPrescription(imageUri: string): Promise<ScanResult> {
-    console.log('[scanPrescription] Starting scan with image:', imageUri);
+    logger.log('[scanPrescription] Starting scan with image:', imageUri);
 
     const formData = new FormData();
     formData.append('image', {
@@ -23,16 +24,16 @@ export const medicationService = {
     } as unknown as Blob);
 
     try {
-      console.log('[scanPrescription] Sending request to /scan...');
+      logger.log('[scanPrescription] Sending request to /scan...');
       const response = await api.post<ApiResponse<ScanResult>>('/scan', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
-      console.log('[scanPrescription] Response:', JSON.stringify(response.data, null, 2));
+      logger.log('[scanPrescription] Response:', JSON.stringify(response.data, null, 2));
       return response.data.result!;
     } catch (error: any) {
-      console.error('[scanPrescription] Error details:', {
+      logger.error('[scanPrescription] Error details:', {
         message: error.message,
         code: error.code,
         response: error.response?.data,
@@ -44,13 +45,13 @@ export const medicationService = {
 
   // 약 등록
   async createMedication(medication: CreateMedicationRequest): Promise<Medication> {
-    console.log('[createMedication] Request:', JSON.stringify(medication, null, 2));
+    logger.log('[createMedication] Request:', JSON.stringify(medication, null, 2));
     try {
       const response = await api.post<ApiResponse<Medication>>('/medications', medication);
-      console.log('[createMedication] Response:', JSON.stringify(response.data, null, 2));
+      logger.log('[createMedication] Response:', JSON.stringify(response.data, null, 2));
       return response.data.result!;
     } catch (error: any) {
-      console.error('[createMedication] Error:', {
+      logger.error('[createMedication] Error:', {
         message: error.message,
         response: error.response?.data,
         status: error.response?.status,
@@ -61,13 +62,13 @@ export const medicationService = {
 
   // 약 목록 조회
   async getMedications(): Promise<MedicationsResponse> {
-    console.log('[getMedications] Fetching medications list...');
+    logger.log('[getMedications] Fetching medications list...');
     try {
       const response = await api.get<ApiResponse<MedicationsResponse>>('/medications');
-      console.log('[getMedications] Response:', JSON.stringify(response.data, null, 2));
+      logger.log('[getMedications] Response:', JSON.stringify(response.data, null, 2));
       return response.data.result!;
     } catch (error: any) {
-      console.error('[getMedications] Error details:', {
+      logger.error('[getMedications] Error details:', {
         message: error.message,
         code: error.code,
         response: error.response?.data,
@@ -102,16 +103,16 @@ export const medicationService = {
 
   // 중복 약물 체크
   async checkDuplicates(drugItemSeqs: string[]): Promise<DuplicateCheckResponse> {
-    console.log('[checkDuplicates] Checking duplicates for:', drugItemSeqs);
+    logger.log('[checkDuplicates] Checking duplicates for:', drugItemSeqs);
     try {
       const response = await api.post<ApiResponse<DuplicateCheckResponse>>(
         '/medications/check-duplicates',
         { drugItemSeqs }
       );
-      console.log('[checkDuplicates] Response:', JSON.stringify(response.data, null, 2));
+      logger.log('[checkDuplicates] Response:', JSON.stringify(response.data, null, 2));
       return response.data.result!;
     } catch (error: any) {
-      console.error('[checkDuplicates] Error:', {
+      logger.error('[checkDuplicates] Error:', {
         message: error.message,
         response: error.response?.data,
         status: error.response?.status,
@@ -122,11 +123,11 @@ export const medicationService = {
 
   // 약 일괄 삭제
   async deleteMedicationsBatch(ids: number[]): Promise<BatchDeleteResult> {
-    console.log('[deleteMedicationsBatch] Deleting medications:', ids);
+    logger.log('[deleteMedicationsBatch] Deleting medications:', ids);
     const response = await api.delete<ApiResponse<BatchDeleteResult>>('/medications/batch', {
       data: { ids },
     });
-    console.log('[deleteMedicationsBatch] Response:', JSON.stringify(response.data, null, 2));
+    logger.log('[deleteMedicationsBatch] Response:', JSON.stringify(response.data, null, 2));
     return response.data.result!;
   },
 };

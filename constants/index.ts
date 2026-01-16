@@ -36,4 +36,9 @@ const getApiBaseUrl = (): string => {
 export const API_BASE_URL = getApiBaseUrl();
 
 // 카카오 로그인 설정
-export const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY || '***REMOVED***';
+export const KAKAO_REST_API_KEY = process.env.EXPO_PUBLIC_KAKAO_REST_API_KEY;
+
+// 프로덕션 환경에서 API 키가 없으면 에러
+if (!KAKAO_REST_API_KEY && !__DEV__) {
+  throw new Error('EXPO_PUBLIC_KAKAO_REST_API_KEY is required in production');
+}
