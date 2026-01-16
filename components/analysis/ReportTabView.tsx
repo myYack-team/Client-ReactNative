@@ -65,7 +65,7 @@ export function ReportTabView({ result }: ReportTabViewProps) {
               <Typography
                 variant="caption"
                 color={isActive ? Colors.brand : Colors.textSecondary}
-                style={[styles.tabLabel, isActive && styles.tabLabelActive]}
+                style={isActive ? { ...styles.tabLabel, ...styles.tabLabelActive } : styles.tabLabel}
               >
                 {tab.label}
               </Typography>
