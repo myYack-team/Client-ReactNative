@@ -7,7 +7,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Typography, Card } from '../../../components/ui';
 import { Colors } from '../../../constants';
@@ -86,6 +86,7 @@ function EmptyState() {
 }
 
 export default function QnAListScreen() {
+  const insets = useSafeAreaInsets();
   const [questions, setQuestions] = useState<QnAQuestion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -181,7 +182,7 @@ export default function QnAListScreen() {
       />
 
       {/* FAB - 새 문의 작성 */}
-      <TouchableOpacity style={styles.fab} onPress={handleCreatePress} activeOpacity={0.8}>
+      <TouchableOpacity style={[styles.fab, { bottom: 24 + insets.bottom }]} onPress={handleCreatePress} activeOpacity={0.8}>
         <Typography variant="h2" style={styles.fabIcon}>
           +
         </Typography>
