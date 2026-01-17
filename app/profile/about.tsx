@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Card, Typography } from '../../components/ui';
+import { Card, Typography, TermsModal } from '../../components/ui';
+import type { TermsType } from '../../components/ui';
 import { Colors } from '../../constants';
 
 interface MenuItemProps {
@@ -20,6 +21,8 @@ function MenuItem({ label, onPress }: MenuItemProps) {
 }
 
 export default function AboutScreen() {
+  const [modalType, setModalType] = useState<TermsType | null>(null);
+
   const handleOpenLink = (url: string) => {
     Linking.openURL(url).catch(() => {
       // 링크 열기 실패 시 무시
@@ -52,17 +55,12 @@ export default function AboutScreen() {
         <Card style={styles.menuCard} variant="elevated">
           <MenuItem
             label="이용약관"
-            onPress={() => handleOpenLink('https://myyak.xyz/terms')}
+            onPress={() => setModalType('terms')}
           />
           <View style={styles.divider} />
           <MenuItem
             label="개인정보 처리방침"
-            onPress={() => handleOpenLink('https://myyak.xyz/privacy')}
-          />
-          <View style={styles.divider} />
-          <MenuItem
-            label="오픈소스 라이선스"
-            onPress={() => handleOpenLink('https://myyak.xyz/licenses')}
+            onPress={() => setModalType('privacy')}
           />
           <View style={styles.divider} />
           <MenuItem
@@ -70,14 +68,16 @@ export default function AboutScreen() {
             onPress={handleContact}
           />
         </Card>
-
-        {/* 저작권 */}
-        <View style={styles.footer}>
-          <Typography variant="caption" color={Colors.textSecondary}>
-            2024 마이약 팀
-          </Typography>
-        </View>
       </View>
+
+      {/* 약관 모달 */}
+      {modalType && (
+        <TermsModal
+          visible={!!modalType}
+          onClose={() => setModalType(null)}
+          type={modalType}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -125,10 +125,5 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: Colors.border,
-  },
-  footer: {
-    alignItems: 'center',
-    marginTop: 'auto',
-    paddingVertical: 20,
   },
 });

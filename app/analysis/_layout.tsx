@@ -17,6 +17,12 @@ export default function AnalysisLayout() {
       }}
     >
       <Stack.Screen
+        name="loading"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         name="result"
         options={{
           title: 'AI 분석 결과',

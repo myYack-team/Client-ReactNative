@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
   svgContainer: {
     overflow: 'hidden',
     borderRadius: 16,
-    backgroundColor: '#f8fafc',
+    backgroundColor: Colors.white,
   },
   webview: {
     flex: 1,

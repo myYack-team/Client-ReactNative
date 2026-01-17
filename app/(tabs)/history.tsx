@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
 import { Card, Typography, DeleteConfirmModal, Toast } from '../../components/ui';
 import { Colors, API_BASE_URL } from '../../constants';
@@ -132,6 +132,7 @@ const MAX_CACHE_SIZE = 5;
 
 export default function PrescriptionScreen() {
   const { contentStyle } = useResponsive();
+  const insets = useSafeAreaInsets();
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -382,7 +383,7 @@ export default function PrescriptionScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, contentStyle]}
+        contentContainerStyle={[styles.scrollContent, contentStyle, { paddingBottom: 40 + insets.bottom }]}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
