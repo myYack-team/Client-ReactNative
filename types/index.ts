@@ -708,12 +708,75 @@ export interface FoodInteraction {
   details: FoodInteractionDetail[];
 }
 
+// 음식 제안 (도움이 되는 음식)
+export interface FoodSuggestion {
+  foodName: string;
+  foodIcon: string;
+  reason: string;
+  tip?: string;
+  relatedMedications: RelatedMedication[];
+}
+
+// 관련 약물 정보
+export interface RelatedMedication {
+  name: string;
+  detail?: string;
+}
+
+// 영양제 상호작용 레벨
+export type SupplementInteractionLevel = 'GOOD' | 'TIMING' | 'CAUTION';
+
+// 영양제 상호작용 레벨 라벨 매핑
+export const SUPPLEMENT_INTERACTION_LABELS: Record<SupplementInteractionLevel, string> = {
+  GOOD: '함께 OK',
+  TIMING: '간격 필요',
+  CAUTION: '주의',
+};
+
+// 영양제 상호작용 레벨 색상 매핑
+export const SUPPLEMENT_INTERACTION_COLORS: Record<SupplementInteractionLevel, { bg: string; text: string }> = {
+  GOOD: { bg: '#E8F5E9', text: '#2E7D32' },
+  TIMING: { bg: '#FFF3E0', text: '#E65100' },
+  CAUTION: { bg: '#FFEBEE', text: '#D32F2F' },
+};
+
+// 영양제 상호작용 상세 (약물 정보)
+export interface SupplementInteractionDetail {
+  medicationName: string;
+  reason: string;
+}
+
+// 영양제 상호작용
+export interface SupplementInteraction {
+  supplementName: string;
+  supplementTag: string;
+  interactionLevel: SupplementInteractionLevel;
+  summaryReason: string;
+  source?: string;
+  details: SupplementInteractionDetail[];
+}
+
+// 생활 팁
+export interface LifestyleTip {
+  category: string;
+  categoryIcon: string;
+  categoryLabel: string;
+  title: string;
+  tip: string;
+  detailedExplanation?: string;
+  source: string;
+  relatedMedications: RelatedMedication[];
+}
+
 // 분석 결과 전체
 export interface AnalysisResult {
   reportId: number;
   analysisDate: string;
   mechanismGroups: MechanismGroup[];
   foodInteractions: FoodInteraction[];
+  foodSuggestions?: FoodSuggestion[];
+  supplementInteractions?: SupplementInteraction[];
+  lifestyleTips?: LifestyleTip[];
 }
 
 // 레포트 요약 (목록용)
