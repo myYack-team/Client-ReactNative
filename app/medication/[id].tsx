@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert, ActivityIndicator, TouchableOpacity, LayoutAnimation, Platform, UIManager, Text } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Card, Typography } from '../../components/ui';
@@ -57,6 +57,7 @@ function ExpandableText({ text, numberOfLines = 3 }: ExpandableTextProps) {
 
 export default function MedicationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const insets = useSafeAreaInsets();
   const { getMedicationDetail, deleteMedication, isLoading } = useMedicationStore();
   const [medication, setMedication] = useState<Medication | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(true);
@@ -304,7 +305,7 @@ export default function MedicationDetailScreen() {
         )}
       </ScrollView>
 
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: 20 + insets.bottom }]}>
         <Button
           title="삭제하기"
           variant="outline"
