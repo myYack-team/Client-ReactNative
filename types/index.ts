@@ -805,3 +805,183 @@ export interface QuotaInfo {
   remainingCount: number;
   resetDate: string;
 }
+
+// ========== Q&A 관련 타입 ==========
+
+// Q&A 상태
+export type QnAStatus = 'PENDING' | 'ANSWERED' | 'CLOSED';
+
+// Q&A 상태 라벨 매핑
+export const QNA_STATUS_LABELS: Record<QnAStatus, string> = {
+  PENDING: '답변 대기',
+  ANSWERED: '답변 완료',
+  CLOSED: '종료됨',
+};
+
+// Q&A 상태 색상 매핑
+export const QNA_STATUS_COLORS: Record<QnAStatus, { bg: string; text: string }> = {
+  PENDING: { bg: '#FFF3E0', text: '#E65100' },
+  ANSWERED: { bg: '#E8F5E9', text: '#2E7D32' },
+  CLOSED: { bg: '#F3F4F6', text: '#6B7280' },
+};
+
+// Q&A 질문 (목록용)
+export interface QnAQuestion {
+  id: number;
+  title: string;
+  status: QnAStatus;
+  statusLabel: string;
+  replyCount: number;
+  createdAt: string;
+  hasAdminReply: boolean;
+}
+
+// Q&A 질문 상세
+export interface QnAQuestionDetail {
+  id: number;
+  title: string;
+  content: string;
+  status: QnAStatus;
+  statusLabel: string;
+  createdAt: string;
+  replies: QnAReply[];
+}
+
+// Q&A 답글
+export interface QnAReply {
+  id: number;
+  content: string;
+  isAdmin: boolean;
+  adminName?: string;
+  createdAt: string;
+}
+
+// Q&A 목록 응답
+export interface QnAListResponse {
+  questions: QnAQuestion[];
+  totalCount: number;
+  page: number;
+  totalPages: number;
+  hasNext: boolean;
+}
+
+// Q&A 답글 추가 결과
+export interface QnAReplyResult {
+  id: number;
+  content: string;
+  isAdmin: boolean;
+  createdAt: string;
+}
+
+// ========== AI 동의 관련 타입 ==========
+
+// AI 동의 상태
+export interface AiConsentStatus {
+  aiDataAgreed: boolean;
+  consentedAt?: string;
+  consentVersion?: string;
+}
+
+// ========== AI 분석 확장 기능 타입 ==========
+
+// 영양제 상호작용 레벨
+export type SupplementInteractionLevel = 'GOOD' | 'TIMING' | 'CAUTION';
+
+// 영양제 상호작용 레벨 라벨 매핑
+export const SUPPLEMENT_INTERACTION_LEVEL_LABELS: Record<SupplementInteractionLevel, string> = {
+  GOOD: '함께 OK',
+  TIMING: '간격 필요',
+  CAUTION: '주의',
+};
+
+// 영양제 상호작용 레벨 색상 매핑
+export const SUPPLEMENT_INTERACTION_LEVEL_COLORS: Record<SupplementInteractionLevel, { bg: string; text: string }> = {
+  GOOD: { bg: '#E8F5E9', text: '#2E7D32' },
+  TIMING: { bg: '#FFF3E0', text: '#E65100' },
+  CAUTION: { bg: '#FFEBEE', text: '#D32F2F' },
+};
+
+// 생활 팁 카테고리
+export type LifestyleTipCategory =
+  | 'SKINCARE'
+  | 'HYDRATION'
+  | 'SUN'
+  | 'TIMING'
+  | 'CAFFEINE'
+  | 'POSTURE'
+  | 'ALCOHOL'
+  | 'EXERCISE';
+
+// 생활 팁 카테고리 아이콘 매핑
+export const LIFESTYLE_TIP_CATEGORY_ICONS: Record<LifestyleTipCategory, string> = {
+  SKINCARE: '🚿',
+  HYDRATION: '💧',
+  SUN: '☀️',
+  TIMING: '🍽️',
+  CAFFEINE: '☕',
+  POSTURE: '🧍',
+  ALCOHOL: '🍷',
+  EXERCISE: '🏃',
+};
+
+// 생활 팁 카테고리 라벨 매핑
+export const LIFESTYLE_TIP_CATEGORY_LABELS: Record<LifestyleTipCategory, string> = {
+  SKINCARE: '피부 관리',
+  HYDRATION: '수분 섭취',
+  SUN: '자외선',
+  TIMING: '복용 타이밍',
+  CAFFEINE: '카페인',
+  POSTURE: '자세 변경',
+  ALCOHOL: '알코올',
+  EXERCISE: '운동',
+};
+
+// 관련 약물 정보 (음식 제안, 생활 팁에서 공통 사용)
+export interface RelatedMedication {
+  name: string;
+  detail?: string;
+}
+
+// 음식 제안 (복용 약물과 좋은 궁합의 음식)
+export interface FoodSuggestion {
+  foodName: string;
+  foodIcon: string;
+  reason: string;
+  tip?: string;
+  relatedMedications: RelatedMedication[];
+}
+
+// 영양제 상호작용 상세
+export interface SupplementInteractionDetail {
+  medicationName: string;
+  reason: string;
+}
+
+// 영양제 상호작용 정보
+export interface SupplementInteraction {
+  supplementName: string;
+  supplementTag: SupplementTag;
+  interactionLevel: SupplementInteractionLevel;
+  summaryReason: string;
+  source?: string;
+  details: SupplementInteractionDetail[];
+}
+
+// 생활 팁 (복용 약물 관련 생활 습관 조언)
+export interface LifestyleTip {
+  category: LifestyleTipCategory;
+  categoryIcon: string;
+  categoryLabel: string;
+  title: string;
+  tip: string;
+  detailedExplanation?: string;
+  source: string;
+  relatedMedications: RelatedMedication[];
+}
+
+// 확장된 분석 결과 전체 (기존 AnalysisResult 확장)
+export interface AnalysisResultExtended extends AnalysisResult {
+  foodSuggestions?: FoodSuggestion[];
+  supplementInteractions?: SupplementInteraction[];
+  lifestyleTips?: LifestyleTip[];
+}

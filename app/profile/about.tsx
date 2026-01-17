@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { Card, Typography } from '../../components/ui';
 import { Colors } from '../../constants';
 
@@ -26,9 +27,8 @@ export default function AboutScreen() {
   };
 
   const handleContact = () => {
-    Linking.openURL('mailto:contact@myyak.app').catch(() => {
-      // 메일 앱 열기 실패 시 무시
-    });
+    // Q&A 페이지로 이동
+    router.push('/profile/qna');
   };
 
   return (
@@ -52,17 +52,17 @@ export default function AboutScreen() {
         <Card style={styles.menuCard} variant="elevated">
           <MenuItem
             label="이용약관"
-            onPress={() => handleOpenLink('https://myyak.app/terms')}
+            onPress={() => handleOpenLink('https://myyak.xyz/terms')}
           />
           <View style={styles.divider} />
           <MenuItem
             label="개인정보 처리방침"
-            onPress={() => handleOpenLink('https://myyak.app/privacy')}
+            onPress={() => handleOpenLink('https://myyak.xyz/privacy')}
           />
           <View style={styles.divider} />
           <MenuItem
             label="오픈소스 라이선스"
-            onPress={() => handleOpenLink('https://myyak.app/licenses')}
+            onPress={() => handleOpenLink('https://myyak.xyz/licenses')}
           />
           <View style={styles.divider} />
           <MenuItem

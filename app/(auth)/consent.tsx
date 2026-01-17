@@ -4,11 +4,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Button, Typography } from '../../components/ui';
+import { Button, Typography, TermsModal, TermsType } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useAuthStore } from '../../stores/authStore';
 import * as SecureStore from 'expo-secure-store';
@@ -22,28 +21,21 @@ interface ConsentItem {
   detailUrl?: string;
 }
 
-// 동의 항목 정의
+// 동의 항목 정의 (AI 동의는 별도 화면에서 처리)
 const CONSENT_ITEMS: ConsentItem[] = [
   {
     id: 'terms',
     title: '이용약관 동의',
     required: true,
     description: '마이약 서비스 이용약관에 동의합니다.',
-    detailUrl: 'https://myyak.xyz/terms',
+    detailUrl: 'terms',
   },
   {
     id: 'privacy',
     title: '개인정보 처리방침 동의',
     required: true,
     description: '개인정보 수집 및 이용에 동의합니다.',
-    detailUrl: 'https://myyak.xyz/privacy',
-  },
-  {
-    id: 'aiData',
-    title: 'AI 데이터 분석 동의',
-    required: true,
-    description:
-      '마이약 서비스는 처방전/약봉투 스캔 기능을 제공하기 위해 외부 AI 서비스(OpenAI, Google Gemini)를 활용합니다.\n\n수집 및 처리되는 정보:\n- 촬영한 처방전/약봉투 이미지\n- 이미지에서 추출된 약물 정보 (약품명, 복용량, 복용 방법 등)\n\n위 정보는 AI 분석 목적으로만 사용되며, 분석 완료 후 외부 서버에서 즉시 삭제됩니다.',
+    detailUrl: 'privacy',
   },
 ];
 
@@ -101,6 +93,7 @@ const CONSENT_STORAGE_KEY = 'user_consent_completed';
 export default function ConsentScreen() {
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [modalType, setModalType] = useState<TermsType | null>(null);
   const { user } = useAuthStore();
 
   // 개별 항목 토글
@@ -132,10 +125,10 @@ export default function ConsentScreen() {
     (item) => checkedItems[item.id]
   );
 
-  // 전문 보기
-  const handleViewDetail = (url?: string) => {
-    if (url) {
-      Linking.openURL(url);
+  // 전문 보기 (모달로 변경)
+  const handleViewDetail = (type?: string) => {
+    if (type === 'terms' || type === 'privacy') {
+      setModalType(type);
     }
   };
 
@@ -215,6 +208,15 @@ export default function ConsentScreen() {
           style={styles.submitButton}
         />
       </View>
+
+      {/* 약관 상세 모달 */}
+      {modalType && (
+        <TermsModal
+          visible={modalType !== null}
+          onClose={() => setModalType(null)}
+          type={modalType}
+        />
+      )}
     </SafeAreaView>
   );
 }

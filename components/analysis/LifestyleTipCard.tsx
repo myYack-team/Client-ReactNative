@@ -11,6 +11,7 @@ import { Card, Typography } from '../ui';
 import { Colors, Shadows } from '../../constants';
 import { LifestyleTip } from '../../types';
 
+// Android에서 LayoutAnimation 활성화
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
@@ -19,10 +20,6 @@ interface LifestyleTipCardProps {
   tip: LifestyleTip;
   onPress?: () => void;
 }
-
-// 하늘색 배경 색상
-const SKY_BLUE_BG = '#E3F2FD';
-const SKY_BLUE_TEXT = '#1565C0';
 
 export function LifestyleTipCard({ tip, onPress }: LifestyleTipCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -36,22 +33,22 @@ export function LifestyleTipCard({ tip, onPress }: LifestyleTipCardProps) {
   return (
     <TouchableOpacity activeOpacity={0.9} onPress={handleToggle}>
       <Card style={styles.card} variant="elevated">
-        {/* 카테고리 아이콘 영역 - 하늘색 배경 */}
+        {/* 아이콘 영역 */}
         <View style={styles.iconContainer}>
           <View style={styles.iconBackground}>
             <Typography variant="h2">{tip.categoryIcon}</Typography>
           </View>
           {/* 카테고리 뱃지 */}
-          <View style={styles.categoryBadge}>
-            <Typography variant="caption" color={Colors.white} style={styles.badgeText}>
+          <View style={styles.badge}>
+            <Typography variant="caption" color={Colors.info} style={styles.badgeText}>
               {tip.categoryLabel}
             </Typography>
           </View>
         </View>
 
-        {/* 제목 */}
+        {/* 팁 제목 */}
         <Typography variant="h4" style={styles.title}>
-          {tip.categoryIcon} {tip.title}
+          {tip.title}
         </Typography>
 
         {/* 팁 내용 */}
@@ -59,19 +56,29 @@ export function LifestyleTipCard({ tip, onPress }: LifestyleTipCardProps) {
           <Typography
             variant="bodySmall"
             color={Colors.textSecondary}
-            numberOfLines={isExpanded ? undefined : 2}
+            style={styles.tipContent}
           >
             {tip.tip}
           </Typography>
         </View>
 
-        {/* 확장 시 상세 정보 */}
+        {/* 출처 (필수) */}
+        <View style={styles.sourceContainer}>
+          <Typography variant="caption" color={Colors.textTertiary}>
+            📚 출처: {tip.source}
+          </Typography>
+        </View>
+
+        {/* 확장 시 상세 설명 및 관련 약물 */}
         {isExpanded && (
           <View style={styles.expandedContent}>
             {/* 상세 설명 */}
             {tip.detailedExplanation && (
-              <View style={styles.detailedExplanation}>
-                <Typography variant="bodySmall" color={Colors.textSecondary}>
+              <View style={styles.detailedContainer}>
+                <Typography variant="caption" color={Colors.textSecondary} style={styles.detailedTitle}>
+                  상세 설명
+                </Typography>
+                <Typography variant="bodySmall" color={Colors.textSecondary} style={styles.detailedText}>
                   {tip.detailedExplanation}
                 </Typography>
               </View>
@@ -88,27 +95,20 @@ export function LifestyleTipCard({ tip, onPress }: LifestyleTipCardProps) {
                     <Typography variant="bodySmall">{med.name}</Typography>
                     {med.detail && (
                       <Typography variant="caption" color={Colors.textSecondary}>
-                        {med.detail}
+                        → {med.detail}
                       </Typography>
                     )}
                   </View>
                 ))}
               </View>
             )}
-
-            {/* 출처 - 필수 표시 */}
-            <View style={styles.sourceContainer}>
-              <Typography variant="caption" color={Colors.textTertiary}>
-                {tip.source}
-              </Typography>
-            </View>
           </View>
         )}
 
         {/* 확장 힌트 */}
         <View style={styles.expandHint}>
           <Typography variant="caption" color={Colors.textTertiary}>
-            {isExpanded ? '접기' : '상세 보기 >'}
+            {isExpanded ? '접기' : '자세히 보기'}
           </Typography>
         </View>
       </Card>
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   },
   iconContainer: {
     height: 80,
-    backgroundColor: SKY_BLUE_BG,
+    backgroundColor: '#E3F2FD', // 연한 파란 배경
     marginHorizontal: -16,
     marginTop: -16,
     marginBottom: 12,
@@ -140,12 +140,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...Shadows.small,
   },
-  categoryBadge: {
+  badge: {
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: SKY_BLUE_TEXT,
-    paddingHorizontal: 10,
+    backgroundColor: '#E3F2FD',
+    borderWidth: 1,
+    borderColor: Colors.info,
+    paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
@@ -156,26 +158,40 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   tipContainer: {
-    padding: 12,
     backgroundColor: Colors.backgroundSecondary,
+    padding: 12,
     borderRadius: 8,
     borderLeftWidth: 3,
-    borderLeftColor: SKY_BLUE_TEXT,
+    borderLeftColor: Colors.info,
+    marginBottom: 8,
+  },
+  tipContent: {
+    lineHeight: 20,
+  },
+  sourceContainer: {
+    marginBottom: 8,
   },
   expandedContent: {
-    marginTop: 16,
+    marginTop: 8,
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: Colors.divider,
   },
-  detailedExplanation: {
-    backgroundColor: SKY_BLUE_BG,
+  detailedContainer: {
+    marginBottom: 16,
+  },
+  detailedTitle: {
+    marginBottom: 6,
+    fontWeight: '500',
+  },
+  detailedText: {
+    lineHeight: 20,
+    backgroundColor: Colors.backgroundSecondary,
     padding: 12,
     borderRadius: 8,
-    marginBottom: 12,
   },
   medicationList: {
-    marginBottom: 12,
+    marginTop: 8,
   },
   medicationListTitle: {
     marginBottom: 8,
@@ -186,11 +202,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.backgroundSecondary,
     borderRadius: 6,
     marginBottom: 4,
-  },
-  sourceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
   },
   expandHint: {
     alignItems: 'center',

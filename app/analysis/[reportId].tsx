@@ -12,14 +12,14 @@ import { Typography, Button, Card } from '../../components/ui';
 import { ReportTabView } from '../../components/analysis';
 import { Colors } from '../../constants';
 import { useAnalysisStore } from '../../stores';
-import { AnalysisResult } from '../../types';
+import { AnalysisResultExtended } from '../../types';
 import { analysisService } from '../../services';
 
 export default function ReportDetailScreen() {
   const { reportId } = useLocalSearchParams<{ reportId: string }>();
   const { deleteReport } = useAnalysisStore();
 
-  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [result, setResult] = useState<AnalysisResultExtended | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,7 +34,7 @@ export default function ReportDetailScreen() {
       setIsLoading(true);
       setError(null);
       const data = await analysisService.getAnalysisResult(parseInt(reportId));
-      setResult(data);
+      setResult(data as AnalysisResultExtended);
     } catch (err) {
       const message = err instanceof Error ? err.message : '레포트를 불러오는데 실패했습니다.';
       setError(message);
@@ -67,6 +67,10 @@ export default function ReportDetailScreen() {
         },
       ]
     );
+  };
+
+  const handleNavigateToSupplementRegister = () => {
+    router.push('/supplement/search');
   };
 
   // 로딩 화면
@@ -104,11 +108,12 @@ export default function ReportDetailScreen() {
     );
   }
 
-  // 헤더에 표시할 통계 계산
+  // 분석 결과 카운트 계산
   const mechanismCount = result?.mechanismGroups?.length || 0;
   const foodInteractionCount = result?.foodInteractions?.length || 0;
+  const foodSuggestionCount = result?.foodSuggestions?.length || 0;
   const supplementCount = result?.supplementInteractions?.length || 0;
-  const tipCount = result?.lifestyleTips?.length || 0;
+  const tipsCount = result?.lifestyleTips?.length || 0;
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -126,7 +131,7 @@ export default function ReportDetailScreen() {
         {/* 헤더 정보 */}
         <Card style={styles.headerCard} variant="elevated">
           <View style={styles.headerContent}>
-            <Typography variant="h2" style={styles.headerEmoji}>&#x1F4CA;</Typography>
+            <Typography variant="h2" style={styles.headerEmoji}>📊</Typography>
             <View style={styles.headerTextContainer}>
               <Typography variant="h4">
                 {result?.analysisDate ? new Date(result.analysisDate).toLocaleDateString('ko-KR', {
@@ -136,19 +141,26 @@ export default function ReportDetailScreen() {
                 }) : ''}
               </Typography>
               <Typography variant="caption" color={Colors.textSecondary}>
-                기전 {mechanismCount}개 · 음식 {foodInteractionCount}개 · 영양제 {supplementCount}개 · 팁 {tipCount}개
+                기전 {mechanismCount}개 · 음식 {foodInteractionCount + foodSuggestionCount}개 · 영양제 {supplementCount}개 · 팁 {tipsCount}개
               </Typography>
             </View>
           </View>
         </Card>
 
-        {/* 탭 뷰로 콘텐츠 표시 */}
-        {result && <ReportTabView result={result} />}
+        {/* 탭 뷰 */}
+        <ReportTabView
+          mechanismGroups={result?.mechanismGroups || []}
+          foodInteractions={result?.foodInteractions || []}
+          foodSuggestions={result?.foodSuggestions || []}
+          supplementInteractions={result?.supplementInteractions || []}
+          lifestyleTips={result?.lifestyleTips || []}
+          onNavigateToSupplementRegister={handleNavigateToSupplementRegister}
+        />
 
         {/* 면책 조항 */}
         <View style={styles.disclaimer}>
           <Typography variant="caption" color={Colors.textTertiary} style={styles.disclaimerText}>
-            AI 분석 결과는 참고용이며, 의료적 판단이나 처방을 대체하지 않습니다.
+            ⚠️ AI 분석 결과는 참고용이며, 의료적 판단이나 처방을 대체하지 않습니다.
             복용에 관한 결정은 반드시 의사나 약사와 상담하세요.
           </Typography>
         </View>
@@ -203,7 +215,7 @@ const styles = StyleSheet.create({
   },
   // 헤더 카드
   headerCard: {
-    marginBottom: 24,
+    marginBottom: 16,
     backgroundColor: Colors.brandLightest,
     borderWidth: 1,
     borderColor: Colors.brand,

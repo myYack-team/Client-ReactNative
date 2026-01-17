@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Animated, Alert } from 'react-native';
+import { View, StyleSheet, Animated, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Typography, Button } from '../../components/ui';
+import { Typography, Button, AiConsentModal } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useMedicationStore } from '../../stores';
+import { userService } from '../../services';
 
 // 단계별 메시지 정의
 const PROGRESS_STAGES = [
@@ -34,9 +35,36 @@ export default function LoadingScreen() {
   const [isComplete, setIsComplete] = useState(false);
   const progressAnim = useRef(new Animated.Value(0)).current;
 
+  // AI 동의 관련 상태
+  const [isCheckingConsent, setIsCheckingConsent] = useState(true);
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const [hasAiConsent, setHasAiConsent] = useState(false);
+
+  // AI 동의 상태 확인
+  useEffect(() => {
+    const checkAiConsent = async () => {
+      try {
+        const status = await userService.getAiConsentStatus();
+        if (status.aiDataAgreed) {
+          setHasAiConsent(true);
+        } else {
+          setShowConsentModal(true);
+        }
+      } catch (error) {
+        console.error('Failed to check AI consent:', error);
+        // 에러 시 동의 모달 표시
+        setShowConsentModal(true);
+      } finally {
+        setIsCheckingConsent(false);
+      }
+    };
+
+    checkAiConsent();
+  }, []);
+
   // 가짜 진행률 업데이트 (90%까지)
   useEffect(() => {
-    if (isComplete || error) return;
+    if (isComplete || error || !hasAiConsent) return;
 
     const intervals = [
       { delay: 300, target: 15 },
@@ -62,7 +90,7 @@ export default function LoadingScreen() {
     );
 
     return () => timers.forEach(clearTimeout);
-  }, [isComplete, error]);
+  }, [isComplete, error, hasAiConsent]);
 
   const performScan = async () => {
     if (!uri) return;
@@ -100,11 +128,29 @@ export default function LoadingScreen() {
     }
   };
 
+  // AI 동의 완료 후 스캔 시작
   useEffect(() => {
-    if (!uri || hasStartedScan.current) return;
+    if (!uri || hasStartedScan.current || !hasAiConsent) return;
     hasStartedScan.current = true;
     performScan();
-  }, [uri]);
+  }, [uri, hasAiConsent]);
+
+  // AI 동의 처리
+  const handleAiConsentAgree = async () => {
+    try {
+      await userService.updateAiConsent(true);
+      setHasAiConsent(true);
+      setShowConsentModal(false);
+    } catch (error) {
+      console.error('Failed to update AI consent:', error);
+      Alert.alert('오류', 'AI 동의 처리에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
+  const handleAiConsentCancel = () => {
+    setShowConsentModal(false);
+    router.back();
+  };
 
   const handleRetry = () => {
     setError(null);
@@ -119,6 +165,41 @@ export default function LoadingScreen() {
     clearScanError();
     router.back();
   };
+
+  // AI 동의 확인 중 로딩
+  if (isCheckingConsent) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.content}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+          <Typography variant="body" color={Colors.textSecondary} style={{ marginTop: 16 }}>
+            AI 동의 상태 확인 중...
+          </Typography>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // AI 동의 모달
+  if (showConsentModal) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.content}>
+          <Typography variant="h3" style={{ marginBottom: 16, textAlign: 'center' }}>
+            AI 데이터 분석 동의가 필요합니다
+          </Typography>
+          <Typography variant="body" color={Colors.textSecondary} style={{ textAlign: 'center' }}>
+            처방전 스캔 기능을 이용하려면{'\n'}AI 데이터 분석에 동의해주세요.
+          </Typography>
+        </View>
+        <AiConsentModal
+          visible={showConsentModal}
+          onAgree={handleAiConsentAgree}
+          onCancel={handleAiConsentCancel}
+        />
+      </SafeAreaView>
+    );
+  }
 
   // 에러 화면
   if (error) {
