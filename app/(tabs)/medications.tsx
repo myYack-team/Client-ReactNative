@@ -1,6 +1,6 @@
 import React, { useCallback, useState, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image, Pressable } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Button, Card, Typography, DeleteConfirmModal, Toast, SupplementTagBadge } from '../../components/ui';
@@ -12,6 +12,7 @@ import { getMedDisplayName, mergeAndSortItems } from '../../utils';
 
 export default function MedicationsScreen() {
   const { contentStyle } = useResponsive();
+  const insets = useSafeAreaInsets();
 
   // 약물 Store
   const {
@@ -301,7 +302,7 @@ export default function MedicationsScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, contentStyle]}
+        contentContainerStyle={[styles.scrollContent, contentStyle, { paddingBottom: 40 + insets.bottom }]}
         refreshControl={
           <RefreshControl
             refreshing={isLoading}

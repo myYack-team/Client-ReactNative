@@ -6,7 +6,7 @@ import {
   RefreshControl,
   TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Card, Typography } from '../../components/ui';
@@ -15,6 +15,7 @@ import { Colors } from '../../constants';
 import { useAnalysisStore } from '../../stores';
 
 export default function AnalysisScreen() {
+  const insets = useSafeAreaInsets();
   const {
     reports,
     isLoading,
@@ -52,7 +53,7 @@ export default function AnalysisScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 + insets.bottom }]}
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
