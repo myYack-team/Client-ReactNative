@@ -818,3 +818,107 @@ export interface AiConsentStatus {
   consentedAt?: string;
   consentVersion?: string;
 }
+
+// ========== AI 분석 확장 기능 타입 ==========
+
+// 영양제 상호작용 레벨
+export type SupplementInteractionLevel = 'GOOD' | 'TIMING' | 'CAUTION';
+
+// 영양제 상호작용 레벨 라벨 매핑
+export const SUPPLEMENT_INTERACTION_LEVEL_LABELS: Record<SupplementInteractionLevel, string> = {
+  GOOD: '함께 OK',
+  TIMING: '간격 필요',
+  CAUTION: '주의',
+};
+
+// 영양제 상호작용 레벨 색상 매핑
+export const SUPPLEMENT_INTERACTION_LEVEL_COLORS: Record<SupplementInteractionLevel, { bg: string; text: string }> = {
+  GOOD: { bg: '#E8F5E9', text: '#2E7D32' },
+  TIMING: { bg: '#FFF3E0', text: '#E65100' },
+  CAUTION: { bg: '#FFEBEE', text: '#D32F2F' },
+};
+
+// 생활 팁 카테고리
+export type LifestyleTipCategory =
+  | 'SKINCARE'
+  | 'HYDRATION'
+  | 'SUN'
+  | 'TIMING'
+  | 'CAFFEINE'
+  | 'POSTURE'
+  | 'ALCOHOL'
+  | 'EXERCISE';
+
+// 생활 팁 카테고리 아이콘 매핑
+export const LIFESTYLE_TIP_CATEGORY_ICONS: Record<LifestyleTipCategory, string> = {
+  SKINCARE: '🚿',
+  HYDRATION: '💧',
+  SUN: '☀️',
+  TIMING: '🍽️',
+  CAFFEINE: '☕',
+  POSTURE: '🧍',
+  ALCOHOL: '🍷',
+  EXERCISE: '🏃',
+};
+
+// 생활 팁 카테고리 라벨 매핑
+export const LIFESTYLE_TIP_CATEGORY_LABELS: Record<LifestyleTipCategory, string> = {
+  SKINCARE: '피부 관리',
+  HYDRATION: '수분 섭취',
+  SUN: '자외선',
+  TIMING: '복용 타이밍',
+  CAFFEINE: '카페인',
+  POSTURE: '자세 변경',
+  ALCOHOL: '알코올',
+  EXERCISE: '운동',
+};
+
+// 관련 약물 정보 (음식 제안, 생활 팁에서 공통 사용)
+export interface RelatedMedication {
+  name: string;
+  detail?: string;
+}
+
+// 음식 제안 (복용 약물과 좋은 궁합의 음식)
+export interface FoodSuggestion {
+  foodName: string;
+  foodIcon: string;
+  reason: string;
+  tip?: string;
+  relatedMedications: RelatedMedication[];
+}
+
+// 영양제 상호작용 상세
+export interface SupplementInteractionDetail {
+  medicationName: string;
+  reason: string;
+}
+
+// 영양제 상호작용 정보
+export interface SupplementInteraction {
+  supplementName: string;
+  supplementTag: SupplementTag;
+  interactionLevel: SupplementInteractionLevel;
+  summaryReason: string;
+  source?: string;
+  details: SupplementInteractionDetail[];
+}
+
+// 생활 팁 (복용 약물 관련 생활 습관 조언)
+export interface LifestyleTip {
+  category: LifestyleTipCategory;
+  categoryIcon: string;
+  categoryLabel: string;
+  title: string;
+  tip: string;
+  detailedExplanation?: string;
+  source: string;
+  relatedMedications: RelatedMedication[];
+}
+
+// 확장된 분석 결과 전체 (기존 AnalysisResult 확장)
+export interface AnalysisResultExtended extends AnalysisResult {
+  foodSuggestions?: FoodSuggestion[];
+  supplementInteractions?: SupplementInteraction[];
+  lifestyleTips?: LifestyleTip[];
+}

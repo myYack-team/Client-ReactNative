@@ -9,17 +9,17 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Typography, Button, Card } from '../../components/ui';
-import { MechanismCard, FoodInteractionCard } from '../../components/analysis';
+import { ReportTabView } from '../../components/analysis';
 import { Colors } from '../../constants';
 import { useAnalysisStore } from '../../stores';
-import { AnalysisResult } from '../../types';
+import { AnalysisResultExtended } from '../../types';
 import { analysisService } from '../../services';
 
 export default function ReportDetailScreen() {
   const { reportId } = useLocalSearchParams<{ reportId: string }>();
   const { deleteReport } = useAnalysisStore();
 
-  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [result, setResult] = useState<AnalysisResultExtended | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,7 +34,7 @@ export default function ReportDetailScreen() {
       setIsLoading(true);
       setError(null);
       const data = await analysisService.getAnalysisResult(parseInt(reportId));
-      setResult(data);
+      setResult(data as AnalysisResultExtended);
     } catch (err) {
       const message = err instanceof Error ? err.message : '레포트를 불러오는데 실패했습니다.';
       setError(message);
@@ -67,6 +67,10 @@ export default function ReportDetailScreen() {
         },
       ]
     );
+  };
+
+  const handleNavigateToSupplementRegister = () => {
+    router.push('/supplement/search');
   };
 
   // 로딩 화면
@@ -104,6 +108,13 @@ export default function ReportDetailScreen() {
     );
   }
 
+  // 분석 결과 카운트 계산
+  const mechanismCount = result?.mechanismGroups?.length || 0;
+  const foodInteractionCount = result?.foodInteractions?.length || 0;
+  const foodSuggestionCount = result?.foodSuggestions?.length || 0;
+  const supplementCount = result?.supplementInteractions?.length || 0;
+  const tipsCount = result?.lifestyleTips?.length || 0;
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView
@@ -130,39 +141,21 @@ export default function ReportDetailScreen() {
                 }) : ''}
               </Typography>
               <Typography variant="caption" color={Colors.textSecondary}>
-                기전 {result?.mechanismGroups?.length || 0}개 · 음식 상호작용 {result?.foodInteractions?.length || 0}개
+                기전 {mechanismCount}개 · 음식 {foodInteractionCount + foodSuggestionCount}개 · 영양제 {supplementCount}개 · 팁 {tipsCount}개
               </Typography>
             </View>
           </View>
         </Card>
 
-        {/* 기전 그룹 섹션 */}
-        {result?.mechanismGroups && result.mechanismGroups.length > 0 && (
-          <View style={styles.section}>
-            <Typography variant="h3" style={styles.sectionTitle}>
-              💊 약물 작용 기전
-            </Typography>
-            <View style={styles.cardList}>
-              {result.mechanismGroups.map((group, index) => (
-                <MechanismCard key={index} mechanism={group} />
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* 음식 상호작용 섹션 */}
-        {result?.foodInteractions && result.foodInteractions.length > 0 && (
-          <View style={styles.section}>
-            <Typography variant="h3" style={styles.sectionTitle}>
-              🍽️ 음식 상호작용
-            </Typography>
-            <View style={styles.cardList}>
-              {result.foodInteractions.map((interaction, index) => (
-                <FoodInteractionCard key={index} interaction={interaction} />
-              ))}
-            </View>
-          </View>
-        )}
+        {/* 탭 뷰 */}
+        <ReportTabView
+          mechanismGroups={result?.mechanismGroups || []}
+          foodInteractions={result?.foodInteractions || []}
+          foodSuggestions={result?.foodSuggestions || []}
+          supplementInteractions={result?.supplementInteractions || []}
+          lifestyleTips={result?.lifestyleTips || []}
+          onNavigateToSupplementRegister={handleNavigateToSupplementRegister}
+        />
 
         {/* 면책 조항 */}
         <View style={styles.disclaimer}>
@@ -222,7 +215,7 @@ const styles = StyleSheet.create({
   },
   // 헤더 카드
   headerCard: {
-    marginBottom: 24,
+    marginBottom: 16,
     backgroundColor: Colors.brandLightest,
     borderWidth: 1,
     borderColor: Colors.brand,
@@ -237,16 +230,6 @@ const styles = StyleSheet.create({
   },
   headerTextContainer: {
     flex: 1,
-  },
-  // 섹션
-  section: {
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    marginBottom: 16,
-  },
-  cardList: {
-    gap: 16,
   },
   // 면책 조항
   disclaimer: {

@@ -6,11 +6,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Typography, Button } from '../../components/ui';
-import { MechanismCard, FoodInteractionCard, AnalysisLoadingModal } from '../../components/analysis';
+import { Typography, Button, Card } from '../../components/ui';
+import { ReportTabView, AnalysisLoadingModal } from '../../components/analysis';
 import { Colors } from '../../constants';
 import { useAnalysisStore } from '../../stores';
-import { AnalysisResult } from '../../types';
+import { AnalysisResultExtended } from '../../types';
 
 // 폴링 설정
 const POLLING_INTERVAL = 2000; // 2초
@@ -20,7 +20,7 @@ export default function AnalysisResultScreen() {
   const { reportId } = useLocalSearchParams<{ reportId: string }>();
   const { fetchAnalysisResult, clearCurrentResult } = useAnalysisStore();
 
-  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [result, setResult] = useState<AnalysisResultExtended | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,7 +37,7 @@ export default function AnalysisResultScreen() {
     const pollResult = async () => {
       try {
         const analysisResult = await fetchAnalysisResult(parseInt(reportId));
-        setResult(analysisResult);
+        setResult(analysisResult as AnalysisResultExtended);
         setIsLoading(false);
 
         // 폴링 중지
@@ -86,7 +86,7 @@ export default function AnalysisResultScreen() {
     const pollResult = async () => {
       try {
         const analysisResult = await fetchAnalysisResult(parseInt(reportId!));
-        setResult(analysisResult);
+        setResult(analysisResult as AnalysisResultExtended);
         setIsLoading(false);
         if (pollingRef.current) {
           clearInterval(pollingRef.current);
@@ -105,6 +105,10 @@ export default function AnalysisResultScreen() {
 
     pollResult();
     pollingRef.current = setInterval(pollResult, POLLING_INTERVAL);
+  };
+
+  const handleNavigateToSupplementRegister = () => {
+    router.push('/supplement/search');
   };
 
   // 로딩 모달 표시 (화면 위에 오버레이)
@@ -146,6 +150,17 @@ export default function AnalysisResultScreen() {
     );
   }
 
+  // 분석 결과 카운트 계산
+  const mechanismCount = result?.mechanismGroups?.length || 0;
+  const foodInteractionCount = result?.foodInteractions?.length || 0;
+  const foodSuggestionCount = result?.foodSuggestions?.length || 0;
+  const supplementCount = result?.supplementInteractions?.length || 0;
+  const tipsCount = result?.lifestyleTips?.length || 0;
+
+  // 결과가 없는 경우 체크
+  const hasNoResults = mechanismCount === 0 && foodInteractionCount === 0 &&
+    foodSuggestionCount === 0 && supplementCount === 0 && tipsCount === 0;
+
   // 결과 화면
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -168,43 +183,21 @@ export default function AnalysisResultScreen() {
           </Typography>
         </View>
 
-        {/* 기전 그룹 섹션 */}
-        {result?.mechanismGroups && result.mechanismGroups.length > 0 && (
-          <View style={styles.section}>
-            <Typography variant="h3" style={styles.sectionTitle}>
-              💊 약물 작용 기전
-            </Typography>
-            <Typography variant="bodySmall" color={Colors.textSecondary} style={styles.sectionDescription}>
-              복용 중인 약물들이 어떻게 작용하는지 쉽게 설명해드려요
-            </Typography>
-            <View style={styles.cardList}>
-              {result.mechanismGroups.map((group, index) => (
-                <MechanismCard key={index} mechanism={group} />
-              ))}
+        {/* 요약 카드 */}
+        <Card style={styles.summaryCard} variant="elevated">
+          <View style={styles.summaryContent}>
+            <Typography variant="h2" style={styles.summaryEmoji}>📊</Typography>
+            <View style={styles.summaryTextContainer}>
+              <Typography variant="h4">분석 요약</Typography>
+              <Typography variant="caption" color={Colors.textSecondary}>
+                기전 {mechanismCount}개 · 음식 {foodInteractionCount + foodSuggestionCount}개 · 영양제 {supplementCount}개 · 팁 {tipsCount}개
+              </Typography>
             </View>
           </View>
-        )}
-
-        {/* 음식 상호작용 섹션 */}
-        {result?.foodInteractions && result.foodInteractions.length > 0 && (
-          <View style={styles.section}>
-            <Typography variant="h3" style={styles.sectionTitle}>
-              🍽️ 음식 상호작용
-            </Typography>
-            <Typography variant="bodySmall" color={Colors.textSecondary} style={styles.sectionDescription}>
-              약물과 함께 섭취 시 주의가 필요한 음식들이에요
-            </Typography>
-            <View style={styles.cardList}>
-              {result.foodInteractions.map((interaction, index) => (
-                <FoodInteractionCard key={index} interaction={interaction} />
-              ))}
-            </View>
-          </View>
-        )}
+        </Card>
 
         {/* 결과가 없는 경우 */}
-        {(!result?.mechanismGroups || result.mechanismGroups.length === 0) &&
-         (!result?.foodInteractions || result.foodInteractions.length === 0) && (
+        {hasNoResults ? (
           <View style={styles.emptyContainer}>
             <Typography variant="h1" style={styles.emptyEmoji}>🔍</Typography>
             <Typography variant="h3" style={styles.emptyTitle}>
@@ -214,6 +207,16 @@ export default function AnalysisResultScreen() {
               등록된 약물이 없거나 분석할 정보가 부족해요
             </Typography>
           </View>
+        ) : (
+          /* 탭 뷰 */
+          <ReportTabView
+            mechanismGroups={result?.mechanismGroups || []}
+            foodInteractions={result?.foodInteractions || []}
+            foodSuggestions={result?.foodSuggestions || []}
+            supplementInteractions={result?.supplementInteractions || []}
+            lifestyleTips={result?.lifestyleTips || []}
+            onNavigateToSupplementRegister={handleNavigateToSupplementRegister}
+          />
         )}
 
         {/* 면책 조항 */}
@@ -276,7 +279,7 @@ const styles = StyleSheet.create({
   },
   // 결과 화면
   header: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   headerTitleRow: {
     flexDirection: 'row',
@@ -287,17 +290,23 @@ const styles = StyleSheet.create({
   headerEmoji: {
     fontSize: 28,
   },
-  section: {
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    marginBottom: 8,
-  },
-  sectionDescription: {
+  // 요약 카드
+  summaryCard: {
     marginBottom: 16,
+    backgroundColor: Colors.brandLightest,
+    borderWidth: 1,
+    borderColor: Colors.brand,
   },
-  cardList: {
+  summaryContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 16,
+  },
+  summaryEmoji: {
+    fontSize: 40,
+  },
+  summaryTextContainer: {
+    flex: 1,
   },
   // 빈 결과
   emptyContainer: {
