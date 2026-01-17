@@ -64,11 +64,6 @@ export default function AboutScreen() {
           />
           <View style={styles.divider} />
           <MenuItem
-            label="오픈소스 라이선스"
-            onPress={() => handleOpenLink('https://myyak.xyz/licenses')}
-          />
-          <View style={styles.divider} />
-          <MenuItem
             label="문의하기"
             onPress={handleContact}
           />

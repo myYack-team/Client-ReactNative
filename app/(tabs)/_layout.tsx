@@ -42,11 +42,12 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textSecondary,
         tabBarStyle: {
-          height: 60 + insets.bottom,
-          paddingTop: 8,
-          paddingBottom: insets.bottom + 8,
+          height: 70 + insets.bottom,
+          paddingTop: 10,
+          paddingBottom: insets.bottom + 12,
           borderTopWidth: 1,
           borderTopColor: Colors.border,
+          backgroundColor: Colors.background,
         },
         tabBarLabelStyle: {
           fontSize: fontSize.sm,

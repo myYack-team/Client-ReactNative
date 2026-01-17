@@ -884,23 +884,6 @@ export interface AiConsentStatus {
 
 // ========== AI 분석 확장 기능 타입 ==========
 
-// 영양제 상호작용 레벨
-export type SupplementInteractionLevel = 'GOOD' | 'TIMING' | 'CAUTION';
-
-// 영양제 상호작용 레벨 라벨 매핑
-export const SUPPLEMENT_INTERACTION_LEVEL_LABELS: Record<SupplementInteractionLevel, string> = {
-  GOOD: '함께 OK',
-  TIMING: '간격 필요',
-  CAUTION: '주의',
-};
-
-// 영양제 상호작용 레벨 색상 매핑
-export const SUPPLEMENT_INTERACTION_LEVEL_COLORS: Record<SupplementInteractionLevel, { bg: string; text: string }> = {
-  GOOD: { bg: '#E8F5E9', text: '#2E7D32' },
-  TIMING: { bg: '#FFF3E0', text: '#E65100' },
-  CAUTION: { bg: '#FFEBEE', text: '#D32F2F' },
-};
-
 // 생활 팁 카테고리
 export type LifestyleTipCategory =
   | 'SKINCARE'

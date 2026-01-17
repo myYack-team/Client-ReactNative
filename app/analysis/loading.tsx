@@ -1,19 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { WebView } from 'react-native-webview';
 import { Typography } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useAnalysisStore } from '../../stores';
-
-// 분석 단계별 메시지
-const ANALYSIS_STAGES = [
-  '약물 확인',
-  '처방전 분석',
-  '자료 조사',
-  '결과 정리',
-];
 
 // SVG 애니메이션 HTML
 const SVG_ANIMATION_HTML = `
@@ -210,15 +202,15 @@ const SVG_ANIMATION_HTML = `
 </html>
 `;
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const SVG_WIDTH = Math.min(SCREEN_WIDTH - 48, 280);
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const SVG_WIDTH = SCREEN_WIDTH; // 좌우 꽉 차게
 const SVG_HEIGHT = SVG_WIDTH * 2;
 
 export default function AnalysisLoadingScreen() {
   const { requestAnalysis } = useAnalysisStore();
   const isRequestedRef = useRef(false);
-  const [currentStage, setCurrentStage] = useState(0);
   const [progress, setProgress] = useState(0);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     // 중복 호출 방지
@@ -243,47 +235,38 @@ export default function AnalysisLoadingScreen() {
     performAnalysis();
   }, []);
 
-  // 진행률 및 단계 업데이트
+  // 진행률 업데이트
   useEffect(() => {
     const progressInterval = setInterval(() => {
       setProgress(prev => Math.min(prev + 0.15, 99));
     }, 100);
 
-    const stageInterval = setInterval(() => {
-      setCurrentStage(prev => (prev + 1) % ANALYSIS_STAGES.length);
-    }, 2000);
-
     return () => {
       clearInterval(progressInterval);
-      clearInterval(stageInterval);
     };
   }, []);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.content}>
-        {/* SVG 애니메이션 */}
-        <View style={[styles.svgContainer, { width: SVG_WIDTH, height: SVG_HEIGHT }]}>
-          <WebView
-            source={{ html: SVG_ANIMATION_HTML }}
-            style={styles.webview}
-            scrollEnabled={false}
-            showsHorizontalScrollIndicator={false}
-            showsVerticalScrollIndicator={false}
-            originWhitelist={['*']}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
-            scalesPageToFit={false}
-            bounces={false}
-            overScrollMode="never"
-          />
-        </View>
+    <View style={styles.container}>
+      {/* SVG 애니메이션 - 좌우 꽉 차게 */}
+      <View style={[styles.svgContainer, { width: SVG_WIDTH, height: SVG_HEIGHT }]}>
+        <WebView
+          source={{ html: SVG_ANIMATION_HTML }}
+          style={styles.webview}
+          scrollEnabled={false}
+          showsHorizontalScrollIndicator={false}
+          showsVerticalScrollIndicator={false}
+          originWhitelist={['*']}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          scalesPageToFit={false}
+          bounces={false}
+          overScrollMode="never"
+        />
+      </View>
 
-        {/* 현재 단계 표시 */}
-        <Typography variant="h4" style={styles.stageText}>
-          {ANALYSIS_STAGES[currentStage]}
-        </Typography>
-
+      {/* 하단 영역 */}
+      <View style={[styles.bottomContainer, { paddingBottom: 24 + insets.bottom }]}>
         {/* 진행바 */}
         <View style={styles.progressContainer}>
           <View style={styles.progressBackground}>
@@ -300,7 +283,7 @@ export default function AnalysisLoadingScreen() {
           잠시만 기다려주세요.
         </Typography>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -309,30 +292,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-  },
   svgContainer: {
-    overflow: 'hidden',
-    borderRadius: 16,
-    backgroundColor: '#f8fafc',
+    flex: 1,
+    backgroundColor: Colors.background,
   },
   webview: {
     flex: 1,
     backgroundColor: 'transparent',
   },
-  stageText: {
-    textAlign: 'center',
-    marginTop: 24,
-    marginBottom: 16,
-    color: Colors.brand,
+  bottomContainer: {
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    backgroundColor: Colors.background,
   },
   progressContainer: {
     width: '100%',
-    maxWidth: 280,
     marginBottom: 16,
   },
   progressBackground: {
