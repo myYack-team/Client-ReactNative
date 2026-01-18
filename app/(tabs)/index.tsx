@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Modal, FlatList, Dimensions, Image, Alert } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
-import { Calendar, LocaleConfig } from 'react-native-calendars';
+import { CalendarList, LocaleConfig } from 'react-native-calendars';
 import { Button, Card, Typography, MedicationActionButtons, SnoozeModal, DrugTypeBadge, SupplementTagBadge } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useResponsive } from '../../hooks';
@@ -219,6 +219,7 @@ export default function HomeScreen() {
   const handleMonthChange = (month: { year: number; month: number }) => {
     setCurrentMonth({ year: month.year, month: month.month });
   };
+
 
   // 날짜 상태 가져오기
   const getDayStatus = (dateString: string): DayStatus => {
@@ -470,12 +471,25 @@ export default function HomeScreen() {
                     <Typography variant="h3">✕</Typography>
                   </TouchableOpacity>
                 </View>
-                <Calendar
-                  current={`${currentMonth.year}-${String(currentMonth.month).padStart(2, '0')}-01`}
-                  onDayPress={handleDayPress}
-                  onMonthChange={handleMonthChange}
-                  markingType="custom"
-                  markedDates={markedDates as any}
+                <View style={styles.calendarListContainer}>
+                  <CalendarList
+                    current={`${currentMonth.year}-${String(currentMonth.month).padStart(2, '0')}-01`}
+                    onDayPress={handleDayPress}
+                    onVisibleMonthsChange={(months) => {
+                      if (months.length > 0) {
+                        const visibleMonth = months[0];
+                        setCurrentMonth({ year: visibleMonth.year, month: visibleMonth.month });
+                      }
+                    }}
+                    horizontal={true}
+                    pagingEnabled={true}
+                    pastScrollRange={12}
+                    futureScrollRange={12}
+                    showScrollIndicator={false}
+                    calendarWidth={SCREEN_WIDTH - 40 - 32}
+                    staticHeader={true}
+                    markingType="custom"
+                    markedDates={markedDates as any}
                   theme={{
                     backgroundColor: Colors.white,
                     calendarBackground: Colors.white,
@@ -533,15 +547,8 @@ export default function HomeScreen() {
                       </TouchableOpacity>
                     );
                   }}
-                  renderHeader={(date) => {
-                    const d = new Date(date.toString());
-                    return (
-                      <Typography variant="h3" style={{ marginVertical: 10 }}>
-                        {d.getFullYear()}년 {d.getMonth() + 1}월
-                      </Typography>
-                    );
-                  }}
-                />
+                  />
+                </View>
 
                 {/* 범례 */}
                 <View style={styles.legend}>
@@ -786,6 +793,11 @@ const styles = StyleSheet.create({
   calendarModalCard: {
     width: SCREEN_WIDTH - 40,
     padding: 16,
+  },
+  calendarListContainer: {
+    width: SCREEN_WIDTH - 40 - 32,
+    alignSelf: 'center',
+    overflow: 'hidden',
   },
   modalHeader: {
     flexDirection: 'row',
