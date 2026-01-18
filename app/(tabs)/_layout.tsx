@@ -42,7 +42,7 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textSecondary,
         tabBarStyle: {
-          height: 70 + insets.bottom,
+          height: (fontSize.sm > 14 ? 80 : 70) + insets.bottom,
           paddingTop: 10,
           paddingBottom: insets.bottom + 12,
           borderTopWidth: 1,
@@ -99,9 +99,11 @@ const styles = StyleSheet.create({
   tabIcon: {
     alignItems: 'center',
     justifyContent: 'center',
+    height: 28,
   },
   emoji: {
     fontSize: 24,
+    lineHeight: 28,
     opacity: 0.6,
   },
   emojiActive: {
