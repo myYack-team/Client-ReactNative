@@ -3,6 +3,8 @@ import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Modal, 
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated from 'react-native-reanimated';
 import { Button, Card, Typography, MedicationActionButtons, SnoozeModal, DrugTypeBadge, SupplementTagBadge } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useResponsive } from '../../hooks';
@@ -219,6 +221,37 @@ export default function HomeScreen() {
   const handleMonthChange = (month: { year: number; month: number }) => {
     setCurrentMonth({ year: month.year, month: month.month });
   };
+
+  // 이전 달로 이동
+  const handlePrevMonth = () => {
+    setCurrentMonth((prev) => {
+      if (prev.month === 1) {
+        return { year: prev.year - 1, month: 12 };
+      }
+      return { year: prev.year, month: prev.month - 1 };
+    });
+  };
+
+  // 다음 달로 이동
+  const handleNextMonth = () => {
+    setCurrentMonth((prev) => {
+      if (prev.month === 12) {
+        return { year: prev.year + 1, month: 1 };
+      }
+      return { year: prev.year, month: prev.month + 1 };
+    });
+  };
+
+  // 달력 스와이프 제스처
+  const calendarPanGesture = Gesture.Pan()
+    .onEnd((event) => {
+      if (event.translationX > 50) {
+        handlePrevMonth();
+      } else if (event.translationX < -50) {
+        handleNextMonth();
+      }
+    })
+    .runOnJS(true);
 
   // 날짜 상태 가져오기
   const getDayStatus = (dateString: string): DayStatus => {
@@ -470,78 +503,82 @@ export default function HomeScreen() {
                     <Typography variant="h3">✕</Typography>
                   </TouchableOpacity>
                 </View>
-                <Calendar
-                  current={`${currentMonth.year}-${String(currentMonth.month).padStart(2, '0')}-01`}
-                  onDayPress={handleDayPress}
-                  onMonthChange={handleMonthChange}
-                  markingType="custom"
-                  markedDates={markedDates as any}
-                  theme={{
-                    backgroundColor: Colors.white,
-                    calendarBackground: Colors.white,
-                    textSectionTitleColor: Colors.textSecondary,
-                    selectedDayBackgroundColor: Colors.primary,
-                    selectedDayTextColor: Colors.white,
-                    todayTextColor: Colors.primary,
-                    dayTextColor: Colors.textPrimary,
-                    textDisabledColor: Colors.textSecondary,
-                    arrowColor: Colors.primary,
-                    monthTextColor: Colors.textPrimary,
-                    textMonthFontWeight: 'bold',
-                    textDayFontSize: 14,
-                    textMonthFontSize: 16,
-                    textDayHeaderFontSize: 12,
-                  }}
-                  dayComponent={({ date, state }) => {
-                    if (!date) return null;
-                    const dateObj = new Date(date.dateString);
-                    const dayIndex = dateObj.getDay();
-                    const dayColor = getDayOfWeekColor(dayIndex);
-                    const isToday = date.dateString === today;
-                    const isSelected = date.dateString === selectedDate;
-                    const daySummary = monthlySummary.find((d) => d.date === date.dateString);
-                    const status = daySummary?.status as DayStatus || 'NONE';
-                    const statusColor = STATUS_COLORS[status] || 'transparent';
-                    const isDisabled = state === 'disabled';
+                <GestureDetector gesture={calendarPanGesture}>
+                  <Animated.View>
+                    <Calendar
+                      current={`${currentMonth.year}-${String(currentMonth.month).padStart(2, '0')}-01`}
+                      onDayPress={handleDayPress}
+                      onMonthChange={handleMonthChange}
+                      markingType="custom"
+                      markedDates={markedDates as any}
+                      theme={{
+                        backgroundColor: Colors.white,
+                        calendarBackground: Colors.white,
+                        textSectionTitleColor: Colors.textSecondary,
+                        selectedDayBackgroundColor: Colors.primary,
+                        selectedDayTextColor: Colors.white,
+                        todayTextColor: Colors.primary,
+                        dayTextColor: Colors.textPrimary,
+                        textDisabledColor: Colors.textSecondary,
+                        arrowColor: Colors.primary,
+                        monthTextColor: Colors.textPrimary,
+                        textMonthFontWeight: 'bold',
+                        textDayFontSize: 14,
+                        textMonthFontSize: 16,
+                        textDayHeaderFontSize: 12,
+                      }}
+                      dayComponent={({ date, state }) => {
+                        if (!date) return null;
+                        const dateObj = new Date(date.dateString);
+                        const dayIndex = dateObj.getDay();
+                        const dayColor = getDayOfWeekColor(dayIndex);
+                        const isToday = date.dateString === today;
+                        const isSelected = date.dateString === selectedDate;
+                        const daySummary = monthlySummary.find((d) => d.date === date.dateString);
+                        const status = daySummary?.status as DayStatus || 'NONE';
+                        const statusColor = STATUS_COLORS[status] || 'transparent';
+                        const isDisabled = state === 'disabled';
 
-                    return (
-                      <TouchableOpacity
-                        style={[
-                          styles.calendarDayContainer,
-                          status === 'COMPLETE' && { backgroundColor: statusColor },
-                          status !== 'COMPLETE' && status !== 'NONE' && { borderWidth: 2, borderColor: statusColor },
-                          isSelected && { borderWidth: 2, borderColor: Colors.primary },
-                        ]}
-                        onPress={() => handleDayPress({ dateString: date.dateString })}
-                        disabled={isDisabled}
-                      >
-                        <Typography
-                          variant="body"
-                          color={
-                            isDisabled
-                              ? Colors.textSecondary
-                              : status === 'COMPLETE'
-                              ? Colors.white
-                              : isToday
-                              ? Colors.primary
-                              : dayColor
-                          }
-                          style={isToday ? { fontWeight: 'bold' } : undefined}
-                        >
-                          {date.day}
-                        </Typography>
-                      </TouchableOpacity>
-                    );
-                  }}
-                  renderHeader={(date) => {
-                    const d = new Date(date.toString());
-                    return (
-                      <Typography variant="h3" style={{ marginVertical: 10 }}>
-                        {d.getFullYear()}년 {d.getMonth() + 1}월
-                      </Typography>
-                    );
-                  }}
-                />
+                        return (
+                          <TouchableOpacity
+                            style={[
+                              styles.calendarDayContainer,
+                              status === 'COMPLETE' && { backgroundColor: statusColor },
+                              status !== 'COMPLETE' && status !== 'NONE' && { borderWidth: 2, borderColor: statusColor },
+                              isSelected && { borderWidth: 2, borderColor: Colors.primary },
+                            ]}
+                            onPress={() => handleDayPress({ dateString: date.dateString })}
+                            disabled={isDisabled}
+                          >
+                            <Typography
+                              variant="body"
+                              color={
+                                isDisabled
+                                  ? Colors.textSecondary
+                                  : status === 'COMPLETE'
+                                  ? Colors.white
+                                  : isToday
+                                  ? Colors.primary
+                                  : dayColor
+                              }
+                              style={isToday ? { fontWeight: 'bold' } : undefined}
+                            >
+                              {date.day}
+                            </Typography>
+                          </TouchableOpacity>
+                        );
+                      }}
+                      renderHeader={(date) => {
+                        const d = new Date(date.toString());
+                        return (
+                          <Typography variant="h3" style={{ marginVertical: 10 }}>
+                            {d.getFullYear()}년 {d.getMonth() + 1}월
+                          </Typography>
+                        );
+                      }}
+                    />
+                  </Animated.View>
+                </GestureDetector>
 
                 {/* 범례 */}
                 <View style={styles.legend}>
