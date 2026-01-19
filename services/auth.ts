@@ -24,6 +24,8 @@ interface LoginResponse {
     birthDate?: string;
   };
   isNewUser: boolean;
+  termsAgreed: boolean;
+  privacyAgreed: boolean;
 }
 
 // 토큰 갱신 응답 (서버 AuthResponseDTO.TokenResponse)
@@ -50,7 +52,7 @@ export const authService = {
       throw new Error('카카오 로그인에 실패했습니다.');
     }
 
-    const { accessToken, refreshToken, user, isNewUser } = response.data.result;
+    const { accessToken, refreshToken, user, isNewUser, termsAgreed, privacyAgreed } = response.data.result;
 
     return {
       accessToken,
@@ -65,6 +67,8 @@ export const authService = {
         createdAt: new Date().toISOString(),
       },
       isNewUser,
+      termsAgreed: termsAgreed ?? false,
+      privacyAgreed: privacyAgreed ?? false,
     };
   },
 

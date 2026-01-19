@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context'; // for bottom padding
 import { router } from 'expo-router';
 import { WebView } from 'react-native-webview';
 import { Typography } from '../../components/ui';
@@ -207,33 +207,28 @@ const SVG_WIDTH = SCREEN_WIDTH; // 좌우 꽉 차게
 const SVG_HEIGHT = SVG_WIDTH * 2;
 
 export default function AnalysisLoadingScreen() {
-  const { requestAnalysis } = useAnalysisStore();
+  const { startAnalysisInBackground, pendingAnalysis, completedResult } = useAnalysisStore();
   const isRequestedRef = useRef(false);
   const [progress, setProgress] = useState(0);
   const insets = useSafeAreaInsets();
 
+  // 분석 요청 시작
   useEffect(() => {
     // 중복 호출 방지
     if (isRequestedRef.current) return;
     isRequestedRef.current = true;
 
-    const performAnalysis = async () => {
-      try {
-        console.log('[AnalysisLoading] Starting analysis request...');
-        const reportId = await requestAnalysis();
-        console.log('[AnalysisLoading] Analysis completed, reportId:', reportId);
-
-        // 결과 페이지로 이동 (replace로 뒤로가기 시 로딩 페이지 스킵)
-        router.replace(`/analysis/result?reportId=${reportId}`);
-      } catch (err) {
-        console.error('[AnalysisLoading] Failed to request analysis:', err);
-        // 에러 시 분석 탭으로 돌아가기
-        router.back();
-      }
-    };
-
-    performAnalysis();
+    console.log('[AnalysisLoading] Starting background analysis...');
+    startAnalysisInBackground();
   }, []);
+
+  // 분석 완료 시 자동으로 탭으로 돌아가기 (자동 이동 없이 알림만)
+  useEffect(() => {
+    if (completedResult) {
+      console.log('[AnalysisLoading] Analysis completed, going back to tab...');
+      router.back();
+    }
+  }, [completedResult]);
 
   // 진행률 업데이트
   useEffect(() => {
@@ -280,7 +275,7 @@ export default function AnalysisLoadingScreen() {
         {/* 안내 문구 */}
         <Typography variant="caption" color={Colors.textSecondary} style={styles.hint}>
           AI가 약물 정보를 분석하고 있습니다.{'\n'}
-          잠시만 기다려주세요.
+          화면을 이동해도 분석은 계속됩니다.
         </Typography>
       </View>
     </View>

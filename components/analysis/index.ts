@@ -7,3 +7,5 @@ export { AnalysisButton } from './AnalysisButton';
 export { ReportListItem } from './ReportListItem';
 export { AnalysisLoadingModal } from './AnalysisLoadingModal';
 export { ReportTabView } from './ReportTabView';
+export { AnalysisProgressCard } from './AnalysisProgressCard';
+export { AnalysisCompletedCard } from './AnalysisCompletedCard';

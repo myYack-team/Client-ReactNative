@@ -4,13 +4,14 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Button, Typography, TermsModal, TermsType } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useAuthStore } from '../../stores/authStore';
-import * as SecureStore from 'expo-secure-store';
+import { userService } from '../../services/user';
 
 // 동의 항목 타입
 interface ConsentItem {
@@ -87,9 +88,6 @@ function CheckboxItem({ item, checked, onToggle, onViewDetail }: CheckboxItemPro
   );
 }
 
-// 동의 상태 저장 키
-const CONSENT_STORAGE_KEY = 'user_consent_completed';
-
 export default function ConsentScreen() {
   const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -138,8 +136,8 @@ export default function ConsentScreen() {
 
     setIsLoading(true);
     try {
-      // 동의 완료 상태를 로컬에 저장
-      await SecureStore.setItemAsync(CONSENT_STORAGE_KEY, 'true');
+      // 서버에 동의 상태 저장
+      await userService.submitConsent(true, true);
 
       // 신규 사용자면 프로필 설정으로, 기존 사용자면 메인으로
       const needsOnboarding = useAuthStore.getState().needsOnboarding;
@@ -150,6 +148,7 @@ export default function ConsentScreen() {
       }
     } catch (error) {
       console.error('동의 저장 실패:', error);
+      Alert.alert('오류', '동의 처리 중 오류가 발생했습니다. 다시 시도해주세요.');
     } finally {
       setIsLoading(false);
     }

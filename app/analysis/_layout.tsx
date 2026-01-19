@@ -23,13 +23,6 @@ export default function AnalysisLayout() {
         }}
       />
       <Stack.Screen
-        name="result"
-        options={{
-          title: 'AI 분석 결과',
-          headerShown: false,
-        }}
-      />
-      <Stack.Screen
         name="preview"
         options={{
           title: '미리보기',

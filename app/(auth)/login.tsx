@@ -3,14 +3,10 @@ import { View, StyleSheet, Image, Dimensions, ActivityIndicator, Alert } from 'r
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as KakaoLogin from '@react-native-seoul/kakao-login';
-import * as SecureStore from 'expo-secure-store';
 import { Button, Typography } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useAuthStore } from '../../stores/authStore';
 import { authService } from '../../services/auth';
-
-// 동의 상태 저장 키 (consent.tsx와 동일)
-const CONSENT_STORAGE_KEY = 'user_consent_completed';
 
 const { width } = Dimensions.get('window');
 
@@ -52,10 +48,10 @@ export default function LoginScreen() {
         result.isNewUser
       );
 
-      // 4. 동의 여부 확인 후 화면 이동
-      const consentCompleted = await SecureStore.getItemAsync(CONSENT_STORAGE_KEY);
+      // 4. 서버에서 받은 동의 상태로 화면 이동 결정
+      const needsConsent = !result.termsAgreed || !result.privacyAgreed;
 
-      if (!consentCompleted) {
+      if (needsConsent) {
         // 동의하지 않은 사용자는 동의 화면으로
         router.replace('/(auth)/consent');
       } else if (result.isNewUser) {

@@ -33,6 +33,13 @@ export interface ProfileSetupResponse {
   signupPurposes: SignupPurpose[];
 }
 
+// 약관 동의 상태
+export interface ConsentStatus {
+  termsAgreed: boolean;
+  privacyAgreed: boolean;
+  consentedAt?: string;
+}
+
 export const userService = {
   // 내 정보 조회
   async getMe(): Promise<User> {
@@ -79,6 +86,21 @@ export const userService = {
   async updateAiConsent(aiDataAgreed: boolean): Promise<AiConsentStatus> {
     const response = await api.patch<ApiResponse<AiConsentStatus>>('/users/me/ai-consent', {
       aiDataAgreed,
+    });
+    return response.data.result!;
+  },
+
+  // 약관 동의 상태 조회
+  async getConsentStatus(): Promise<ConsentStatus> {
+    const response = await api.get<ApiResponse<ConsentStatus>>('/users/me/consent');
+    return response.data.result!;
+  },
+
+  // 약관 동의 제출
+  async submitConsent(termsAgreed: boolean, privacyAgreed: boolean): Promise<ConsentStatus> {
+    const response = await api.post<ApiResponse<ConsentStatus>>('/users/me/consent', {
+      termsAgreed,
+      privacyAgreed,
     });
     return response.data.result!;
   },

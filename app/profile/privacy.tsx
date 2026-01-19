@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Linking, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Card, Typography, Toast } from '../../components/ui';
@@ -62,12 +62,6 @@ export default function PrivacyScreen() {
     setShowToast(true);
   };
 
-  const handleOpenLink = (url: string) => {
-    Linking.openURL(url).catch(() => {
-      // 링크 열기 실패 시 무시
-    });
-  };
-
   const handleDeleteAccount = () => {
     Alert.alert(
       '회원 탈퇴',
@@ -125,19 +119,6 @@ export default function PrivacyScreen() {
             danger
           />
         </MenuSection>
-
-        {/* 약관 및 정책 */}
-        <MenuSection title="약관 및 정책">
-          <MenuItem
-            label="개인정보 처리방침"
-            onPress={() => handleOpenLink('https://myyak.app/privacy')}
-          />
-          <View style={styles.divider} />
-          <MenuItem
-            label="이용약관"
-            onPress={() => handleOpenLink('https://myyak.app/terms')}
-          />
-        </MenuSection>
       </View>
 
       <Toast
@@ -173,9 +154,5 @@ const styles = StyleSheet.create({
   },
   menuItemContent: {
     flex: 1,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.border,
   },
 });

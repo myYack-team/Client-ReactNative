@@ -10,7 +10,12 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Card, Typography } from '../../components/ui';
-import { AnalysisButton, ReportListItem } from '../../components/analysis';
+import {
+  AnalysisButton,
+  ReportListItem,
+  AnalysisProgressCard,
+  AnalysisCompletedCard,
+} from '../../components/analysis';
 import { Colors } from '../../constants';
 import { useAnalysisStore } from '../../stores';
 
@@ -21,6 +26,9 @@ export default function AnalysisScreen() {
     isLoading,
     fetchReports,
     isAnalyzing,
+    pendingAnalysis,
+    completedResult,
+    clearCompletedResult,
   } = useAnalysisStore();
 
   // 탭 포커스 시 데이터 로드
@@ -37,12 +45,31 @@ export default function AnalysisScreen() {
     await fetchReports();
   };
 
-  // 분석 요청 - 즉시 로딩 페이지로 이동
+  // 분석 요청 - 로딩 페이지로 이동
   const handleAnalysisRequest = () => {
     console.log('[Analysis] Navigating to loading page...');
-    // 먼저 로딩 페이지로 이동 (API 호출은 로딩 페이지에서 수행)
     router.push('/analysis/loading');
   };
+
+  // 분석 완료 후 상세 보기
+  const handleViewDetails = () => {
+    if (completedResult) {
+      const reportId = completedResult.reportId;
+      clearCompletedResult();
+      router.push(`/analysis/${reportId}`);
+    }
+  };
+
+  // 분석 완료 카드 닫기
+  const handleDismissCompleted = () => {
+    clearCompletedResult();
+    fetchReports();
+  };
+
+  // 분석 중인지 확인 (pendingAnalysis가 loading 또는 polling 상태)
+  const isAnalyzingInBackground =
+    pendingAnalysis &&
+    (pendingAnalysis.status === 'loading' || pendingAnalysis.status === 'polling');
 
   // 레포트 상세 이동
   const handleReportPress = (reportId: number) => {
@@ -91,11 +118,25 @@ export default function AnalysisScreen() {
           </View>
         </Card>
 
-        {/* 분석 요청 버튼 */}
-        <AnalysisButton
-          onPress={handleAnalysisRequest}
-          isLoading={isAnalyzing}
-        />
+        {/* 분석 진행 중 인라인 카드 */}
+        {isAnalyzingInBackground && <AnalysisProgressCard />}
+
+        {/* 분석 완료 인라인 카드 */}
+        {completedResult && (
+          <AnalysisCompletedCard
+            result={completedResult}
+            onViewDetails={handleViewDetails}
+            onDismiss={handleDismissCompleted}
+          />
+        )}
+
+        {/* 분석 요청 버튼 - 분석 중이거나 완료 결과가 있으면 숨김 */}
+        {!isAnalyzingInBackground && !completedResult && (
+          <AnalysisButton
+            onPress={handleAnalysisRequest}
+            isLoading={isAnalyzing}
+          />
+        )}
 
         {/* 분석 기록 섹션 */}
         <View style={styles.section}>
