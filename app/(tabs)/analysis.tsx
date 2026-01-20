@@ -19,7 +19,8 @@ import {
 } from '../../components/analysis';
 import { Colors } from '../../constants';
 import { useAnalysisStore } from '../../stores';
-import { userService } from '../../services';
+import { userService, analysisService } from '../../services';
+import { QuotaInfo } from '../../types';
 
 export default function AnalysisScreen() {
   const insets = useSafeAreaInsets();
@@ -38,6 +39,9 @@ export default function AnalysisScreen() {
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [isCheckingConsent, setIsCheckingConsent] = useState(true);
 
+  // Quota 상태
+  const [quotaInfo, setQuotaInfo] = useState<QuotaInfo | null>(null);
+
   // AI 동의 확인
   useEffect(() => {
     const checkAiConsent = async () => {
@@ -54,12 +58,23 @@ export default function AnalysisScreen() {
     checkAiConsent();
   }, []);
 
+  // Quota 정보 로드
+  const fetchQuotaInfo = async () => {
+    try {
+      const quota = await analysisService.getQuota();
+      setQuotaInfo(quota);
+    } catch (error) {
+      console.error('쿼터 정보 조회 실패:', error);
+    }
+  };
+
   // 탭 포커스 시 데이터 로드
   useFocusEffect(
     useCallback(() => {
       fetchReports().catch((err) => {
         console.error('Failed to load analysis data:', err);
       });
+      fetchQuotaInfo();
     }, [])
   );
 
@@ -176,6 +191,8 @@ export default function AnalysisScreen() {
           <AnalysisButton
             onPress={handleAnalysisRequest}
             isLoading={isAnalyzing}
+            weeklyRemainingCount={quotaInfo?.weeklyRemainingCount}
+            weeklyLimit={quotaInfo?.weeklyLimit}
           />
         )}
 
