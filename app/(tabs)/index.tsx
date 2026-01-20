@@ -815,6 +815,31 @@ export default function HomeScreen() {
           ))
         )}
 
+        {/* 오늘의 컨디션 기록 카드 */}
+        {isSelectedDateToday && (
+          <TouchableOpacity
+            style={styles.conditionCard}
+            onPress={() => router.push(`/health-note/${selectedDate}`)}
+          >
+            <View style={styles.conditionCardContent}>
+              <Typography variant="h3" style={styles.conditionCardEmoji}>
+                📝
+              </Typography>
+              <View style={styles.conditionCardText}>
+                <Typography variant="body" style={styles.conditionCardTitle}>
+                  오늘의 컨디션 기록
+                </Typography>
+                <Typography variant="caption" color={Colors.textSecondary}>
+                  몸 상태와 메모를 남겨보세요
+                </Typography>
+              </View>
+              <Typography variant="body" color={Colors.textTertiary}>
+                &gt;
+              </Typography>
+            </View>
+          </TouchableOpacity>
+        )}
+
         <Button
           title="+ 약/영양제 추가하기"
           variant="secondary"
@@ -1153,5 +1178,29 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryLightest,
     borderRadius: 8,
     marginTop: 8,
+  },
+  // 컨디션 기록 카드 스타일
+  conditionCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  conditionCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  conditionCardEmoji: {
+    fontSize: 28,
+  },
+  conditionCardText: {
+    flex: 1,
+  },
+  conditionCardTitle: {
+    fontWeight: '600',
+    marginBottom: 2,
   },
 });

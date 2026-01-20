@@ -69,10 +69,6 @@ export default function ReportDetailScreen() {
     );
   };
 
-  const handleNavigateToSupplementRegister = () => {
-    router.push('/supplement/search');
-  };
-
   // 로딩 화면
   if (isLoading) {
     return (
@@ -112,8 +108,8 @@ export default function ReportDetailScreen() {
   const mechanismCount = result?.mechanismGroups?.length || 0;
   const foodInteractionCount = result?.foodInteractions?.length || 0;
   const foodSuggestionCount = result?.foodSuggestions?.length || 0;
-  const supplementCount = result?.supplementInteractions?.length || 0;
   const tipsCount = result?.lifestyleTips?.length || 0;
+  const hasTrend = !!result?.patternAnalysis;
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -141,7 +137,7 @@ export default function ReportDetailScreen() {
                 }) : ''}
               </Typography>
               <Typography variant="caption" color={Colors.textSecondary}>
-                기전 {mechanismCount}개 · 음식 {foodInteractionCount + foodSuggestionCount}개 · 영양제 {supplementCount}개 · 팁 {tipsCount}개
+                기전 {mechanismCount}개 · 음식 {foodInteractionCount + foodSuggestionCount}개 · 팁 {tipsCount}개{hasTrend ? ' · 추세 분석' : ''}
               </Typography>
             </View>
           </View>
@@ -152,9 +148,8 @@ export default function ReportDetailScreen() {
           mechanismGroups={result?.mechanismGroups || []}
           foodInteractions={result?.foodInteractions || []}
           foodSuggestions={result?.foodSuggestions || []}
-          supplementInteractions={result?.supplementInteractions || []}
           lifestyleTips={result?.lifestyleTips || []}
-          onNavigateToSupplementRegister={handleNavigateToSupplementRegister}
+          patternAnalysis={result?.patternAnalysis}
         />
 
         {/* 면책 조항 */}

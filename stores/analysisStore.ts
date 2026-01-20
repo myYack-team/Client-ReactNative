@@ -11,7 +11,7 @@ const CACHE_DURATION = 5 * 60 * 1000;
 
 // 폴링 설정
 const POLLING_INTERVAL = 2000; // 2초
-const MAX_POLLING_TIME = 60000; // 60초
+const MAX_POLLING_TIME = 300000; // 5분 - 고성능 모델 + 대용량 데이터 분석 대응
 
 // 백그라운드 분석 상태 타입
 interface PendingAnalysis {

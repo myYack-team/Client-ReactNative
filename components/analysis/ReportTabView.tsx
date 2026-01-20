@@ -10,17 +10,17 @@ import { Colors } from '../../constants';
 import { MechanismCard } from './MechanismCard';
 import { FoodInteractionCard } from './FoodInteractionCard';
 import { FoodSuggestionCard } from './FoodSuggestionCard';
-import { SupplementInteractionCard } from './SupplementInteractionCard';
 import { LifestyleTipCard } from './LifestyleTipCard';
+import { TrendTab } from './tabs/TrendTab';
 import {
   MechanismGroup,
   FoodInteraction,
   FoodSuggestion,
-  SupplementInteraction,
   LifestyleTip,
+  PatternAnalysis,
 } from '../../types';
 
-type TabKey = 'summary' | 'food' | 'supplement' | 'tips';
+type TabKey = 'trend' | 'summary' | 'food' | 'tips';
 
 interface Tab {
   key: TabKey;
@@ -33,35 +33,28 @@ interface ReportTabViewProps {
   mechanismGroups: MechanismGroup[];
   foodInteractions: FoodInteraction[];
   foodSuggestions?: FoodSuggestion[];
-  supplementInteractions?: SupplementInteraction[];
   lifestyleTips?: LifestyleTip[];
-  onNavigateToSupplementRegister?: () => void;
+  patternAnalysis?: PatternAnalysis;
 }
 
 export function ReportTabView({
   mechanismGroups,
   foodInteractions,
   foodSuggestions = [],
-  supplementInteractions = [],
   lifestyleTips = [],
-  onNavigateToSupplementRegister,
+  patternAnalysis,
 }: ReportTabViewProps) {
-  const [activeTab, setActiveTab] = useState<TabKey>('summary');
+  const [activeTab, setActiveTab] = useState<TabKey>('trend');
 
   // 탭 정의 (뱃지 포함)
   const tabs: Tab[] = [
+    { key: 'trend', label: '추세', icon: '📈' },
     { key: 'summary', label: '요약', icon: '📋' },
     {
       key: 'food',
       label: '음식',
       icon: '🍽️',
       badge: foodInteractions.length > 0 ? foodInteractions.length : undefined,
-    },
-    {
-      key: 'supplement',
-      label: '영양제',
-      icon: '💊',
-      badge: supplementInteractions.filter(s => s.interactionLevel === 'CAUTION' || s.interactionLevel === 'TIMING').length || undefined,
     },
     {
       key: 'tips',
@@ -73,6 +66,9 @@ export function ReportTabView({
 
   const renderTabContent = () => {
     switch (activeTab) {
+      case 'trend':
+        return <TrendTab patternAnalysis={patternAnalysis} />;
+
       case 'summary':
         return (
           <View>
@@ -154,45 +150,6 @@ export function ReportTabView({
                 <Typography variant="body" color={Colors.textSecondary} style={styles.emptyText}>
                   음식 관련 정보가 없습니다.
                 </Typography>
-              </View>
-            )}
-          </View>
-        );
-
-      case 'supplement':
-        return (
-          <View>
-            {/* 영양제 상호작용 */}
-            {supplementInteractions && supplementInteractions.length > 0 ? (
-              <View style={styles.section}>
-                <Typography variant="h3" style={styles.sectionTitle}>
-                  💊 내 영양제 체크
-                </Typography>
-                <View style={styles.cardList}>
-                  {supplementInteractions.map((interaction, index) => (
-                    <SupplementInteractionCard key={index} interaction={interaction} />
-                  ))}
-                </View>
-              </View>
-            ) : (
-              <View style={styles.emptyContainer}>
-                <Typography variant="h2" style={styles.emptyIcon}>💊</Typography>
-                <Typography variant="body" color={Colors.textSecondary} style={styles.emptyText}>
-                  등록된 영양제가 없습니다.
-                </Typography>
-                <Typography variant="caption" color={Colors.textTertiary} style={styles.emptySubText}>
-                  영양제를 등록하면 약물과의 상호작용을 분석해드립니다.
-                </Typography>
-                {onNavigateToSupplementRegister && (
-                  <TouchableOpacity
-                    style={styles.registerButton}
-                    onPress={onNavigateToSupplementRegister}
-                  >
-                    <Typography variant="body" color={Colors.brand}>
-                      영양제 등록하기
-                    </Typography>
-                  </TouchableOpacity>
-                )}
               </View>
             )}
           </View>
@@ -376,13 +333,5 @@ const styles = StyleSheet.create({
   emptySubText: {
     textAlign: 'center',
     marginBottom: 16,
-  },
-  registerButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    backgroundColor: Colors.brandLightest,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.brand,
   },
 });

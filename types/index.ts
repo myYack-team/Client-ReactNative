@@ -983,4 +983,115 @@ export interface AnalysisResultExtended extends AnalysisResult {
   foodSuggestions?: FoodSuggestion[];
   supplementInteractions?: SupplementInteraction[];
   lifestyleTips?: LifestyleTip[];
+  patternAnalysis?: PatternAnalysis;
+}
+
+// ========== 건강 메모 관련 타입 ==========
+
+// 건강 메모
+export interface HealthNote {
+  id: number;
+  noteDate: string;
+  conditionScore: number;  // 0-10
+  content?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 건강 메모 목록 아이템
+export interface HealthNoteListItem {
+  id: number;
+  noteDate: string;
+  conditionScore: number;
+  hasContent: boolean;
+}
+
+// ========== 패턴 분석 관련 타입 (추세 탭용) ==========
+
+// 패턴 분석 전체
+export interface PatternAnalysis {
+  analysisStartDate?: string;
+  analysisEndDate?: string;
+  adherenceAnalysis?: AdherenceAnalysis;
+  patterns?: Pattern[];
+  insights?: Insight[];
+  summary?: PatternSummary;
+  dailyConditions?: DailyCondition[];
+  events?: TimelineEvent[];
+}
+
+// 복약 순응도 분석
+export interface AdherenceAnalysis {
+  overallRate: number;
+  weekdayPattern?: WeekdayPattern;
+  timingPattern?: TimingPattern;
+  missedDays?: number;
+  perfectDays?: number;
+}
+
+// 요일별 복약 패턴
+export interface WeekdayPattern {
+  mondayRate?: number;
+  tuesdayRate?: number;
+  wednesdayRate?: number;
+  thursdayRate?: number;
+  fridayRate?: number;
+  saturdayRate?: number;
+  sundayRate?: number;
+  bestDay?: string;
+  worstDay?: string;
+}
+
+// 시간대별 복약 패턴
+export interface TimingPattern {
+  morningRate?: number;
+  lunchRate?: number;
+  dinnerRate?: number;
+  bedtimeRate?: number;
+  bestTiming?: string;
+  worstTiming?: string;
+}
+
+// 패턴 타입
+export type PatternType = 'POSITIVE' | 'NEGATIVE' | 'NEUTRAL';
+
+// 패턴
+export interface Pattern {
+  patternType: PatternType;
+  patternIcon?: string;
+  title: string;
+  description: string;
+  suggestion?: string;
+}
+
+// 인사이트
+export interface Insight {
+  insightType?: string;
+  insightIcon?: string;
+  title: string;
+  description: string;
+  actionItem?: string;
+}
+
+// 패턴 요약
+export interface PatternSummary {
+  overallAssessment?: string;
+  positivePoint?: string;
+  improvementPoint?: string;
+  encouragement?: string;
+}
+
+// 일별 컨디션
+export interface DailyCondition {
+  date: string;
+  score: number;
+}
+
+// 타임라인 이벤트
+export interface TimelineEvent {
+  date?: string;
+  eventType?: string;
+  eventIcon?: string;
+  title: string;
+  description?: string;
 }
