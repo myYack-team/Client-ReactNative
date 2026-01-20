@@ -90,12 +90,14 @@ export function AiConsentModal({ visible, onAgree, onCancel }: AiConsentModalPro
               onPress={handleCancel}
               disabled={isLoading}
               style={styles.button}
+              textStyle={styles.buttonText}
             />
             <Button
               title={isLoading ? '' : '동의'}
               onPress={handleAgree}
               disabled={!isChecked || isLoading}
               style={styles.button}
+              textStyle={styles.buttonText}
             >
               {isLoading && <ActivityIndicator color={Colors.white} size="small" />}
             </Button>
@@ -112,56 +114,58 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 28,
   },
   container: {
     backgroundColor: Colors.white,
-    borderRadius: 16,
+    borderRadius: 10,
     width: '100%',
-    maxWidth: 400,
-    maxHeight: '80%',
+    maxWidth: 300,
+    maxHeight: '65%',
     overflow: 'hidden',
   },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 12,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
   title: {
     textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '600',
   },
   scrollView: {
-    maxHeight: 300,
+    maxHeight: 200,
   },
   scrollContent: {
-    padding: 20,
+    padding: 14,
   },
   content: {
-    lineHeight: 22,
+    lineHeight: 18,
     color: Colors.textSecondary,
-    fontSize: 14,
+    fontSize: 12,
   },
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
     backgroundColor: Colors.backgroundSecondary,
   },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
+    width: 18,
+    height: 18,
+    borderRadius: 4,
     borderWidth: 2,
     borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.white,
-    marginRight: 12,
+    marginRight: 8,
   },
   checkboxChecked: {
     borderColor: Colors.primary,
@@ -169,19 +173,25 @@ const styles = StyleSheet.create({
   },
   checkmark: {
     color: Colors.white,
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: 'bold',
   },
   checkboxLabel: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 12,
+    lineHeight: 16,
   },
   buttonContainer: {
     flexDirection: 'row',
-    padding: 16,
-    gap: 12,
+    padding: 10,
+    gap: 8,
   },
   button: {
     flex: 1,
+    height: 36,
+    paddingVertical: 0,
+  },
+  buttonText: {
+    fontSize: 13,
   },
 });

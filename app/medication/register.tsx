@@ -21,9 +21,12 @@ import { Colors, DEFAULT_TIMES } from '../../constants';
 import { drugService } from '../../services/drug';
 import { medicationService } from '../../services';
 import { DrugInfo } from '../../types';
+import { useMedicationStore } from '../../stores';
+import { formatDateToLocal } from '../../utils/dateUtils';
 
 export default function MedicationRegisterScreen() {
   const { itemSeq } = useLocalSearchParams<{ itemSeq: string }>();
+  const { addMedication: addMedicationToStore } = useMedicationStore();
 
   const [drug, setDrug] = useState<DrugInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -102,13 +105,14 @@ export default function MedicationRegisterScreen() {
 
     setIsSubmitting(true);
     try {
-      await medicationService.createMedication({
+      // Store action 사용으로 변경 - 자동으로 캐시 무효화 및 홈 탭 데이터 갱신
+      await addMedicationToStore({
         drugItemSeq: drug.itemSeq,
         dosage,
         frequency,
         durationDays,
         totalCount,
-        startDate: startDate.toISOString().split('T')[0],
+        startDate: formatDateToLocal(startDate), // 로컬 타임존 기준 날짜 문자열
         memo: memo || undefined,
         reminderTimes,
       });

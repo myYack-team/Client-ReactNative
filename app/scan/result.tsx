@@ -23,6 +23,7 @@ import { Colors, DEFAULT_TIMES } from '../../constants';
 import { useMedicationStore } from '../../stores';
 import { ScannedMedication, DuplicateMedication, TimingWithTime, PrescriptionRegisterRequest, RegisterMedicationInfo, MedicationTiming } from '../../types';
 import { medicationService, prescriptionService } from '../../services';
+import { getTodayString } from '../../utils/dateUtils';
 
 // 시간 옵션 생성 (00:00 ~ 23:30, 30분 간격)
 const TIME_OPTIONS: string[] = [];
@@ -359,7 +360,7 @@ export default function ResultScreen() {
         throw new Error('처방전 이미지가 없습니다.');
       }
 
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayString(); // 로컬 타임존 기준 오늘 날짜
 
       // 약물 정보를 통합 API 형식으로 변환
       const medications: RegisterMedicationInfo[] = medsToRegister.map((med) => {

@@ -62,9 +62,9 @@ export default function LoadingScreen() {
     checkAiConsent();
   }, []);
 
-  // 가짜 진행률 업데이트 (90%까지)
+  // 가짜 진행률 업데이트 (90%까지) - 동의 체크 완료 후에만 시작
   useEffect(() => {
-    if (isComplete || error || !hasAiConsent) return;
+    if (isComplete || error || isCheckingConsent || !hasAiConsent) return;
 
     const intervals = [
       { delay: 300, target: 15 },
@@ -90,7 +90,7 @@ export default function LoadingScreen() {
     );
 
     return () => timers.forEach(clearTimeout);
-  }, [isComplete, error, hasAiConsent]);
+  }, [isComplete, error, isCheckingConsent, hasAiConsent]);
 
   const performScan = async () => {
     if (!uri) return;
@@ -128,12 +128,13 @@ export default function LoadingScreen() {
     }
   };
 
-  // AI 동의 완료 후 스캔 시작
+  // AI 동의 완료 후 스캔 시작 (레이스 컨디션 방지)
   useEffect(() => {
-    if (!uri || hasStartedScan.current || !hasAiConsent) return;
+    // 동의 체크가 완료되고 + 동의된 경우에만 스캔 시작
+    if (!uri || hasStartedScan.current || isCheckingConsent || !hasAiConsent) return;
     hasStartedScan.current = true;
     performScan();
-  }, [uri, hasAiConsent]);
+  }, [uri, isCheckingConsent, hasAiConsent]);
 
   // AI 동의 처리
   const handleAiConsentAgree = async () => {

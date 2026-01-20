@@ -13,6 +13,7 @@ import {
 } from '../types';
 import { medicationService, intakeService, prescriptionService } from '../services';
 import { logger } from '../utils/logger';
+import { getTodayString } from '../utils/dateUtils';
 
 // 캐시 만료 시간 (5분)
 const CACHE_DURATION = 5 * 60 * 1000;
@@ -97,12 +98,12 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
     }
   },
 
-  fetchTodaySchedule: async () => {
+  fetchTodaySchedule: async (forceRefresh = false) => {
     const { todayData, todayDataExpiry } = get();
     const now = Date.now();
 
-    // 캐시가 유효하면 API 호출 건너뜀
-    if (todayData && todayDataExpiry > now) {
+    // 강제 새로고침이 아니고 캐시가 유효하면 API 호출 건너뜀
+    if (!forceRefresh && todayData && todayDataExpiry > now) {
       return;
     }
 
@@ -167,11 +168,11 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
         : medication;
 
       await medicationService.createMedication(medicationWithPrescription);
-      // 캐시 무효화 및 데이터 갱신
+      // 캐시 무효화 및 데이터 갱신 (강제 새로고침)
       get().invalidateCache();
       await Promise.all([
         get().fetchMedications(),
-        get().fetchTodaySchedule(),
+        get().fetchTodaySchedule(true), // 강제 새로고침
       ]);
       set({ isLoading: false });
     } catch (error) {
@@ -276,7 +277,7 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
       await intakeService.markAsTaken(medicationIds, timing);
 
       // 성공 시 캐시 무효화 (낙관적 업데이트가 이미 적용되어 있으므로 fetchTodaySchedule 호출 불필요)
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayString(); // 로컬 타임존 기준 오늘 날짜
       get().invalidateCache(today);
       // 오늘 스케줄 캐시도 무효화
       set({ todayDataExpiry: 0 });
@@ -303,7 +304,7 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
   fetchScheduleForDate: async (date: string) => {
     const { scheduleCache, cacheExpiry, todayData } = get();
     const now = Date.now();
-    const today = new Date().toISOString().split('T')[0];
+    const today = getTodayString(); // 로컬 타임존 기준 오늘 날짜
 
     // 오늘 날짜면 todayData 사용
     if (date === today && todayData?.schedules) {

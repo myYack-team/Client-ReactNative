@@ -10,6 +10,7 @@ import { useMedicationStore } from '../../stores';
 import { intakeService, reminderService } from '../../services';
 import { MedicationTiming, TodaySchedule, DaySummary, DayStatus, ScheduleMedication, IntakesResponse } from '../../types';
 import { getMedDisplayName } from '../../utils';
+import { getTodayString, formatDateToLocal, addDays } from '../../utils/dateUtils';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DAY_ITEM_WIDTH = (SCREEN_WIDTH - 40) / 7; // 양쪽 padding 20씩 빼고 7등분
@@ -69,9 +70,7 @@ const generateWeekDates = () => {
   const dates: string[] = [];
   const today = new Date();
   for (let i = -21; i <= 21; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
-    dates.push(date.toISOString().split('T')[0]);
+    dates.push(formatDateToLocal(addDays(today, i)));
   }
   return dates;
 };
@@ -80,7 +79,7 @@ export default function HomeScreen() {
   const { contentStyle } = useResponsive();
   const insets = useSafeAreaInsets();
   const { todayData, fetchTodaySchedule, recordIntake, isLoading, fetchScheduleForDate, isLoadingSchedule: storeIsLoadingSchedule, fetchMonthlySummary } = useMedicationStore();
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(getTodayString()); // 로컬 타임존 기준 오늘 날짜
   const [currentMonth, setCurrentMonth] = useState({
     year: new Date().getFullYear(),
     month: new Date().getMonth() + 1,
@@ -102,7 +101,7 @@ export default function HomeScreen() {
   // 선택된 날짜의 스케줄 데이터
   const [selectedDateSchedules, setSelectedDateSchedules] = useState<TodaySchedule[]>([]);
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = getTodayString(); // 로컬 타임존 기준 오늘 날짜
 
   // 오늘 날짜로 주간 달력 스크롤
   const scrollToToday = useCallback(() => {
@@ -667,8 +666,8 @@ export default function HomeScreen() {
                         </Typography>
                       </View>
                     </View>
-                    {/* 복용 안 한 약물에만 액션 버튼 표시 (오늘 날짜일 때만) */}
-                    {!med.taken && isSelectedDateToday && (
+                    {/* 복용 안 한 약물에만 액션 버튼 표시 */}
+                    {!med.taken && (
                       <MedicationActionButtons
                         onSkip={() => handleSkipMedication(med, schedule.timing)}
                         onMiss={() => handleMissMedication(med, schedule.timing)}
@@ -680,7 +679,7 @@ export default function HomeScreen() {
                 ))}
               </View>
 
-              {!schedule.allTaken && isSelectedDateToday && (
+              {!schedule.allTaken && (
                 <Button
                   title="모두 먹었어요 ✓"
                   variant="primary"

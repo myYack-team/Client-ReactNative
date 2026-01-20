@@ -1,15 +1,16 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import {
   View,
   StyleSheet,
   ScrollView,
   RefreshControl,
   TouchableOpacity,
+  Alert,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import { Card, Typography } from '../../components/ui';
+import { Card, Typography, AiConsentModal } from '../../components/ui';
 import {
   AnalysisButton,
   ReportListItem,
@@ -18,6 +19,7 @@ import {
 } from '../../components/analysis';
 import { Colors } from '../../constants';
 import { useAnalysisStore } from '../../stores';
+import { userService } from '../../services';
 
 export default function AnalysisScreen() {
   const insets = useSafeAreaInsets();
@@ -30,6 +32,27 @@ export default function AnalysisScreen() {
     completedResult,
     clearCompletedResult,
   } = useAnalysisStore();
+
+  // AI 동의 상태
+  const [hasAiConsent, setHasAiConsent] = useState(false);
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const [isCheckingConsent, setIsCheckingConsent] = useState(true);
+
+  // AI 동의 확인
+  useEffect(() => {
+    const checkAiConsent = async () => {
+      try {
+        const status = await userService.getAiConsentStatus();
+        setHasAiConsent(status.aiDataAgreed);
+      } catch (error) {
+        console.error('AI 동의 상태 확인 실패:', error);
+      } finally {
+        setIsCheckingConsent(false);
+      }
+    };
+
+    checkAiConsent();
+  }, []);
 
   // 탭 포커스 시 데이터 로드
   useFocusEffect(
@@ -45,8 +68,26 @@ export default function AnalysisScreen() {
     await fetchReports();
   };
 
-  // 분석 요청 - 로딩 페이지로 이동
+  // AI 동의 처리
+  const handleConsent = async () => {
+    try {
+      await userService.updateAiConsent(true);
+      setHasAiConsent(true);
+      setShowConsentModal(false);
+    } catch (error) {
+      console.error('AI 동의 처리 실패:', error);
+      Alert.alert('오류', 'AI 동의 처리에 실패했어요.');
+    }
+  };
+
+  // 분석 요청 - AI 동의 확인 후 로딩 페이지로 이동
   const handleAnalysisRequest = () => {
+    // AI 동의 확인
+    if (!hasAiConsent) {
+      setShowConsentModal(true);
+      return;
+    }
+
     console.log('[Analysis] Navigating to loading page...');
     router.push('/analysis/loading');
   };
@@ -186,6 +227,13 @@ export default function AnalysisScreen() {
           </TouchableOpacity>
         )}
       </ScrollView>
+
+      {/* AI 동의 모달 */}
+      <AiConsentModal
+        visible={showConsentModal}
+        onAgree={handleConsent}
+        onCancel={() => setShowConsentModal(false)}
+      />
     </SafeAreaView>
   );
 }

@@ -21,6 +21,7 @@ import {
   TIMING_LABELS,
   TIMING_OPTIONS,
 } from '../../../types';
+import { getTodayString } from '../../../utils/dateUtils';
 
 // 전달받는 영양제 데이터 타입 (중복 호출 방지용)
 interface CachedSupplementData {
@@ -41,7 +42,7 @@ export default function AddUserSupplementScreen() {
   const [dosage, setDosage] = useState('1정');
   const [frequency, setFrequency] = useState(1);
   const [selectedTimings, setSelectedTimings] = useState<MedicationTiming[]>(['MORNING']);
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(getTodayString()); // 로컬 타임존 기준 오늘 날짜
   const [memo, setMemo] = useState('');
 
   useEffect(() => {

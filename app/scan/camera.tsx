@@ -5,9 +5,10 @@ import * as ImagePicker from 'expo-image-picker';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import { router } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Button, Typography } from '../../components/ui';
+import { Button, Typography, AiConsentModal } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useMedicationStore } from '../../stores';
+import { userService } from '../../services';
 
 export default function CameraScreen() {
   const [facing, setFacing] = useState<CameraType>('back');
@@ -17,18 +18,44 @@ export default function CameraScreen() {
   const { isLoading } = useMedicationStore();
   const insets = useSafeAreaInsets();
 
-  // 화면 진입 시 가로 모드로 고정
+  // AI 동의 상태
+  const [hasAiConsent, setHasAiConsent] = useState(false);
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const [isCheckingConsent, setIsCheckingConsent] = useState(true);
+
+  // AI 동의 확인
   useEffect(() => {
-    const lockLandscape = async () => {
-      await ScreenOrientation.lockAsync(
-        ScreenOrientation.OrientationLock.LANDSCAPE_RIGHT
-      );
-      setIsLandscape(true);
+    const checkAiConsent = async () => {
+      try {
+        const status = await userService.getAiConsentStatus();
+        if (status.aiDataAgreed) {
+          setHasAiConsent(true);
+        } else {
+          setShowConsentModal(true);
+        }
+      } catch (error) {
+        console.error('AI 동의 상태 확인 실패:', error);
+        setShowConsentModal(true); // 에러 시에도 모달 표시
+      } finally {
+        setIsCheckingConsent(false);
+      }
     };
 
-    lockLandscape();
+    checkAiConsent();
+  }, []);
 
-    // 화면 이탈 시 세로 모드로 복원
+  // 화면 진입 시 세로 모드로 고정 (AI 동의 모달이 세로로 표시되도록)
+  useEffect(() => {
+    const lockPortrait = async () => {
+      await ScreenOrientation.lockAsync(
+        ScreenOrientation.OrientationLock.PORTRAIT_UP
+      );
+      setIsLandscape(false);
+    };
+
+    lockPortrait();
+
+    // 화면 이탈 시에도 세로 모드 유지
     return () => {
       ScreenOrientation.lockAsync(
         ScreenOrientation.OrientationLock.PORTRAIT_UP
@@ -63,7 +90,25 @@ export default function CameraScreen() {
     );
   }
 
+  // AI 동의 처리
+  const handleConsent = async () => {
+    try {
+      await userService.updateAiConsent(true);
+      setHasAiConsent(true);
+      setShowConsentModal(false);
+    } catch (error) {
+      console.error('AI 동의 처리 실패:', error);
+      Alert.alert('오류', 'AI 동의 처리에 실패했어요.');
+    }
+  };
+
   const handleCapture = async () => {
+    // AI 동의 확인
+    if (!hasAiConsent) {
+      setShowConsentModal(true);
+      return;
+    }
+
     if (!cameraRef.current) return;
 
     try {
@@ -87,10 +132,11 @@ export default function CameraScreen() {
   };
 
   const handlePickImage = async () => {
-    // 갤러리 열기 전 세로 모드로 전환
-    await ScreenOrientation.lockAsync(
-      ScreenOrientation.OrientationLock.PORTRAIT_UP
-    );
+    // AI 동의 확인
+    if (!hasAiConsent) {
+      setShowConsentModal(true);
+      return;
+    }
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -103,12 +149,8 @@ export default function CameraScreen() {
         pathname: '/scan/loading',
         params: { uri: result.assets[0].uri },
       });
-    } else {
-      // 취소 시 다시 가로 모드로
-      await ScreenOrientation.lockAsync(
-        ScreenOrientation.OrientationLock.LANDSCAPE_RIGHT
-      );
     }
+    // 취소 시에도 세로 모드 유지 (변경 불필요)
   };
 
   return (
@@ -143,17 +185,16 @@ export default function CameraScreen() {
           </View>
         </View>
 
-        {/* 컨트롤 버튼 (가로 모드: 우측에 배치) */}
+        {/* 컨트롤 버튼 (세로 모드: 하단에 배치) */}
         <View style={[
-          styles.controlsLandscape,
+          styles.controlsPortrait,
           {
-            paddingRight: Math.max(insets.right, 16),
-            width: 100 + Math.max(insets.right, 16),
+            paddingBottom: Math.max(insets.bottom, 20),
           }
         ]}>
-          <TouchableOpacity style={styles.galleryButtonLandscape} onPress={handlePickImage}>
+          <TouchableOpacity style={styles.galleryButton} onPress={handlePickImage}>
             <View style={styles.iconButton}>
-              <Typography variant="caption" color={Colors.white}>
+              <Typography variant="h3" color={Colors.white}>
                 🖼️
               </Typography>
             </View>
@@ -172,7 +213,7 @@ export default function CameraScreen() {
 
           <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
             <View style={styles.iconButton}>
-              <Typography variant="caption" color={Colors.white}>
+              <Typography variant="h3" color={Colors.white}>
                 ✕
               </Typography>
             </View>
@@ -182,13 +223,21 @@ export default function CameraScreen() {
           </TouchableOpacity>
         </View>
       </CameraView>
+
+      {/* AI 동의 모달 */}
+      <AiConsentModal
+        visible={showConsentModal}
+        onAgree={handleConsent}
+        onCancel={() => router.back()}
+      />
     </View>
   );
 }
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const GUIDE_WIDTH = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.85;
-const GUIDE_HEIGHT = GUIDE_WIDTH * 0.65; // 약봉투 비율
+// 세로 모드 기준으로 가이드 프레임 크기 설정
+const GUIDE_WIDTH = SCREEN_WIDTH * 0.85;
+const GUIDE_HEIGHT = GUIDE_WIDTH * 1.4; // 세로 비율 (약봉투를 세로로 촬영)
 const CORNER_SIZE = 30;
 const CORNER_THICKNESS = 4;
 
@@ -283,40 +332,43 @@ const styles = StyleSheet.create({
     borderRightWidth: CORNER_THICKNESS,
     borderBottomRightRadius: 8,
   },
-  controlsLandscape: {
-    justifyContent: 'center',
+  controlsPortrait: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingVertical: 20,
-    paddingLeft: 16,
-    // width와 paddingRight는 인라인에서 insets.right로 동적 적용
+    paddingTop: 20,
+    paddingHorizontal: 20,
+    // paddingBottom은 인라인에서 insets.bottom으로 동적 적용
   },
-  galleryButtonLandscape: {
+  galleryButton: {
     alignItems: 'center',
-    marginBottom: 30,
   },
   iconButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 4,
   },
   captureButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: Colors.white,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 30,
   },
   captureInner: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     backgroundColor: Colors.white,
     borderWidth: 4,
     borderColor: Colors.textPrimary,

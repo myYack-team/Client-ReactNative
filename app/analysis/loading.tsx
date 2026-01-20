@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context'; // for bottom padding
 import { router } from 'expo-router';
 import { WebView } from 'react-native-webview';
-import { Typography } from '../../components/ui';
+import { Typography, AiConsentModal } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useAnalysisStore } from '../../stores';
+import { userService } from '../../services';
 
 // SVG 애니메이션 HTML
 const SVG_ANIMATION_HTML = `
@@ -212,15 +213,56 @@ export default function AnalysisLoadingScreen() {
   const [progress, setProgress] = useState(0);
   const insets = useSafeAreaInsets();
 
-  // 분석 요청 시작
+  // AI 동의 상태
+  const [hasAiConsent, setHasAiConsent] = useState(false);
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const [isCheckingConsent, setIsCheckingConsent] = useState(true);
+
+  // AI 동의 확인
   useEffect(() => {
+    const checkAiConsent = async () => {
+      try {
+        const status = await userService.getAiConsentStatus();
+        if (status.aiDataAgreed) {
+          setHasAiConsent(true);
+        } else {
+          setShowConsentModal(true);
+        }
+      } catch (error) {
+        console.error('AI 동의 상태 확인 실패:', error);
+        setShowConsentModal(true); // 에러 시에도 모달 표시
+      } finally {
+        setIsCheckingConsent(false);
+      }
+    };
+
+    checkAiConsent();
+  }, []);
+
+  // AI 동의 처리
+  const handleConsent = async () => {
+    try {
+      await userService.updateAiConsent(true);
+      setHasAiConsent(true);
+      setShowConsentModal(false);
+    } catch (error) {
+      console.error('AI 동의 처리 실패:', error);
+      Alert.alert('오류', 'AI 동의 처리에 실패했어요.');
+    }
+  };
+
+  // 분석 요청 시작 - AI 동의 확인 후에만 실행
+  useEffect(() => {
+    // 동의 체크 중이거나 동의하지 않았으면 대기
+    if (isCheckingConsent || !hasAiConsent) return;
+
     // 중복 호출 방지
     if (isRequestedRef.current) return;
     isRequestedRef.current = true;
 
     console.log('[AnalysisLoading] Starting background analysis...');
     startAnalysisInBackground();
-  }, []);
+  }, [isCheckingConsent, hasAiConsent]);
 
   // 분석 완료 시 자동으로 탭으로 돌아가기 (자동 이동 없이 알림만)
   useEffect(() => {
@@ -278,6 +320,13 @@ export default function AnalysisLoadingScreen() {
           화면을 이동해도 분석은 계속됩니다.
         </Typography>
       </View>
+
+      {/* AI 동의 모달 */}
+      <AiConsentModal
+        visible={showConsentModal}
+        onAgree={handleConsent}
+        onCancel={() => router.back()}
+      />
     </View>
   );
 }
