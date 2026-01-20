@@ -14,9 +14,10 @@ export const NOTIFICATION_ACTIONS = {
 // 알림 카테고리 식별자
 export const NOTIFICATION_CATEGORY = 'MEDICATION_REMINDER';
 
-// Development Build 여부 확인
-// Expo Go에서는 Constants.appOwnership이 'expo'이고, Development Build에서는 undefined 또는 'standalone'
-const isDevelopmentBuild = Constants.appOwnership !== 'expo';
+// Development/Release Build 여부 확인
+// Expo Go에서는 Constants.appOwnership이 'expo'
+// Development Build/Release Build에서는 undefined, null, 또는 'standalone'
+const isNativeBuild = Constants.appOwnership !== 'expo';
 
 // 포그라운드에서 알림 표시 설정
 Notifications.setNotificationHandler({
@@ -31,12 +32,21 @@ Notifications.setNotificationHandler({
 
 export const notificationService = {
   /**
-   * 푸시 알림 권한 요청 및 토큰 발급
+   * 푸시 알림 권한 요청 및 FCM 네이티브 토큰 발급
+   * 주의: getDevicePushTokenAsync()는 Expo Go에서 작동하지 않음. Development Build 필수.
    */
   registerForPushNotifications: async (): Promise<string | null> => {
+    logger.log(`[Notification] 토큰 등록 시작 - isDevice: ${Device.isDevice}, appOwnership: ${Constants.appOwnership}, isNativeBuild: ${isNativeBuild}`);
+
     // 실제 디바이스에서만 동작
     if (!Device.isDevice) {
       logger.log('[Notification] 실제 디바이스에서만 푸시 알림이 지원됩니다.');
+      return null;
+    }
+
+    // Expo Go에서는 FCM 네이티브 토큰 발급 불가
+    if (!isNativeBuild) {
+      logger.log('[Notification] Expo Go 환경 - FCM 네이티브 토큰 발급 불가. Development Build 필요.');
       return null;
     }
 
@@ -55,23 +65,9 @@ export const notificationService = {
       return null;
     }
 
-    // FCM 토큰 발급
+    // FCM 네이티브 토큰 발급
     try {
-      const projectId = Constants.expoConfig?.extra?.eas?.projectId;
-
-      // projectId가 유효하지 않으면 개발 환경으로 간주하고 스킵
-      if (!projectId || projectId === 'your-project-id') {
-        logger.log('[Notification] 개발 환경 - Expo projectId 미설정, 푸시 알림 스킵');
-        return null;
-      }
-
-      const token = await Notifications.getExpoPushTokenAsync({
-        projectId: projectId,
-      });
-
-      logger.log('[Notification] FCM 토큰 발급 완료:', token.data);
-
-      // Android 채널 설정
+      // Android 채널 설정 (토큰 발급 전에 설정해야 함)
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('medication', {
           name: '복약 알림',
@@ -82,10 +78,14 @@ export const notificationService = {
         });
       }
 
-      return token.data;
+      // FCM 네이티브 토큰 발급 (Firebase Admin SDK와 호환)
+      const deviceToken = await Notifications.getDevicePushTokenAsync();
+
+      logger.log(`[Notification] FCM 네이티브 토큰 발급 완료 (${deviceToken.type}):`, deviceToken.data);
+
+      return deviceToken.data;
     } catch (error) {
-      // 개발 환경에서의 에러는 조용히 무시
-      logger.log('[Notification] 토큰 발급 스킵 (개발 환경)');
+      logger.error('[Notification] FCM 토큰 발급 실패:', error);
       return null;
     }
   },
@@ -108,7 +108,7 @@ export const notificationService = {
    */
   setupNotificationCategories: async (): Promise<void> => {
     // Expo Go에서는 카테고리 액션이 지원되지 않음
-    if (!isDevelopmentBuild) {
+    if (!isNativeBuild) {
       logger.log('[Notification] Expo Go 환경 - 알림 액션 버튼 비활성화');
       return;
     }
@@ -193,7 +193,7 @@ export const notificationService = {
         body: '테스트 알림입니다. 약을 복용할 시간입니다!',
         sound: 'default',
         // Development Build에서만 카테고리 적용
-        ...(isDevelopmentBuild && { categoryIdentifier: NOTIFICATION_CATEGORY }),
+        ...(isNativeBuild && { categoryIdentifier: NOTIFICATION_CATEGORY }),
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,

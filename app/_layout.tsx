@@ -69,12 +69,15 @@ export default function RootLayout() {
     };
   }, []);
 
-  // 로그인 상태 변경 시 FCM 토큰 등록
+  // 인증 상태일 때 FCM 토큰 등록
+  // - 로그인 상태 변경 시 (로그인 직후)
+  // - 앱 재시작 시 (이미 로그인된 상태로 시작)
+  // - 초기화 완료 후 (authLoading이 false가 된 후)
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !authLoading) {
       notificationService.initialize();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, authLoading]);
 
   // 스플래시 스크린 표시
   if (showSplash) {
