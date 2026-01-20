@@ -11,3 +11,4 @@ export { RecentSearchList } from './RecentSearchList';
 export { TermsModal } from './TermsModal';
 export type { TermsType } from './TermsModal';
 export { AiConsentModal } from './AiConsentModal';
+export { ExpandableText } from './ExpandableText';

@@ -15,8 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Typography, Card, Button } from '../../components/ui';
-import { DrugTypeBadge } from '../../components/ui';
+import { Typography, Card, Button, ExpandableText, DrugTypeBadge } from '../../components/ui';
 import { Colors, DEFAULT_TIMES } from '../../constants';
 import { drugService } from '../../services/drug';
 import { medicationService } from '../../services';
@@ -186,9 +185,7 @@ export default function MedicationRegisterScreen() {
                 <Typography variant="caption" color={Colors.textTertiary}>
                   효능/효과
                 </Typography>
-                <Typography variant="bodySmall" color={Colors.textSecondary} numberOfLines={3}>
-                  {drug.efficacy}
-                </Typography>
+                <ExpandableText text={drug.efficacy} numberOfLines={3} />
               </View>
             )}
           </Card>

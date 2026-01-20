@@ -23,6 +23,18 @@ export default function MedicationLayout() {
         }}
       />
       <Stack.Screen
+        name="search"
+        options={{
+          title: '약 검색',
+        }}
+      />
+      <Stack.Screen
+        name="register"
+        options={{
+          title: '약 추가',
+        }}
+      />
+      <Stack.Screen
         name="[id]"
         options={{
           title: '약 상세',

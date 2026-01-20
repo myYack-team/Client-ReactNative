@@ -433,7 +433,7 @@ export default function HomeScreen() {
         </View>
 
         {/* 주간 달력 스트립 */}
-        <Card style={styles.weekStripCard} variant="elevated">
+        <View style={styles.weekStrip}>
           <FlatList
             ref={weekListRef}
             data={weekDates}
@@ -448,7 +448,8 @@ export default function HomeScreen() {
             })}
             onScrollToIndexFailed={() => {}}
           />
-        </Card>
+          <View style={styles.weekStripDivider} />
+        </View>
 
         {/* 달력 모달 */}
         <Modal
@@ -572,19 +573,6 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </TouchableOpacity>
         </Modal>
-
-        {/* 선택된 날짜 정보 */}
-        {selectedDaySummary && selectedDaySummary.status !== 'NONE' && (
-          <Card style={styles.summaryCard}>
-            <Typography variant="bodySmall" color={Colors.textSecondary}>
-              {selectedDate === today ? '오늘' : selectedDate.replace(/-/g, '.')}
-            </Typography>
-            <Typography variant="body">
-              {selectedDaySummary.totalTaken}/{selectedDaySummary.totalScheduled}개 복용
-              {selectedDaySummary.status === 'COMPLETE' && ' ✓'}
-            </Typography>
-          </Card>
-        )}
 
         {/* 복약 스케줄 */}
         <View style={styles.scheduleSection}>
@@ -739,7 +727,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 4,
   },
   headerRight: {
     flexDirection: 'row',
@@ -755,10 +743,14 @@ const styles = StyleSheet.create({
   calendarIconButton: {
     padding: 4,
   },
-  weekStripCard: {
+  weekStrip: {
     marginBottom: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 0,
+    paddingVertical: 8,
+  },
+  weekStripDivider: {
+    height: 1,
+    backgroundColor: Colors.divider,
+    marginTop: 8,
   },
   weekDayItem: {
     width: DAY_ITEM_WIDTH,
@@ -829,13 +821,6 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-  },
-  summaryCard: {
-    marginBottom: 16,
-    padding: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
   scheduleSection: {
     marginBottom: 16,
