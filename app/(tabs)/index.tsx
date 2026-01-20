@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Modal, FlatList, Dimensions, Image, Alert } from 'react-native';
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Modal, FlatList, Dimensions, Image, Alert, TextStyle } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { CalendarList, LocaleConfig } from 'react-native-calendars';
@@ -8,7 +8,7 @@ import { Colors } from '../../constants';
 import { useResponsive } from '../../hooks';
 import { useMedicationStore } from '../../stores';
 import { intakeService, reminderService } from '../../services';
-import { MedicationTiming, TodaySchedule, DaySummary, DayStatus, ScheduleMedication, IntakesResponse } from '../../types';
+import { MedicationTiming, TodaySchedule, DaySummary, DayStatus, ScheduleMedication, IntakesResponse, TimePeriodGroup, TimeSlot } from '../../types';
 import { getMedDisplayName } from '../../utils';
 import { getTodayString, formatDateToLocal, addDays } from '../../utils/dateUtils';
 
@@ -299,6 +299,90 @@ export default function HomeScreen() {
     return '💊';
   };
 
+  // 시간대 정보 매핑
+  const TIMING_INFO: Record<MedicationTiming, { label: string; icon: string }> = {
+    MORNING: { label: '오전', icon: '☀️' },
+    AFTERNOON: { label: '점심', icon: '🌤️' },
+    EVENING: { label: '저녁', icon: '🌙' },
+    AS_NEEDED: { label: '필요시', icon: '💊' },
+  };
+
+  // 알림 시간으로부터 6시간이 경과했는지 확인
+  const isElapsedOver6Hours = (scheduledTime: string, selectedDate: string): boolean => {
+    const now = new Date();
+    const [hours, minutes] = scheduledTime.split(':').map(Number);
+    const scheduledDateTime = new Date(selectedDate);
+    scheduledDateTime.setHours(hours, minutes, 0, 0);
+
+    // 경과 시간 (밀리초)
+    const elapsedMs = now.getTime() - scheduledDateTime.getTime();
+    const sixHoursMs = 6 * 60 * 60 * 1000;
+
+    return elapsedMs >= sixHoursMs;
+  };
+
+  // 약물 복용 상태 결정
+  type MedStatus = 'pending' | 'taken' | 'missed';
+  const getMedStatus = (med: ScheduleMedication, slotTime: string): MedStatus => {
+    if (med.taken) return 'taken';
+    if (isElapsedOver6Hours(slotTime, selectedDate)) return 'missed';
+    return 'pending';
+  };
+
+  // TodaySchedule[] -> TimePeriodGroup[] 변환 함수
+  const transformToTimePeriodGroups = (schedules: TodaySchedule[]): TimePeriodGroup[] => {
+    // timing별로 그룹핑 (서버에서 올바른 timing을 보내줌)
+    const groupMap = new Map<MedicationTiming, TodaySchedule[]>();
+
+    schedules.forEach((schedule) => {
+      const existing = groupMap.get(schedule.timing);
+      if (existing) {
+        existing.push(schedule);
+      } else {
+        groupMap.set(schedule.timing, [schedule]);
+      }
+    });
+
+    // 시간대 순서 정의
+    const timingOrder: MedicationTiming[] = ['MORNING', 'AFTERNOON', 'EVENING', 'AS_NEEDED'];
+
+    return timingOrder
+      .filter((timing) => groupMap.has(timing))
+      .map((timing) => {
+        const scheduleList = groupMap.get(timing)!;
+        const info = TIMING_INFO[timing];
+
+        // 같은 timing 내에서 scheduledTime별로 TimeSlot 생성
+        const timeSlotMap = new Map<string, ScheduleMedication[]>();
+        scheduleList.forEach((schedule) => {
+          const time = schedule.scheduledTime;
+          const existing = timeSlotMap.get(time);
+          if (existing) {
+            existing.push(...schedule.medications);
+          } else {
+            timeSlotMap.set(time, [...schedule.medications]);
+          }
+        });
+
+        // TimeSlot 배열 생성 (시간순 정렬)
+        const timeSlots: TimeSlot[] = Array.from(timeSlotMap.entries())
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([time, medications]) => ({
+            time,
+            medications,
+            allTaken: medications.every((m) => m.taken),
+          }));
+
+        return {
+          timing,
+          timingLabel: info.label,
+          timingIcon: info.icon,
+          timeSlots,
+          allTaken: timeSlots.every((slot) => slot.allTaken),
+        };
+      });
+  };
+
   const handleTakeAll = async (schedule: TodaySchedule) => {
     const notTakenMeds = schedule.medications.filter((m) => !m.taken);
     if (notTakenMeds.length === 0) return;
@@ -307,6 +391,22 @@ export default function HomeScreen() {
       await recordIntake(
         notTakenMeds.map((m) => m.id),
         schedule.timing
+      );
+    } catch (error) {
+      console.error('Failed to record intake:', error);
+      Alert.alert('오류', '복용 기록에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
+  // 시간 슬롯 전체 복용 처리
+  const handleTakeAllInSlot = async (timeSlot: TimeSlot, timing: MedicationTiming) => {
+    const notTakenMeds = timeSlot.medications.filter((m) => !m.taken);
+    if (notTakenMeds.length === 0) return;
+
+    try {
+      await recordIntake(
+        notTakenMeds.map((m) => m.id),
+        timing
       );
     } catch (error) {
       console.error('Failed to record intake:', error);
@@ -391,6 +491,9 @@ export default function HomeScreen() {
   // 표시할 스케줄 (선택된 날짜 기준)
   const schedules = selectedDateSchedules;
   const summary = isSelectedDateToday ? todayData?.summary : null;
+
+  // TimePeriodGroup으로 변환 (useMemo로 성능 최적화)
+  const timePeriodGroups = useMemo(() => transformToTimePeriodGroups(schedules), [schedules]);
 
   // 선택된 날짜의 요약 정보
   const selectedDaySummary = monthlySummary.find((d) => d.date === selectedDate);
@@ -587,7 +690,7 @@ export default function HomeScreen() {
               불러오는 중...
             </Typography>
           </Card>
-        ) : schedules.length === 0 ? (
+        ) : timePeriodGroups.length === 0 ? (
           <Card style={styles.emptyCard} variant="elevated">
             <Typography variant="body" style={styles.emptyText}>
               {isSelectedDateToday ? '오늘 먹을 약이 없어요' : '이 날짜에 복약 기록이 없어요'}
@@ -597,90 +700,114 @@ export default function HomeScreen() {
             </Typography>
           </Card>
         ) : (
-          schedules.map((schedule, index) => (
-            <Card key={index} style={styles.scheduleCard} variant="elevated">
-              <View style={styles.scheduleHeader}>
-                <View style={styles.scheduleHeaderRow}>
-                  <Typography variant="h3">
-                    {getTimingEmoji(schedule.timingLabel)} {schedule.timingLabel}
-                  </Typography>
-                  <Typography variant="body" style={styles.scheduleTime}>
-                    {schedule.scheduledTime}
-                  </Typography>
-                </View>
-              </View>
-
-              <View style={styles.medicationList}>
-                {schedule.medications.map((med) => (
-                  <View key={med.id} style={styles.medicationItem}>
-                    <View style={styles.medicationRow}>
-                      {/* 약물 이미지 썸네일 */}
-                      <View style={styles.medThumbnailContainer}>
-                        {med.imageUrl ? (
-                          <Image source={{ uri: med.imageUrl }} style={styles.medThumbnail} resizeMode="cover" />
-                        ) : (
-                          <View style={[styles.medThumbnail, styles.medThumbnailPlaceholder]}>
-                            <Typography variant="caption" color={Colors.textSecondary}>
-                              {med.isSupplement ? '🍀' : '💊'}
-                            </Typography>
-                          </View>
-                        )}
-                        {/* 복용 상태 표시 */}
-                        {med.taken && (
-                          <View style={styles.takenOverlay}>
-                            <Typography variant="caption" color={Colors.white}>✓</Typography>
-                          </View>
-                        )}
-                      </View>
-                      <View style={styles.medicationInfo}>
-                        <View style={styles.medicationNameRow}>
-                          <Typography
-                            variant="body"
-                            style={styles.medicationName}
-                            numberOfLines={1}
-                            adjustsFontSizeToFit
-                            minimumFontScale={0.8}
-                          >
-                            {getMedDisplayName(med)}
-                          </Typography>
-                          {med.isSupplement && med.supplementTag ? (
-                            <SupplementTagBadge tag={med.supplementTag} size="small" />
-                          ) : med.drugType ? (
-                            <DrugTypeBadge type={med.drugType} size="small" />
-                          ) : null}
-                        </View>
-                        <Typography variant="caption" color={Colors.textSecondary}>
-                          {med.dosage}정
-                        </Typography>
-                      </View>
-                    </View>
-                    {/* 복용 안 한 약물에만 액션 버튼 표시 */}
-                    {!med.taken && (
-                      <MedicationActionButtons
-                        onSkip={() => handleSkipMedication(med, schedule.timing)}
-                        onMiss={() => handleMissMedication(med, schedule.timing)}
-                        onTakeNow={() => handleTakeMedication(med, schedule.timing)}
-                        disabled={processingMeds.has(med.id)}
-                      />
-                    )}
+          timePeriodGroups.map((group) => (
+            <Card key={group.timing} style={styles.scheduleCard} variant="elevated">
+              {/* 시간대 헤더 */}
+              <View style={styles.timePeriodHeader}>
+                <Typography variant="h3">
+                  {group.timingIcon} {group.timingLabel}
+                </Typography>
+                {group.allTaken && (
+                  <View style={styles.completedBadgeSmall}>
+                    <Typography variant="caption" color={Colors.primary}>완료</Typography>
                   </View>
-                ))}
+                )}
               </View>
 
-              {!schedule.allTaken && (
-                <Button
-                  title="모두 먹었어요 ✓"
-                  variant="primary"
-                  size="medium"
-                  onPress={() => handleTakeAll(schedule)}
-                  style={styles.takeButton}
-                />
-              )}
+              {/* 시간 슬롯 목록 */}
+              {group.timeSlots.map((slot, slotIndex) => (
+                <View key={slot.time} style={styles.timeSlotContainer}>
+                  {/* 시간 라벨 */}
+                  <View style={styles.timeSlotHeader}>
+                    <View style={styles.timeSlotLabelContainer}>
+                      <Typography variant="body" style={styles.timeSlotLabel}>
+                        [{slot.time}]
+                      </Typography>
+                    </View>
+                  </View>
 
-              {schedule.allTaken && (
-                <View style={styles.completedBadge}>
+                  {/* 약물 목록 */}
+                  <View style={styles.medicationList}>
+                    {slot.medications.map((med) => {
+                      const status = getMedStatus(med, slot.time);
+                      return (
+                        <View key={med.id} style={styles.medicationItemCompact}>
+                          <View style={styles.medicationRowCompact}>
+                            {/* 약물 이미지 썸네일 */}
+                            <View style={styles.medThumbnailContainerSmall}>
+                              {med.imageUrl ? (
+                                <Image source={{ uri: med.imageUrl }} style={styles.medThumbnailSmall} resizeMode="cover" />
+                              ) : (
+                                <View style={[styles.medThumbnailSmall, styles.medThumbnailPlaceholder]}>
+                                  <Typography variant="caption" color={Colors.textSecondary}>
+                                    {med.isSupplement ? '🍀' : '💊'}
+                                  </Typography>
+                                </View>
+                              )}
+                              {med.taken && (
+                                <View style={styles.takenOverlaySmall}>
+                                  <Typography variant="caption" color={Colors.white} style={{ fontSize: 10 }}>✓</Typography>
+                                </View>
+                              )}
+                            </View>
+
+                            {/* 약물 정보 */}
+                            <View style={styles.medicationInfoCompact}>
+                              <Typography
+                                variant="body"
+                                style={med.taken ? StyleSheet.flatten([styles.medicationNameCompact, styles.medicationNameTaken]) : styles.medicationNameCompact}
+                                numberOfLines={1}
+                              >
+                                {getMedDisplayName(med)}
+                              </Typography>
+                            </View>
+
+                            {/* 복용 상태 표시 */}
+                            {status === 'pending' ? (
+                              <TouchableOpacity
+                                style={styles.takeButtonCompact}
+                                onPress={() => handleTakeMedication(med, group.timing)}
+                                disabled={processingMeds.has(med.id)}
+                              >
+                                <Typography variant="caption" color={Colors.white}>지금 복용</Typography>
+                              </TouchableOpacity>
+                            ) : status === 'taken' ? (
+                              <View style={styles.takenBadge}>
+                                <Typography variant="caption" color={Colors.primary}>복용 완료</Typography>
+                              </View>
+                            ) : (
+                              <View style={styles.missedBadge}>
+                                <Typography variant="caption" color="#F44336">누락</Typography>
+                              </View>
+                            )}
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+
+                  {/* 시간 슬롯 전체 복용 버튼 */}
+                  {!slot.allTaken && slot.medications.filter(m => !m.taken).length > 1 && (
+                    <TouchableOpacity
+                      style={styles.takeAllSlotButton}
+                      onPress={() => handleTakeAllInSlot(slot, group.timing)}
+                    >
+                      <Typography variant="caption" color={Colors.primary}>모두 복용</Typography>
+                    </TouchableOpacity>
+                  )}
+
+                  {/* 구분선 (마지막 슬롯 제외) */}
+                  {slotIndex < group.timeSlots.length - 1 && (
+                    <View style={styles.slotDivider} />
+                  )}
+                </View>
+              ))}
+
+              {/* 시간대 전체 완료 표시 */}
+              {group.allTaken && (
+                <View style={styles.allCompletedBadge}>
                   <Typography variant="body" color={Colors.primary}>
-                    ✓ 완료
+                    ✓ 모두 복용 완료
                   </Typography>
                 </View>
               )}
@@ -916,5 +1043,115 @@ const styles = StyleSheet.create({
   },
   addButton: {
     marginTop: 24,
+  },
+  // 시간대 그룹 스타일
+  timePeriodHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.divider,
+  },
+  completedBadgeSmall: {
+    backgroundColor: Colors.primaryLightest,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  // 시간 슬롯 스타일
+  timeSlotContainer: {
+    marginBottom: 8,
+  },
+  timeSlotHeader: {
+    marginBottom: 8,
+  },
+  timeSlotLabelContainer: {
+    alignSelf: 'flex-start',
+  },
+  timeSlotLabel: {
+    color: '#2196F3',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  slotDivider: {
+    height: 1,
+    backgroundColor: Colors.divider,
+    marginVertical: 12,
+  },
+  // 컴팩트 약물 아이템 스타일
+  medicationItemCompact: {
+    paddingVertical: 8,
+  },
+  medicationRowCompact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  medThumbnailContainerSmall: {
+    position: 'relative',
+  },
+  medThumbnailSmall: {
+    width: 36,
+    height: 28,
+    borderRadius: 4,
+  },
+  takenOverlaySmall: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(76, 175, 80, 0.8)',
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  medicationInfoCompact: {
+    flex: 1,
+  },
+  medicationNameCompact: {
+    fontWeight: '500',
+    fontSize: 15,
+  },
+  medicationNameTaken: {
+    color: Colors.textSecondary,
+  },
+  takeButtonCompact: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  takenBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: Colors.primaryLightest,
+    borderRadius: 12,
+  },
+  missedBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: '#FFEBEE',
+    borderRadius: 12,
+  },
+  takeAllSlotButton: {
+    alignSelf: 'flex-end',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderRadius: 16,
+    marginTop: 8,
+  },
+  allCompletedBadge: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    backgroundColor: Colors.primaryLightest,
+    borderRadius: 8,
+    marginTop: 8,
   },
 });

@@ -3,12 +3,15 @@ import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image, 
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import { Button, Card, Typography, DeleteConfirmModal, Toast, SupplementTagBadge } from '../../components/ui';
+import { Card, Typography, DeleteConfirmModal, Toast, SupplementTagBadge } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useResponsive } from '../../hooks';
 import { useMedicationStore, useSupplementStore } from '../../stores';
 import { MedicationListItemUnified, Reminder } from '../../types';
-import { getMedDisplayName, mergeAndSortItems } from '../../utils';
+import { mergeAndSortItems } from '../../utils';
+
+// FAB 버튼 탭바 위 간격
+const FAB_BOTTOM_OFFSET = 24;
 
 export default function MedicationsScreen() {
   const { contentStyle } = useResponsive();
@@ -205,24 +208,22 @@ export default function MedicationsScreen() {
     );
   };
 
-  // 아이템 렌더링
-  const renderItem = (item: MedicationListItemUnified) => {
+  // 아이템 렌더링 (구분선 스타일 - 박스 없음)
+  const renderItem = (item: MedicationListItemUnified, index: number) => {
     const key = `${item.type}-${item.id}`;
     const isSelected = selectedIds.has(key);
+    const isLast = index === allItems.length - 1;
 
     return (
-      <Pressable
-        key={key}
-        onPress={() => handleItemPress(item)}
-        onLongPress={() => handleLongPress(item)}
-        delayLongPress={500}
-      >
-        <Card
+      <View key={key}>
+        <Pressable
+          onPress={() => handleItemPress(item)}
+          onLongPress={() => handleLongPress(item)}
+          delayLongPress={500}
           style={[
-            styles.medicationCard,
-            isSelectMode && isSelected && styles.selectedCard
+            styles.medicationItem,
+            isSelectMode && isSelected && styles.selectedItem
           ]}
-          variant="elevated"
         >
           <View style={styles.medicationRow}>
             {/* 선택 모드일 때 체크박스 표시 */}
@@ -246,20 +247,15 @@ export default function MedicationsScreen() {
             )}
 
             <View style={styles.medicationContent}>
-              <View style={styles.medicationHeader}>
-                <View style={styles.nameRow}>
-                  <Typography variant="body" style={styles.drugName} numberOfLines={1}>
-                    {item.displayName || item.name}
-                  </Typography>
-                  {/* 영양제 태그 뱃지 */}
-                  {item.type === 'supplement' && item.supplementTag && (
-                    <SupplementTagBadge tag={item.supplementTag} size="small" />
-                  )}
-                </View>
-                <Typography variant="caption" color={Colors.textSecondary}>
-                  1회 {item.dosage}{item.type === 'medication' ? '정' : ''} / 하루 {item.frequency}회
-                  {item.ingredientKr ? ` · ${item.ingredientKr}` : ''}
+              {/* 약 이름 */}
+              <View style={styles.nameRow}>
+                <Typography variant="body" style={styles.drugName} numberOfLines={1}>
+                  {item.displayName || item.name}
                 </Typography>
+                {/* 영양제 태그 뱃지 */}
+                {item.type === 'supplement' && item.supplementTag && (
+                  <SupplementTagBadge tag={item.supplementTag} size="small" />
+                )}
               </View>
 
               <View style={styles.medicationInfo}>
@@ -293,8 +289,11 @@ export default function MedicationsScreen() {
               </View>
             </View>
           </View>
-        </Card>
-      </Pressable>
+        </Pressable>
+
+        {/* 구분선 (마지막 아이템이 아닌 경우만) */}
+        {!isLast && <View style={styles.divider} />}
+      </View>
     );
   };
 
@@ -302,7 +301,7 @@ export default function MedicationsScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, contentStyle, { paddingBottom: 40 + insets.bottom }]}
+        contentContainerStyle={[styles.scrollContent, contentStyle, { paddingBottom: 100 + insets.bottom }]}
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
@@ -363,19 +362,22 @@ export default function MedicationsScreen() {
             </Typography>
           </Card>
         ) : (
-          allItems.map(renderItem)
-        )}
-
-        {!isSelectMode && (
-          <Button
-            title="+ 약/영양제 추가하기"
-            variant="secondary"
-            size="large"
-            onPress={() => router.push('/medication/add')}
-            style={styles.addButton}
-          />
+          allItems.map((item, index) => renderItem(item, index))
         )}
       </ScrollView>
+
+      {/* FAB - 선택 모드가 아닐 때만 표시, 탭바 바로 위 위치 */}
+      {!isSelectMode && (
+        <TouchableOpacity
+          style={[styles.fab, { bottom: FAB_BOTTOM_OFFSET }]}
+          onPress={() => router.push('/medication/add')}
+          activeOpacity={0.8}
+        >
+          <Typography variant="body" color={Colors.white} style={styles.fabText}>
+            + 약 추가
+          </Typography>
+        </TouchableOpacity>
+      )}
 
       {/* 삭제 확인 모달 */}
       <DeleteConfirmModal
@@ -457,12 +459,14 @@ const styles = StyleSheet.create({
   emptySubtext: {
     textAlign: 'center',
   },
-  medicationCard: {
-    marginBottom: 12,
+  // 아이템 스타일 (박스 없음)
+  medicationItem: {
+    paddingVertical: 16,
   },
-  selectedCard: {
-    borderColor: Colors.primary,
-    borderWidth: 2,
+  selectedItem: {
+    backgroundColor: Colors.primaryLightest,
+    marginHorizontal: -20,
+    paddingHorizontal: 20,
   },
   medicationRow: {
     flexDirection: 'row',
@@ -482,14 +486,12 @@ const styles = StyleSheet.create({
   medicationContent: {
     flex: 1,
   },
-  medicationHeader: {
-    marginBottom: 8,
-  },
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     flexWrap: 'wrap',
+    marginBottom: 4,
   },
   medicationInfo: {
     flexDirection: 'row',
@@ -514,11 +516,27 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 4,
   },
-  addButton: {
-    marginTop: 24,
+  // 구분선 스타일
+  divider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    marginHorizontal: 20,
   },
-  errorCard: {
-    marginBottom: 16,
-    backgroundColor: '#FFF0F0',
+  // FAB 스타일
+  fab: {
+    position: 'absolute',
+    right: 20,
+    backgroundColor: Colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  fabText: {
+    fontWeight: '600',
   },
 });

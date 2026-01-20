@@ -257,6 +257,22 @@ export interface TodaySchedule {
   allTaken: boolean;
 }
 
+// 홈탭 시간 슬롯 (Option C)
+export interface TimeSlot {
+  time: string;  // "08:00", "09:30"
+  medications: ScheduleMedication[];
+  allTaken: boolean;
+}
+
+// 홈탭 시간대 그룹 (Option C)
+export interface TimePeriodGroup {
+  timing: MedicationTiming;
+  timingLabel: string;  // "오전", "점심", "저녁"
+  timingIcon: string;   // "☀️", "🌤️", "🌙"
+  timeSlots: TimeSlot[];
+  allTaken: boolean;
+}
+
 // 오늘의 복약 응답
 export interface TodayResponse {
   date: string;
