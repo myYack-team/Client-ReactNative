@@ -814,12 +814,12 @@ export interface AnalysisRequestResponse extends AnalysisResult {
   quota?: QuotaInfo;
 }
 
-// 분석 쿼터 정보
+// Weekly quota info for AI analysis
 export interface QuotaInfo {
-  monthlyLimit: number;
-  usedCount: number;
-  remainingCount: number;
-  resetDate: string;
+  weeklyLimit: number;
+  weeklyUsedCount: number;
+  weeklyRemainingCount: number;
+  weeklyResetDate: string;
 }
 
 // ========== Q&A 관련 타입 ==========
