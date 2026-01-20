@@ -208,8 +208,9 @@ const SVG_WIDTH = SCREEN_WIDTH; // 좌우 꽉 차게
 const SVG_HEIGHT = SVG_WIDTH * 2;
 
 export default function AnalysisLoadingScreen() {
-  const { startAnalysisInBackground, pendingAnalysis, completedResult } = useAnalysisStore();
+  const { startAnalysisInBackground, pendingAnalysis, completedResult, error } = useAnalysisStore();
   const isRequestedRef = useRef(false);
+  const isNavigatingRef = useRef(false);
   const [progress, setProgress] = useState(0);
   const insets = useSafeAreaInsets();
 
@@ -264,13 +265,30 @@ export default function AnalysisLoadingScreen() {
     startAnalysisInBackground();
   }, [isCheckingConsent, hasAiConsent]);
 
-  // 분석 완료 시 자동으로 탭으로 돌아가기 (자동 이동 없이 알림만)
+  // 분석 완료 시 자동으로 탭으로 돌아가기
   useEffect(() => {
+    if (isNavigatingRef.current) return;
+
     if (completedResult) {
       console.log('[AnalysisLoading] Analysis completed, going back to tab...');
-      router.back();
+      isNavigatingRef.current = true;
+      setTimeout(() => {
+        router.back();
+      }, 100);
     }
   }, [completedResult]);
+
+  // 분석 실패 시 에러 알림 후 돌아가기
+  useEffect(() => {
+    if (error && pendingAnalysis?.status === 'failed') {
+      console.log('[AnalysisLoading] Analysis failed:', error);
+      Alert.alert(
+        '분석 실패',
+        error,
+        [{ text: '확인', onPress: () => router.back() }]
+      );
+    }
+  }, [error, pendingAnalysis?.status]);
 
   // 진행률 업데이트
   useEffect(() => {
