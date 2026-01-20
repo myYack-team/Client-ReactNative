@@ -187,7 +187,10 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
       const initialSuccess = await pollResult();
       if (initialSuccess) return;
 
-      // 폴링 반복
+      // 폴링 반복 (재시도 로직 포함)
+      let retryCount = 0;
+      const MAX_RETRIES = 3;
+
       const pollInterval = setInterval(async () => {
         const { pendingAnalysis: currentPending } = get();
         const elapsed = Date.now() - startedAt;
@@ -203,15 +206,29 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
           clearInterval(pollInterval);
           set({
             pendingAnalysis: { reportId, status: 'failed', startedAt },
-            error: '분석 시간이 초과되었습니다.',
+            error: '분석 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.',
           });
           return;
         }
 
-        // 폴링 시도
-        const success = await pollResult();
-        if (success) {
-          clearInterval(pollInterval);
+        // 폴링 시도 (재시도 로직 포함)
+        try {
+          const success = await pollResult();
+          if (success) {
+            clearInterval(pollInterval);
+          }
+          retryCount = 0; // 성공 시 재시도 카운트 리셋
+        } catch (err) {
+          retryCount++;
+          console.log(`[AnalysisStore] Poll retry ${retryCount}/${MAX_RETRIES}`);
+
+          if (retryCount >= MAX_RETRIES) {
+            clearInterval(pollInterval);
+            set({
+              pendingAnalysis: { reportId, status: 'failed', startedAt },
+              error: '분석 결과를 불러오는데 실패했습니다.',
+            });
+          }
         }
       }, POLLING_INTERVAL);
 
