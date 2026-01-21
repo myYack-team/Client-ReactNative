@@ -47,7 +47,12 @@ export default function EditProfileScreen() {
               <Image source={{ uri: user.profileImage }} style={styles.profileImage} />
             ) : (
               <View style={[styles.profileImage, styles.profileImagePlaceholder]}>
-                <Typography variant="h1">👤</Typography>
+                <Image
+                  source={require('../../assets/icons_iamge_processed/05_User.png')}
+                  style={styles.profilePlaceholderIcon}
+                  accessibilityLabel="Profile placeholder"
+                  resizeMode="contain"
+                />
               </View>
             )}
             <Typography variant="caption" color={Colors.textSecondary} style={styles.imageHint}>
@@ -124,6 +129,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 2,
     borderColor: Colors.border,
+  },
+  profilePlaceholderIcon: {
+    width: 60,
+    height: 60,
   },
   imageHint: {
     textAlign: 'center',

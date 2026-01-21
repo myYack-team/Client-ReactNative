@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Linking } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Linking, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Card, Typography, TermsModal } from '../../components/ui';
@@ -41,7 +41,12 @@ export default function AboutScreen() {
         <Card style={styles.logoCard} variant="elevated">
           <View style={styles.logoContainer}>
             <View style={styles.logoPlaceholder}>
-              <Typography variant="h1">💊</Typography>
+              <Image
+                source={require('../../assets/icons_iamge_processed/02_Pill.png')}
+                style={styles.logoIcon}
+                accessibilityLabel="App logo"
+                resizeMode="contain"
+              />
             </View>
             <Typography variant="h2" style={styles.appName}>마이약</Typography>
             <Typography variant="body" color={Colors.textSecondary}>MyYak</Typography>
@@ -106,6 +111,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
+  },
+  logoIcon: {
+    width: 48,
+    height: 48,
   },
   appName: {
     marginBottom: 4,

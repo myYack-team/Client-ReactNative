@@ -291,20 +291,22 @@ export default function HomeScreen() {
     );
   };
 
-  const getTimingEmoji = (timingLabel: string): string => {
-    if (timingLabel.includes('아침')) return '☀️';
-    if (timingLabel.includes('점심')) return '🌤️';
-    if (timingLabel.includes('저녁')) return '🌙';
-    if (timingLabel.includes('취침')) return '🌃';
-    return '💊';
+  const getTimingIcon = (timing: MedicationTiming): any => {
+    const icons: Record<MedicationTiming, any> = {
+      MORNING: require('../../assets/icons_iamge_processed/06_Morning.png'),
+      AFTERNOON: require('../../assets/icons_iamge_processed/07_Afternoon.png'),
+      EVENING: require('../../assets/icons_iamge_processed/08_Evening.png'),
+      AS_NEEDED: require('../../assets/icons_iamge_processed/02_Pill.png'),
+    };
+    return icons[timing];
   };
 
   // 시간대 정보 매핑
-  const TIMING_INFO: Record<MedicationTiming, { label: string; icon: string }> = {
-    MORNING: { label: '오전', icon: '☀️' },
-    AFTERNOON: { label: '점심', icon: '🌤️' },
-    EVENING: { label: '저녁', icon: '🌙' },
-    AS_NEEDED: { label: '필요시', icon: '💊' },
+  const TIMING_INFO: Record<MedicationTiming, { label: string }> = {
+    MORNING: { label: '오전' },
+    AFTERNOON: { label: '점심' },
+    EVENING: { label: '저녁' },
+    AS_NEEDED: { label: '필요시' },
   };
 
   // 알림 시간으로부터 6시간이 경과했는지 확인
@@ -376,7 +378,7 @@ export default function HomeScreen() {
         return {
           timing,
           timingLabel: info.label,
-          timingIcon: info.icon,
+          timingIcon: getTimingIcon(timing),
           timeSlots,
           allTaken: timeSlots.every((slot) => slot.allTaken),
         };
@@ -530,7 +532,12 @@ export default function HomeScreen() {
               style={styles.calendarIconButton}
               onPress={() => setShowCalendarModal(true)}
             >
-              <Typography variant="h3">📅</Typography>
+              <Image
+                source={require('../../assets/icons_iamge_processed/Calender.png')}
+                style={styles.calendarIcon}
+                accessibilityLabel="Calendar icon"
+                resizeMode="contain"
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -684,9 +691,12 @@ export default function HomeScreen() {
             onPress={() => router.push(`/health-note/${selectedDate}`)}
           >
             <View style={styles.conditionCardContent}>
-              <Typography variant="h3" style={styles.conditionCardEmoji}>
-                📝
-              </Typography>
+              <Image
+                source={require('../../assets/icons_iamge_processed/03_Clipboard.png')}
+                style={styles.conditionCardIcon}
+                accessibilityLabel="Condition record icon"
+                resizeMode="contain"
+              />
               <View style={styles.conditionCardText}>
                 <Typography variant="body" style={styles.conditionCardTitle}>
                   오늘의 컨디션 기록
@@ -723,9 +733,17 @@ export default function HomeScreen() {
             <Card key={group.timing} style={styles.scheduleCard} variant="elevated">
               {/* 시간대 헤더 */}
               <View style={styles.timePeriodHeader}>
-                <Typography variant="h3">
-                  {group.timingIcon} {group.timingLabel}
-                </Typography>
+                <View style={styles.timingHeaderLeft}>
+                  <Image
+                    source={group.timingIcon}
+                    style={styles.timingIcon}
+                    accessibilityLabel={`${group.timingLabel} timing icon`}
+                    resizeMode="contain"
+                  />
+                  <Typography variant="h3">
+                    {group.timingLabel}
+                  </Typography>
+                </View>
                 <View style={styles.timePeriodHeaderActions}>
                   {/* 모두 복용 버튼 */}
                   {!group.allTaken && group.timeSlots.some(slot => slot.medications.filter(m => !m.taken).length > 0) && (
@@ -778,14 +796,25 @@ export default function HomeScreen() {
                                 <Image source={{ uri: med.imageUrl }} style={styles.medThumbnailSmall} resizeMode="cover" />
                               ) : (
                                 <View style={[styles.medThumbnailSmall, styles.medThumbnailPlaceholder]}>
-                                  <Typography variant="caption" color={Colors.textSecondary}>
-                                    {med.isSupplement ? '🍀' : '💊'}
-                                  </Typography>
+                                  <Image
+                                    source={med.isSupplement
+                                      ? require('../../assets/icons_iamge_processed/47_Leaf.png')
+                                      : require('../../assets/icons_iamge_processed/02_Pill.png')
+                                    }
+                                    style={styles.placeholderIcon}
+                                    accessibilityLabel={med.isSupplement ? 'Supplement placeholder' : 'Medication placeholder'}
+                                    resizeMode="contain"
+                                  />
                                 </View>
                               )}
                               {med.taken && (
                                 <View style={styles.takenOverlaySmall}>
-                                  <Typography variant="caption" color={Colors.white} style={{ fontSize: 10 }}>✓</Typography>
+                                  <Image
+                                    source={require('../../assets/icons_iamge_processed/31_Checkmark.png')}
+                                    style={styles.checkmarkIcon}
+                                    accessibilityLabel="Taken checkmark"
+                                    resizeMode="contain"
+                                  />
                                 </View>
                               )}
                             </View>
@@ -899,6 +928,10 @@ const styles = StyleSheet.create({
   },
   calendarIconButton: {
     padding: 4,
+  },
+  calendarIcon: {
+    width: 24,
+    height: 24,
   },
   weekStrip: {
     marginBottom: 16,
@@ -1050,6 +1083,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  placeholderIcon: {
+    width: 20,
+    height: 20,
+  },
   takenOverlay: {
     position: 'absolute',
     top: 0,
@@ -1083,6 +1120,15 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: Colors.divider,
+  },
+  timingHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  timingIcon: {
+    width: 24,
+    height: 24,
   },
   timePeriodHeaderActions: {
     flexDirection: 'row',
@@ -1150,6 +1196,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  checkmarkIcon: {
+    width: 16,
+    height: 16,
+  },
   medicationInfoCompact: {
     flex: 1,
   },
@@ -1210,8 +1260,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
   },
-  conditionCardEmoji: {
-    fontSize: 28,
+  conditionCardIcon: {
+    width: 36,  // 28 * 1.3 ≈ 36
+    height: 36,
   },
   conditionCardText: {
     flex: 1,

@@ -5,6 +5,7 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -127,7 +128,12 @@ export default function ReportDetailScreen() {
         {/* 헤더 정보 */}
         <Card style={styles.headerCard} variant="elevated">
           <View style={styles.headerContent}>
-            <Typography variant="h2" style={styles.headerEmoji}>📊</Typography>
+            <Image
+              source={require('../../assets/icons_iamge_processed/AI_Report.png')}
+              style={styles.headerIcon}
+              accessibilityLabel="Analysis report icon"
+              resizeMode="contain"
+            />
             <View style={styles.headerTextContainer}>
               <Typography variant="h4">
                 {result?.analysisDate ? new Date(result.analysisDate).toLocaleDateString('ko-KR', {
@@ -220,8 +226,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
   },
-  headerEmoji: {
-    fontSize: 40,
+  headerIcon: {
+    width: 40,
+    height: 40,
   },
   headerTextContainer: {
     flex: 1,

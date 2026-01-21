@@ -3,6 +3,7 @@ import {
   View,
   StyleSheet,
   TouchableOpacity,
+  Image,
 } from 'react-native';
 import { Card, Typography } from '../ui';
 import { Colors } from '../../constants';
@@ -25,7 +26,12 @@ export function ReportListItem({ report, onPress }: ReportListItemProps) {
       <Card style={styles.card}>
         <View style={styles.row}>
           <View style={styles.iconContainer}>
-            <Typography variant="body">📊</Typography>
+            <Image
+              source={require('../../assets/icons_iamge_processed/AI_Report.png')}
+              style={styles.chartIcon}
+              accessibilityLabel="Analysis report icon"
+              resizeMode="contain"
+            />
           </View>
           <View style={styles.content}>
             <Typography variant="body" style={styles.title}>
@@ -61,6 +67,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+  },
+  chartIcon: {
+    width: 24,
+    height: 24,
   },
   content: {
     flex: 1,

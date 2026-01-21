@@ -4,6 +4,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Image,
 } from 'react-native';
 import { Typography } from '../ui';
 import { Colors } from '../../constants';
@@ -45,6 +46,14 @@ export function ReportTabView({
   patternAnalysis,
 }: ReportTabViewProps) {
   const [activeTab, setActiveTab] = useState<TabKey>('trend');
+
+  // 탭 아이콘 이미지
+  const tabIcons: Record<TabKey, any> = {
+    trend: require('../../assets/icons_iamge_processed/LineChart.png'),
+    summary: require('../../assets/icons_iamge_processed/03_Clipboard.png'),
+    food: require('../../assets/icons_iamge_processed/22_Food_plate.png'),
+    tips: require('../../assets/icons_iamge_processed/18_Lightbulb.png'),
+  };
 
   // 탭 정의 (뱃지 포함)
   const tabs: Tab[] = [
@@ -203,13 +212,15 @@ export function ReportTabView({
             onPress={() => setActiveTab(tab.key)}
           >
             <View style={styles.tabContent}>
-              <Typography
-                variant="bodySmall"
-                color={activeTab === tab.key ? Colors.brand : Colors.textSecondary}
-                style={styles.tabIcon}
-              >
-                {tab.icon}
-              </Typography>
+              <Image
+                source={tabIcons[tab.key]}
+                style={[
+                  styles.tabIconImage,
+                  { opacity: activeTab === tab.key ? 1 : 0.6 }
+                ]}
+                accessibilityLabel={`${tab.label} tab icon`}
+                resizeMode="contain"
+              />
               <Typography
                 variant="caption"
                 color={activeTab === tab.key ? Colors.brand : Colors.textSecondary}
@@ -263,8 +274,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     position: 'relative',
   },
-  tabIcon: {
-    fontSize: 18,
+  tabIconImage: {
+    width: 20,
+    height: 20,
     marginBottom: 4,
   },
   tabLabel: {

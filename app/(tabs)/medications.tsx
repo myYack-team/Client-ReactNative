@@ -319,7 +319,15 @@ export default function MedicationsScreen() {
               </TouchableOpacity>
             ) : (
               <>
-                <Typography variant="h2">약 목록</Typography>
+                <View style={styles.headerTitleRow}>
+                  <Image
+                    source={require('../../assets/icons_iamge_processed/02_Pill.png')}
+                    style={styles.headerIcon}
+                    accessibilityLabel="Pill icon"
+                    resizeMode="contain"
+                  />
+                  <Typography variant="h2">약 목록</Typography>
+                </View>
                 <Typography variant="body" color={Colors.textSecondary}>
                   등록된 약 {allItems.length}개
                 </Typography>
@@ -420,6 +428,15 @@ const styles = StyleSheet.create({
   },
   headerLeft: {
     flex: 1,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerIcon: {
+    width: 28,
+    height: 28,
   },
   deleteButton: {
     fontWeight: '600',

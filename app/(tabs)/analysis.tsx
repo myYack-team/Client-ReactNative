@@ -6,6 +6,7 @@ import {
   RefreshControl,
   TouchableOpacity,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -151,7 +152,12 @@ export default function AnalysisScreen() {
         {/* 헤더 */}
         <View style={styles.header}>
           <View style={styles.headerTitleRow}>
-            <Typography variant="h2" style={styles.headerEmoji}>✨</Typography>
+            <Image
+              source={require('../../assets/icons_iamge_processed/04_AI.png')}
+              style={styles.headerIcon}
+              accessibilityLabel="AI icon"
+              resizeMode="contain"
+            />
             <Typography variant="h2">AI 약물 분석</Typography>
           </View>
           <Typography variant="body" color={Colors.textSecondary}>
@@ -162,9 +168,6 @@ export default function AnalysisScreen() {
         {/* AI 분석 소개 카드 */}
         <Card style={styles.introCard} variant="elevated">
           <View style={styles.introContent}>
-            <View style={styles.introIconContainer}>
-              <Typography variant="h1" style={styles.introIcon}>🔬</Typography>
-            </View>
             <View style={styles.introTextContainer}>
               <Typography variant="body" style={styles.introTitle}>
                 약물 분석이란?
@@ -279,8 +282,9 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 4,
   },
-  headerEmoji: {
-    fontSize: 28,
+  headerIcon: {
+    width: 28,
+    height: 28,
   },
   introCard: {
     marginBottom: 20,
@@ -302,7 +306,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   introIcon: {
-    fontSize: 28,
+    width: 36,
+    height: 36,
   },
   introTextContainer: {
     flex: 1,

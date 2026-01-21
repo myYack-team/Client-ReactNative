@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Image, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../../constants';
 import { FontSizes } from '../../constants/fonts';
@@ -14,19 +14,28 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
     profile: '내 정보',
   };
 
-  const emojis: Record<string, string> = {
-    home: '🏠',
-    medications: '💊',
-    history: '📋',
-    analysis: '✨',
-    profile: '👤',
+  const iconImages: Record<string, any> = {
+    home: require('../../assets/icons_iamge_processed/01_Home.png'),
+    medications: require('../../assets/icons_iamge_processed/02_Pill.png'),
+    history: require('../../assets/icons_iamge_processed/03_Clipboard.png'),
+    analysis: require('../../assets/icons_iamge_processed/04_AI.png'),
+    profile: require('../../assets/icons_iamge_processed/05_User.png'),
   };
 
   return (
     <View style={styles.tabIcon}>
-      <Text style={[styles.emoji, focused && styles.emojiActive]}>
-        {emojis[name]}
-      </Text>
+      <Image
+        source={iconImages[name]}
+        style={[
+          styles.iconImage,
+          {
+            opacity: focused ? 1 : 0.6,
+            tintColor: focused ? Colors.textPrimary : Colors.textSecondary
+          }
+        ]}
+        accessibilityLabel={`${icons[name]} tab icon`}
+        resizeMode="contain"
+      />
     </View>
   );
 }
@@ -101,12 +110,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     height: 28,
   },
-  emoji: {
-    fontSize: 24,
-    lineHeight: 28,
-    opacity: 0.6,
-  },
-  emojiActive: {
-    opacity: 1,
+  iconImage: {
+    width: 24,
+    height: 24,
   },
 });

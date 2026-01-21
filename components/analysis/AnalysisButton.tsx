@@ -4,6 +4,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { Typography } from '../ui';
 import { Colors, Shadows } from '../../constants';
@@ -50,8 +51,15 @@ export function AnalysisButton({
       <View style={styles.iconContainer}>
         {isLoading ? (
           <ActivityIndicator color={Colors.brand} size="small" />
+        ) : isQuotaExceeded ? (
+          <Typography variant="h2">⏰</Typography>
         ) : (
-          <Typography variant="h2">{isQuotaExceeded ? '⏰' : '✨'}</Typography>
+          <Image
+            source={require('../../assets/icons_iamge_processed/04_AI.png')}
+            style={styles.aiIcon}
+            accessibilityLabel="AI analysis icon"
+            resizeMode="contain"
+          />
         )}
       </View>
 
@@ -118,6 +126,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginRight: 12,
     ...Shadows.small,
+  },
+  aiIcon: {
+    width: 32,
+    height: 32,
   },
   textContainer: {
     flex: 1,

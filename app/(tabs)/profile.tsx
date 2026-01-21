@@ -8,16 +8,21 @@ import { useResponsive } from '../../hooks';
 import { useAuthStore } from '../../stores';
 
 interface MenuItemProps {
-  icon: string;
+  icon: any;
   label: string;
   onPress: () => void;
+  useIonicons?: boolean;
 }
 
-function MenuItem({ icon, label, onPress }: MenuItemProps) {
+function MenuItem({ icon, label, onPress, useIonicons = false }: MenuItemProps) {
   return (
     <TouchableOpacity style={styles.menuItem} onPress={onPress}>
       <View style={styles.menuItemLeft}>
-        <Typography variant="body" style={styles.menuIcon}>{icon}</Typography>
+        {useIonicons ? (
+          <Typography variant="body" style={styles.menuIcon}>{icon}</Typography>
+        ) : (
+          <Image source={icon} style={styles.menuIconImage} accessibilityLabel={`${label} icon`} resizeMode="contain" />
+        )}
         <Typography variant="body">{label}</Typography>
       </View>
       <Typography variant="body" color={Colors.textSecondary}>{'>'}</Typography>
@@ -75,7 +80,12 @@ export default function ProfileScreen() {
               <Image source={{ uri: user.profileImage }} style={styles.profileImage} />
             ) : (
               <View style={[styles.profileImage, styles.profileImagePlaceholder]}>
-                <Typography variant="h2">👤</Typography>
+                <Image
+                  source={require('../../assets/icons_iamge_processed/05_User.png')}
+                  style={styles.profilePlaceholderIcon}
+                  accessibilityLabel="Profile placeholder"
+                  resizeMode="contain"
+                />
               </View>
             )}
             <View style={styles.profileInfo}>
@@ -92,7 +102,7 @@ export default function ProfileScreen() {
         {/* 복약 관리 */}
         <MenuSection title="복약 관리">
           <MenuItem
-            icon="📋"
+            icon={require('../../assets/icons_iamge_processed/03_Clipboard.png')}
             label="내 복약 목록"
             onPress={() => router.push('/(tabs)/medications')}
           />
@@ -100,13 +110,14 @@ export default function ProfileScreen() {
             icon="🔔"
             label="알림 설정"
             onPress={() => router.push('/profile/reminders')}
+            useIonicons={true}
           />
         </MenuSection>
 
         {/* 계정 */}
         <MenuSection title="계정">
           <MenuItem
-            icon="👤"
+            icon={require('../../assets/icons_iamge_processed/05_User.png')}
             label="프로필 수정"
             onPress={() => router.push('/profile/edit')}
           />
@@ -114,6 +125,7 @@ export default function ProfileScreen() {
             icon="🔒"
             label="개인정보 보호"
             onPress={() => router.push('/profile/privacy')}
+            useIonicons={true}
           />
         </MenuSection>
 
@@ -123,16 +135,19 @@ export default function ProfileScreen() {
             icon="🔤"
             label="글자 크기"
             onPress={() => router.push('/profile/font-size')}
+            useIonicons={true}
           />
           <MenuItem
             icon="🤖"
             label="AI 데이터 분석 동의"
             onPress={() => router.push('/profile/ai-consent')}
+            useIonicons={true}
           />
           <MenuItem
             icon="ℹ️"
             label="앱 정보"
             onPress={() => router.push('/profile/about')}
+            useIonicons={true}
           />
         </MenuSection>
 
@@ -142,6 +157,7 @@ export default function ProfileScreen() {
             icon="💬"
             label="문의하기"
             onPress={() => router.push('/profile/qna')}
+            useIonicons={true}
           />
         </MenuSection>
 
@@ -190,6 +206,10 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: Colors.border,
   },
+  profilePlaceholderIcon: {
+    width: 48,
+    height: 48,
+  },
   profileInfo: {
     flex: 1,
   },
@@ -226,6 +246,10 @@ const styles = StyleSheet.create({
   },
   menuIcon: {
     fontSize: 20,
+  },
+  menuIconImage: {
+    width: 20,
+    height: 20,
   },
   logoutButton: {
     marginTop: 8,

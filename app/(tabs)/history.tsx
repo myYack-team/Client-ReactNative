@@ -10,6 +10,7 @@ import {
   Alert,
   Pressable,
   ActivityIndicator,
+  Image as RNImage,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -401,7 +402,15 @@ export default function PrescriptionScreen() {
               </TouchableOpacity>
             ) : (
               <>
-                <Typography variant="h2">처방 기록</Typography>
+                <View style={styles.headerTitleRow}>
+                  <RNImage
+                    source={require('../../assets/icons_iamge_processed/03_Clipboard.png')}
+                    style={styles.headerIcon}
+                    accessibilityLabel="Clipboard icon"
+                    resizeMode="contain"
+                  />
+                  <Typography variant="h2">처방 기록</Typography>
+                </View>
                 <Typography variant="body" color={Colors.textSecondary}>
                   스캔한 처방전을 모아볼 수 있어요
                 </Typography>
@@ -723,6 +732,15 @@ const styles = StyleSheet.create({
   },
   headerLeft: {
     flex: 1,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerIcon: {
+    width: 28,
+    height: 28,
   },
   deleteButton: {
     fontWeight: '600',
