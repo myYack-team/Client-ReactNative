@@ -4,6 +4,7 @@ import {
   AnalysisResult,
   ReportListResponse,
   AnalysisRequestResponse,
+  QuotaInfo,
 } from '../types';
 import { logger } from '../utils/logger';
 
@@ -45,5 +46,15 @@ export const analysisService = {
     if (!response.data.isSuccess) {
       throw new Error(response.data.message || '레포트 삭제에 실패했습니다.');
     }
+  },
+
+  // 쿼터 정보 조회
+  async getQuota(): Promise<QuotaInfo> {
+    logger.log('[analysisService] Getting quota info...');
+    const response = await api.get<ApiResponse<QuotaInfo>>('/analysis/quota');
+    if (!response.data.isSuccess || !response.data.result) {
+      throw new Error(response.data.message || '쿼터 정보를 불러오는데 실패했습니다.');
+    }
+    return response.data.result;
   },
 };

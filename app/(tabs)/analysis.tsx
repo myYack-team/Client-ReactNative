@@ -19,7 +19,8 @@ import {
 } from '../../components/analysis';
 import { Colors } from '../../constants';
 import { useAnalysisStore } from '../../stores';
-import { userService } from '../../services';
+import { userService, analysisService } from '../../services';
+import { QuotaInfo } from '../../types';
 
 export default function AnalysisScreen() {
   const insets = useSafeAreaInsets();
@@ -37,6 +38,9 @@ export default function AnalysisScreen() {
   const [hasAiConsent, setHasAiConsent] = useState(false);
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [isCheckingConsent, setIsCheckingConsent] = useState(true);
+
+  // 쿼터 정보
+  const [quotaInfo, setQuotaInfo] = useState<QuotaInfo | null>(null);
 
   // AI 동의 확인
   useEffect(() => {
@@ -60,12 +64,26 @@ export default function AnalysisScreen() {
       fetchReports().catch((err) => {
         console.error('Failed to load analysis data:', err);
       });
+
+      // 쿼터 정보 조회
+      analysisService.getQuota().then((quota) => {
+        setQuotaInfo(quota);
+      }).catch((err) => {
+        console.error('Failed to load quota info:', err);
+      });
     }, [])
   );
 
   // 새로고침
   const handleRefresh = async () => {
     await fetchReports();
+    // 쿼터 정보도 새로고침
+    try {
+      const quota = await analysisService.getQuota();
+      setQuotaInfo(quota);
+    } catch (err) {
+      console.error('Failed to refresh quota info:', err);
+    }
   };
 
   // AI 동의 처리
@@ -176,6 +194,8 @@ export default function AnalysisScreen() {
           <AnalysisButton
             onPress={handleAnalysisRequest}
             isLoading={isAnalyzing}
+            weeklyRemainingCount={quotaInfo?.weeklyRemainingCount}
+            weeklyLimit={quotaInfo?.weeklyLimit}
           />
         )}
 
