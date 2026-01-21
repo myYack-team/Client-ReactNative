@@ -5,7 +5,6 @@ import { Colors } from '../../../constants';
 import { PatternAnalysis } from '../../../types';
 import { ConditionLineChart } from '../ConditionLineChart';
 import { PatternCard } from '../PatternCard';
-import { InsightCard } from '../InsightCard';
 
 interface TrendTabProps {
   patternAnalysis?: PatternAnalysis;
@@ -30,7 +29,6 @@ export function TrendTab({ patternAnalysis }: TrendTabProps) {
   const {
     adherenceAnalysis,
     patterns,
-    insights,
     summary,
     dailyConditions,
     events,
@@ -151,19 +149,6 @@ export function TrendTab({ patternAnalysis }: TrendTabProps) {
         </View>
       )}
 
-      {/* 인사이트 카드 */}
-      {insights && insights.length > 0 && (
-        <View style={styles.section}>
-          <Typography variant="h4" style={styles.sectionTitle}>
-            맞춤 제안
-          </Typography>
-          <View style={styles.cardList}>
-            {insights.map((insight, index) => (
-              <InsightCard key={`insight-${index}`} insight={insight} />
-            ))}
-          </View>
-        </View>
-      )}
     </View>
   );
 }
