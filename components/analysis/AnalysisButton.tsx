@@ -58,31 +58,38 @@ export function AnalysisButton({
       {/* 텍스트 영역 */}
       <View style={styles.textContainer}>
         <View style={styles.titleRow}>
-          <Typography variant="h4" color={isDisabled ? Colors.textSecondary : Colors.brand}>
+          <Typography
+            variant="h4"
+            color={isDisabled ? Colors.textSecondary : Colors.brand}
+            style={styles.titleText}
+          >
             {getButtonText()}
           </Typography>
           {/* 쿼터 배지 */}
           {hasQuotaInfo && !isLoading && (
             <View style={[styles.quotaBadge, isQuotaExceeded && styles.quotaBadgeExceeded]}>
-              <Typography variant="caption" color={isQuotaExceeded ? Colors.error : Colors.brand}>
+              <Typography
+                variant="caption"
+                color={isQuotaExceeded ? Colors.error : Colors.brand}
+                style={styles.quotaText}
+              >
                 {weeklyRemainingCount}/{weeklyLimit}
               </Typography>
             </View>
           )}
         </View>
-        <Typography variant="caption" color={Colors.textSecondary}>
-          {getSubText()}
-        </Typography>
-      </View>
-
-      {/* 화살표 */}
-      {!isDisabled && (
-        <View style={styles.arrowContainer}>
-          <Typography variant="h4" color={Colors.brand}>
-            →
+        <View style={styles.subtextRow}>
+          <Typography variant="caption" color={Colors.textSecondary} style={styles.subtextText}>
+            {getSubText()}
           </Typography>
+          {/* 화살표를 설명 오른쪽으로 이동 */}
+          {!isDisabled && (
+            <Typography variant="h4" color={Colors.brand}>
+              →
+            </Typography>
+          )}
         </View>
-      )}
+      </View>
     </TouchableOpacity>
   );
 }
@@ -114,26 +121,42 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     flex: 1,
+    minWidth: 0,
   },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    flexWrap: 'wrap',
+    marginBottom: 4,
+  },
+  titleText: {
+    flexShrink: 1,
+    flexGrow: 0,
   },
   quotaBadge: {
     backgroundColor: Colors.brandLightest,
+    borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 12,
     borderWidth: 1,
-    borderColor: Colors.brandLight,
+    borderColor: Colors.brand,
+    flexShrink: 0,
+    flexGrow: 0,
   },
   quotaBadgeExceeded: {
-    backgroundColor: '#FFEBEE',
-    borderColor: '#FFCDD2',
+    backgroundColor: Colors.backgroundSecondary,
+    borderColor: Colors.error,
   },
-  arrowContainer: {
-    marginLeft: 8,
+  quotaText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  subtextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  subtextText: {
+    flex: 1,
   },
 });

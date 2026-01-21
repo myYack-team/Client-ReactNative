@@ -48,7 +48,7 @@ export const analysisService = {
     }
   },
 
-  // Get weekly quota info
+  // 쿼터 정보 조회
   async getQuota(): Promise<QuotaInfo> {
     logger.log('[analysisService] Getting quota info...');
     const response = await api.get<ApiResponse<QuotaInfo>>('/analysis/quota');

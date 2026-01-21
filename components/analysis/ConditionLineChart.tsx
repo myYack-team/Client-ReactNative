@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
+import { LineChart } from 'react-native-gifted-charts';
 import { Typography } from '../ui';
 import { Colors } from '../../constants';
 import { DailyCondition, TimelineEvent } from '../../types';
@@ -9,10 +10,8 @@ interface ConditionLineChartProps {
   events?: TimelineEvent[];
 }
 
-const CHART_HEIGHT = 160;
-const CHART_PADDING = 40;
-const DOT_SIZE = 10;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const CHART_WIDTH = SCREEN_WIDTH - 80;
 
 export function ConditionLineChart({ dailyConditions, events = [] }: ConditionLineChartProps) {
   if (!dailyConditions || dailyConditions.length === 0) {
@@ -27,20 +26,33 @@ export function ConditionLineChart({ dailyConditions, events = [] }: ConditionLi
 
   // 최대 7일치만 표시
   const displayData = dailyConditions.slice(-7);
-  const chartWidth = SCREEN_WIDTH - 80;
-  const dataPointWidth = chartWidth / Math.max(displayData.length - 1, 1);
 
-  // Y축 값 계산 (0-10)
-  const getYPosition = (score: number) => {
-    const availableHeight = CHART_HEIGHT - CHART_PADDING * 2;
-    return CHART_PADDING + availableHeight * (1 - score / 10);
-  };
+  // Y축 범위 계산 (데이터 기반 동적 범위)
+  // 서버 데이터는 conditionScore, 타입 정의는 score 둘 다 지원
+  const { minY, maxY, yAxisOffset } = useMemo(() => {
+    const scores = displayData.map(d => (d as any).conditionScore ?? d.score);
+    const min = Math.min(...scores);
+    const max = Math.max(...scores);
 
-  // X축 위치 계산
-  const getXPosition = (index: number) => {
-    if (displayData.length === 1) return chartWidth / 2;
-    return index * dataPointWidth;
-  };
+    // 최소/최대 차이가 작으면 범위 확장
+    const range = max - min;
+    let adjustedMin = min;
+    let adjustedMax = max;
+
+    if (range < 2) {
+      adjustedMin = Math.max(0, min - 1);
+      adjustedMax = Math.min(10, max + 1);
+    } else {
+      adjustedMin = Math.max(0, min - 0.5);
+      adjustedMax = Math.min(10, max + 0.5);
+    }
+
+    return {
+      minY: Math.floor(adjustedMin),
+      maxY: Math.ceil(adjustedMax),
+      yAxisOffset: Math.floor(adjustedMin),
+    };
+  }, [displayData]);
 
   // 날짜 포맷팅 (MM/DD)
   const formatDate = (dateString: string) => {
@@ -53,204 +65,177 @@ export function ConditionLineChart({ dailyConditions, events = [] }: ConditionLi
     return events?.find((e) => e.date === dateString);
   };
 
-  return (
-    <View style={styles.container}>
-      {/* Y축 레이블 */}
-      <View style={styles.yAxis}>
-        <Typography variant="caption" color={Colors.textTertiary}>10</Typography>
-        <Typography variant="caption" color={Colors.textTertiary}>5</Typography>
-        <Typography variant="caption" color={Colors.textTertiary}>0</Typography>
-      </View>
+  // 차트 데이터 생성
+  const chartData = useMemo(() => {
+    return displayData.map((item, index) => {
+      const event = findEvent(item.date);
+      const score = (item as any).conditionScore ?? item.score;
 
-      {/* 차트 영역 */}
-      <View style={[styles.chartArea, { width: chartWidth }]}>
-        {/* 그리드 라인 */}
-        <View style={[styles.gridLine, { top: getYPosition(10) }]} />
-        <View style={[styles.gridLine, { top: getYPosition(5) }]} />
-        <View style={[styles.gridLine, { top: getYPosition(0) }]} />
-
-        {/* 연결선 */}
-        {displayData.map((item, index) => {
-          if (index === 0) return null;
-          const prevItem = displayData[index - 1];
-
-          const x1 = getXPosition(index - 1);
-          const y1 = getYPosition(prevItem.score);
-          const x2 = getXPosition(index);
-          const y2 = getYPosition(item.score);
-
-          // 선의 길이와 각도 계산
-          const length = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
-          const angle = Math.atan2(y2 - y1, x2 - x1) * (180 / Math.PI);
-
-          return (
+      return {
+        value: score,
+        label: formatDate(item.date),
+        labelTextStyle: styles.xAxisLabel,
+        // 이벤트가 있는 날은 다른 색상
+        dataPointColor: event ? Colors.warning : Colors.brand,
+        // 커스텀 데이터 포인트 렌더링
+        customDataPoint: () => (
+          <View style={styles.dataPointContainer}>
             <View
-              key={`line-${index}`}
               style={[
-                styles.line,
-                {
-                  width: length,
-                  left: x1,
-                  top: y1,
-                  transform: [{ rotate: `${angle}deg` }],
-                  transformOrigin: 'left center',
-                },
+                styles.dataPoint,
+                { backgroundColor: event ? Colors.warning : Colors.brand },
               ]}
             />
-          );
-        })}
-
-        {/* 데이터 포인트 */}
-        {displayData.map((item, index) => {
-          const x = getXPosition(index);
-          const y = getYPosition(item.score);
-          const event = findEvent(item.date);
-
-          return (
-            <View key={`point-${index}`}>
-              {/* 점 */}
-              <View
-                style={[
-                  styles.dot,
-                  {
-                    left: x - DOT_SIZE / 2,
-                    top: y - DOT_SIZE / 2,
-                    backgroundColor: event ? Colors.warning : Colors.brand,
-                  },
-                ]}
-              />
-
-              {/* 점수 표시 */}
-              <View
-                style={[
-                  styles.scoreLabel,
-                  {
-                    left: x - 12,
-                    top: y - 24,
-                  },
-                ]}
-              >
-                <Typography variant="caption" color={Colors.brand} style={styles.scoreLabelText}>
-                  {item.score}
+            {event && (
+              <View style={styles.eventMarker}>
+                <Typography variant="caption" style={styles.eventIcon}>
+                  {event.eventIcon}
                 </Typography>
               </View>
+            )}
+          </View>
+        ),
+      };
+    });
+  }, [displayData, events]);
 
-              {/* 이벤트 마커 */}
-              {event && (
-                <View
-                  style={[
-                    styles.eventMarker,
-                    {
-                      left: x - 8,
-                      top: y + DOT_SIZE / 2 + 4,
-                    },
-                  ]}
-                >
-                  <Typography variant="caption" style={styles.eventIcon}>
-                    {event.eventIcon}
+  // Y축 라벨 섹션 개수
+  const noOfSections = Math.max(maxY - minY, 2);
+
+  return (
+    <View style={styles.container}>
+      <LineChart
+        data={chartData}
+        width={CHART_WIDTH}
+        height={160}
+        // 곡선 설정
+        curved
+        curvature={0.2}
+        // 색상 설정
+        color={Colors.brand}
+        thickness={2}
+        // 데이터 포인트
+        dataPointsHeight={10}
+        dataPointsWidth={10}
+        dataPointsColor={Colors.brand}
+        // 영역 채우기 (그라데이션 효과)
+        areaChart
+        startFillColor={Colors.brand}
+        endFillColor={Colors.brandLightest}
+        startOpacity={0.3}
+        endOpacity={0.05}
+        // Y축 설정
+        yAxisOffset={yAxisOffset}
+        maxValue={maxY - yAxisOffset}
+        noOfSections={noOfSections}
+        yAxisColor="transparent"
+        yAxisTextStyle={styles.yAxisLabel}
+        yAxisLabelWidth={24}
+        formatYLabel={(label) => String(Math.round(Number(label) + yAxisOffset))}
+        // X축 설정
+        xAxisColor={Colors.divider}
+        xAxisLabelTextStyle={styles.xAxisLabel}
+        // 그리드
+        rulesColor={Colors.divider}
+        rulesType="solid"
+        // 값 표시
+        showValuesAsDataPointsText
+        textColor={Colors.brand}
+        textFontSize={11}
+        textShiftY={-10}
+        textShiftX={0}
+        // 간격
+        spacing={(CHART_WIDTH - 40) / Math.max(displayData.length - 1, 1)}
+        initialSpacing={15}
+        endSpacing={15}
+        // 애니메이션
+        isAnimated
+        animationDuration={800}
+        // 포인터 (터치 시)
+        pointerConfig={{
+          pointerStripUptoDataPoint: true,
+          pointerStripColor: Colors.brand,
+          pointerStripWidth: 1,
+          pointerColor: Colors.brand,
+          radius: 6,
+          pointerLabelWidth: 80,
+          pointerLabelHeight: 40,
+          pointerLabelComponent: (items: any) => {
+            const item = items[0];
+            const index = chartData.findIndex(d => d.value === item.value);
+            const event = index >= 0 ? findEvent(displayData[index]?.date) : null;
+
+            return (
+              <View style={styles.pointerLabel}>
+                <Typography variant="caption" color={Colors.white}>
+                  {item.value}점
+                </Typography>
+                {event && (
+                  <Typography variant="caption" color={Colors.white} style={styles.pointerEventText}>
+                    {event.title}
                   </Typography>
-                </View>
-              )}
-            </View>
-          );
-        })}
-
-        {/* X축 레이블 */}
-        <View style={styles.xAxis}>
-          {displayData.map((item, index) => (
-            <View
-              key={`label-${index}`}
-              style={[
-                styles.xAxisLabel,
-                {
-                  left: getXPosition(index) - 20,
-                },
-              ]}
-            >
-              <Typography variant="caption" color={Colors.textTertiary}>
-                {formatDate(item.date)}
-              </Typography>
-            </View>
-          ))}
-        </View>
-      </View>
+                )}
+              </View>
+            );
+          },
+        }}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
     backgroundColor: Colors.white,
     borderRadius: 12,
     padding: 16,
+    paddingRight: 8,
     borderWidth: 1,
     borderColor: Colors.border,
   },
   emptyContainer: {
-    height: CHART_HEIGHT,
+    height: 160,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: Colors.backgroundSecondary,
     borderRadius: 12,
   },
-  yAxis: {
-    width: 24,
-    height: CHART_HEIGHT,
-    justifyContent: 'space-between',
-    paddingVertical: CHART_PADDING - 8,
+  yAxisLabel: {
+    color: Colors.textTertiary,
+    fontSize: 11,
   },
-  chartArea: {
-    height: CHART_HEIGHT,
-    position: 'relative',
+  xAxisLabel: {
+    color: Colors.textTertiary,
+    fontSize: 10,
+    width: 40,
+    textAlign: 'center',
   },
-  gridLine: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: Colors.divider,
+  dataPointContainer: {
+    alignItems: 'center',
   },
-  line: {
-    position: 'absolute',
-    height: 2,
-    backgroundColor: Colors.brand,
-  },
-  dot: {
-    position: 'absolute',
-    width: DOT_SIZE,
-    height: DOT_SIZE,
-    borderRadius: DOT_SIZE / 2,
+  dataPoint: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     borderWidth: 2,
     borderColor: Colors.white,
   },
-  scoreLabel: {
-    position: 'absolute',
-    width: 24,
-    alignItems: 'center',
-  },
-  scoreLabelText: {
-    fontWeight: '600',
-    fontSize: 11,
-  },
   eventMarker: {
     position: 'absolute',
+    top: 14,
   },
   eventIcon: {
     fontSize: 12,
   },
-  xAxis: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: CHART_PADDING,
-    flexDirection: 'row',
-  },
-  xAxisLabel: {
-    position: 'absolute',
-    width: 40,
+  pointerLabel: {
+    backgroundColor: Colors.brand,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
     alignItems: 'center',
-    bottom: 0,
+  },
+  pointerEventText: {
+    fontSize: 9,
+    marginTop: 2,
   },
 });

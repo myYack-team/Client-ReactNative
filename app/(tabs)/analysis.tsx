@@ -39,7 +39,7 @@ export default function AnalysisScreen() {
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [isCheckingConsent, setIsCheckingConsent] = useState(true);
 
-  // Quota 상태
+  // 쿼터 정보
   const [quotaInfo, setQuotaInfo] = useState<QuotaInfo | null>(null);
 
   // AI 동의 확인
@@ -58,29 +58,32 @@ export default function AnalysisScreen() {
     checkAiConsent();
   }, []);
 
-  // Quota 정보 로드
-  const fetchQuotaInfo = async () => {
-    try {
-      const quota = await analysisService.getQuota();
-      setQuotaInfo(quota);
-    } catch (error) {
-      console.error('쿼터 정보 조회 실패:', error);
-    }
-  };
-
   // 탭 포커스 시 데이터 로드
   useFocusEffect(
     useCallback(() => {
       fetchReports().catch((err) => {
         console.error('Failed to load analysis data:', err);
       });
-      fetchQuotaInfo();
+
+      // 쿼터 정보 조회
+      analysisService.getQuota().then((quota) => {
+        setQuotaInfo(quota);
+      }).catch((err) => {
+        console.error('Failed to load quota info:', err);
+      });
     }, [])
   );
 
   // 새로고침
   const handleRefresh = async () => {
     await fetchReports();
+    // 쿼터 정보도 새로고침
+    try {
+      const quota = await analysisService.getQuota();
+      setQuotaInfo(quota);
+    } catch (err) {
+      console.error('Failed to refresh quota info:', err);
+    }
   };
 
   // AI 동의 처리
