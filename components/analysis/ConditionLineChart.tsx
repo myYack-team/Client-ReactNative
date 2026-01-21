@@ -147,7 +147,7 @@ export function ConditionLineChart({ dailyConditions, events = [] }: ConditionLi
                   ]}
                 >
                   <Typography variant="caption" style={styles.eventIcon}>
-                    {event.icon}
+                    {event.eventIcon}
                   </Typography>
                 </View>
               )}
