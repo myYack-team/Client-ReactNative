@@ -677,13 +677,32 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </Modal>
 
-        {/* 복약 스케줄 */}
-        <View style={styles.scheduleSection}>
-          <Typography variant="h3" style={styles.sectionTitle}>
-            {isSelectedDateToday ? '오늘의 복약' : `${selectedDate.substring(5).replace('-', '/')} 복약`}
-          </Typography>
-        </View>
+        {/* 오늘의 컨디션 기록 카드 */}
+        {isSelectedDateToday && (
+          <TouchableOpacity
+            style={styles.conditionCard}
+            onPress={() => router.push(`/health-note/${selectedDate}`)}
+          >
+            <View style={styles.conditionCardContent}>
+              <Typography variant="h3" style={styles.conditionCardEmoji}>
+                📝
+              </Typography>
+              <View style={styles.conditionCardText}>
+                <Typography variant="body" style={styles.conditionCardTitle}>
+                  오늘의 컨디션 기록
+                </Typography>
+                <Typography variant="caption" color={Colors.textSecondary}>
+                  몸 상태와 메모를 남겨보세요
+                </Typography>
+              </View>
+              <Typography variant="body" color={Colors.textTertiary}>
+                &gt;
+              </Typography>
+            </View>
+          </TouchableOpacity>
+        )}
 
+        {/* 복약 스케줄 */}
         {storeIsLoadingSchedule ? (
           <Card style={styles.emptyCard} variant="elevated">
             <Typography variant="body" style={styles.emptyText}>
@@ -707,11 +726,31 @@ export default function HomeScreen() {
                 <Typography variant="h3">
                   {group.timingIcon} {group.timingLabel}
                 </Typography>
-                {group.allTaken && (
-                  <View style={styles.completedBadgeSmall}>
-                    <Typography variant="caption" color={Colors.primary}>완료</Typography>
-                  </View>
-                )}
+                <View style={styles.timePeriodHeaderActions}>
+                  {/* 모두 복용 버튼 */}
+                  {!group.allTaken && group.timeSlots.some(slot => slot.medications.filter(m => !m.taken).length > 0) && (
+                    <TouchableOpacity
+                      style={styles.takeAllGroupButton}
+                      onPress={() => {
+                        // 시간대 전체 미복용 약물 수집
+                        const allNotTakenMeds = group.timeSlots.flatMap(slot =>
+                          slot.medications.filter(m => !m.taken).map(m => m.id)
+                        );
+                        if (allNotTakenMeds.length > 0) {
+                          recordIntake(allNotTakenMeds, group.timing);
+                        }
+                      }}
+                    >
+                      <Typography variant="caption" color={Colors.primary}>모두 복용</Typography>
+                    </TouchableOpacity>
+                  )}
+                  {/* 완료 배지 */}
+                  {group.allTaken && (
+                    <View style={styles.completedBadgeSmall}>
+                      <Typography variant="caption" color={Colors.primary}>완료</Typography>
+                    </View>
+                  )}
+                </View>
               </View>
 
               {/* 시간 슬롯 목록 */}
@@ -786,16 +825,6 @@ export default function HomeScreen() {
                     })}
                   </View>
 
-                  {/* 시간 슬롯 전체 복용 버튼 */}
-                  {!slot.allTaken && slot.medications.filter(m => !m.taken).length > 1 && (
-                    <TouchableOpacity
-                      style={styles.takeAllSlotButton}
-                      onPress={() => handleTakeAllInSlot(slot, group.timing)}
-                    >
-                      <Typography variant="caption" color={Colors.primary}>모두 복용</Typography>
-                    </TouchableOpacity>
-                  )}
-
                   {/* 구분선 (마지막 슬롯 제외) */}
                   {slotIndex < group.timeSlots.length - 1 && (
                     <View style={styles.slotDivider} />
@@ -813,31 +842,6 @@ export default function HomeScreen() {
               )}
             </Card>
           ))
-        )}
-
-        {/* 오늘의 컨디션 기록 카드 */}
-        {isSelectedDateToday && (
-          <TouchableOpacity
-            style={styles.conditionCard}
-            onPress={() => router.push(`/health-note/${selectedDate}`)}
-          >
-            <View style={styles.conditionCardContent}>
-              <Typography variant="h3" style={styles.conditionCardEmoji}>
-                📝
-              </Typography>
-              <View style={styles.conditionCardText}>
-                <Typography variant="body" style={styles.conditionCardTitle}>
-                  오늘의 컨디션 기록
-                </Typography>
-                <Typography variant="caption" color={Colors.textSecondary}>
-                  몸 상태와 메모를 남겨보세요
-                </Typography>
-              </View>
-              <Typography variant="body" color={Colors.textTertiary}>
-                &gt;
-              </Typography>
-            </View>
-          </TouchableOpacity>
         )}
 
         <Button
@@ -872,7 +876,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 8,
     paddingBottom: 40,
   },
   header: {
@@ -897,7 +902,7 @@ const styles = StyleSheet.create({
   },
   weekStrip: {
     marginBottom: 16,
-    paddingVertical: 8,
+    paddingVertical: 4,
   },
   weekStripDivider: {
     height: 1,
@@ -1079,6 +1084,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.divider,
   },
+  timePeriodHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  takeAllGroupButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderRadius: 16,
+  },
   completedBadgeSmall: {
     backgroundColor: Colors.primaryLightest,
     paddingHorizontal: 8,
@@ -1184,7 +1201,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: 12,
     padding: 16,
-    marginTop: 16,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: Colors.border,
   },

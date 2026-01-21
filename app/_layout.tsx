@@ -17,6 +17,38 @@ export default function RootLayout() {
   const notificationListener = useRef<Notifications.Subscription | null>(null);
   const responseListener = useRef<Notifications.Subscription | null>(null);
 
+  // 앱 종료 상태에서 알림 클릭으로 시작된 경우의 응답을 저장
+  const [initialNotificationResponse, setInitialNotificationResponse] =
+    useState<Notifications.NotificationResponse | null>(null);
+
+  // 알림 응답 처리 함수 (리스너와 initial notification에서 공통 사용)
+  const handleNotificationResponse = async (response: Notifications.NotificationResponse) => {
+    const actionId = notificationService.getActionIdentifier(response);
+    const data = response.notification.request.content.data;
+
+    console.log('[Notification] 알림 응답:', {
+      action: actionId || 'TAP',
+      data,
+    });
+
+    // 액션 버튼 처리 (Development Build에서만 동작)
+    if (actionId === NOTIFICATION_ACTIONS.TAKE) {
+      // 복용 버튼 클릭
+      console.log('[Notification] 복용 버튼 클릭');
+      // TODO: 복용 기록 API 호출 (data에서 medicationId, timing 등 추출)
+    } else if (actionId === NOTIFICATION_ACTIONS.SKIP) {
+      // 건너뛰기 버튼 클릭
+      console.log('[Notification] 건너뛰기 버튼 클릭');
+      // TODO: 건너뛰기 기록 API 호출
+    } else {
+      // 알림 자체를 클릭한 경우 - 홈 화면으로 이동
+      router.push('/(tabs)');
+    }
+
+    // 배지 초기화
+    notificationService.clearBadge();
+  };
+
   useEffect(() => {
     initAuth();
     initSettings();
@@ -29,35 +61,21 @@ export default function RootLayout() {
     );
 
     // 알림 응답 리스너 (알림 클릭 또는 액션 버튼 클릭 시)
+    // Background 상태에서 알림 클릭 시 동작
     responseListener.current = notificationService.addNotificationResponseListener(
-      async (response) => {
-        const actionId = notificationService.getActionIdentifier(response);
-        const data = response.notification.request.content.data;
-
-        console.log('[Notification] 알림 응답:', {
-          action: actionId || 'TAP',
-          data,
-        });
-
-        // 액션 버튼 처리 (Development Build에서만 동작)
-        if (actionId === NOTIFICATION_ACTIONS.TAKE) {
-          // 복용 버튼 클릭
-          console.log('[Notification] 복용 버튼 클릭');
-          // TODO: 복용 기록 API 호출 (data에서 medicationId, timing 등 추출)
-          // 현재는 서버에서 data를 포함하지 않으므로 추후 구현
-        } else if (actionId === NOTIFICATION_ACTIONS.SKIP) {
-          // 건너뛰기 버튼 클릭
-          console.log('[Notification] 건너뛰기 버튼 클릭');
-          // TODO: 건너뛰기 기록 API 호출
-        } else {
-          // 알림 자체를 클릭한 경우 - 홈 화면으로 이동
-          router.push('/(tabs)');
-        }
-
-        // 배지 초기화
-        notificationService.clearBadge();
-      }
+      handleNotificationResponse
     );
+
+    // 앱이 종료된 상태(killed)에서 알림 클릭으로 시작된 경우
+    // 즉시 처리하지 않고 state에 저장 (Race Condition 방지)
+    const checkInitialNotification = async () => {
+      const response = await Notifications.getLastNotificationResponseAsync();
+      if (response) {
+        console.log('[Notification] Initial notification 감지 - 앱 초기화 완료 후 처리 예정');
+        setInitialNotificationResponse(response);
+      }
+    };
+    checkInitialNotification();
 
     return () => {
       if (notificationListener.current) {
@@ -68,6 +86,20 @@ export default function RootLayout() {
       }
     };
   }, []);
+
+  // 앱 초기화 완료 후 저장된 initial notification 처리
+  useEffect(() => {
+    if (
+      initialNotificationResponse &&
+      !authLoading &&
+      !settingsLoading &&
+      !showSplash
+    ) {
+      console.log('[Notification] 앱 초기화 완료 - Initial notification 처리');
+      handleNotificationResponse(initialNotificationResponse);
+      setInitialNotificationResponse(null);
+    }
+  }, [initialNotificationResponse, authLoading, settingsLoading, showSplash]);
 
   // 인증 상태일 때 FCM 토큰 등록
   // - 로그인 상태 변경 시 (로그인 직후)

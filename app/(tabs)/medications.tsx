@@ -408,14 +408,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingTop: 8,
     paddingBottom: 40,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 24,
+    marginBottom: 8,
   },
   headerLeft: {
     flex: 1,
@@ -474,8 +475,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   medThumbnail: {
-    width: 60,
-    height: 48,
+    width: 78,
+    height: 62,
     borderRadius: 8,
   },
   medThumbnailPlaceholder: {
@@ -491,11 +492,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     flexWrap: 'wrap',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   medicationInfo: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 8,
   },
   infoItem: {
     flex: 1,
