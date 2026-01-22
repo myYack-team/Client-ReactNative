@@ -170,11 +170,12 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
       const pollResult = async (): Promise<boolean> => {
         try {
           const result = await analysisService.getAnalysisResult(reportId);
-          // 성공
+          // 성공 - error도 명시적으로 null로 초기화
           set({
             pendingAnalysis: null,
             completedResult: result as AnalysisResultExtended,
             reportsExpiry: 0, // 레포트 목록 캐시 무효화
+            error: null,
           });
           return true;
         } catch {

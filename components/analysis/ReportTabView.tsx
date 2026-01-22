@@ -57,7 +57,7 @@ export function ReportTabView({
 
   // 탭 정의 (뱃지 포함)
   const tabs: Tab[] = [
-    { key: 'trend', label: '추세', icon: '📈' },
+    { key: 'trend', label: '나의 리포트', icon: '📈' },
     { key: 'summary', label: '요약', icon: '📋' },
     {
       key: 'food',

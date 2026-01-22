@@ -43,6 +43,10 @@ export default function AnalysisScreen() {
   // 쿼터 정보
   const [quotaInfo, setQuotaInfo] = useState<QuotaInfo | null>(null);
 
+  // 페이지네이션 상태
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 5;
+
   // AI 동의 확인
   useEffect(() => {
     const checkAiConsent = async () => {
@@ -136,6 +140,13 @@ export default function AnalysisScreen() {
     router.push(`/analysis/${reportId}`);
   };
 
+  // 페이지네이션 계산
+  const totalPages = Math.ceil(reports.length / ITEMS_PER_PAGE);
+  const paginatedReports = reports.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
@@ -174,7 +185,8 @@ export default function AnalysisScreen() {
               </Typography>
               <Typography variant="bodySmall" color={Colors.textSecondary}>
                 등록된 약물들의 작용 기전을 쉽게 설명해드리고,{'\n'}
-                주의해야 할 음식과의 상호작용을 알려드려요.
+                주의해야 할 음식과의 상호작용을 알려드려요.{'\n'}
+                마이약을 오래 사용할수록 더 정확한 리포트를 받을 수 있어요.
               </Typography>
             </View>
           </View>
@@ -218,15 +230,40 @@ export default function AnalysisScreen() {
               </Typography>
             </Card>
           ) : (
-            <View style={styles.reportList}>
-              {reports.map((report) => (
-                <ReportListItem
-                  key={report.id}
-                  report={report}
-                  onPress={() => handleReportPress(report.id)}
-                />
-              ))}
-            </View>
+            <>
+              <View style={styles.reportList}>
+                {paginatedReports.map((report) => (
+                  <ReportListItem
+                    key={report.id}
+                    report={report}
+                    onPress={() => handleReportPress(report.id)}
+                  />
+                ))}
+              </View>
+
+              {/* 페이지네이션 */}
+              {totalPages > 1 && (
+                <View style={styles.pagination}>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <TouchableOpacity
+                      key={page}
+                      style={[
+                        styles.pageButton,
+                        currentPage === page && styles.pageButtonActive,
+                      ]}
+                      onPress={() => setCurrentPage(page)}
+                    >
+                      <Typography
+                        variant="bodySmall"
+                        color={currentPage === page ? Colors.white : Colors.textSecondary}
+                      >
+                        {page}
+                      </Typography>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </>
           )}
         </View>
 
@@ -346,5 +383,23 @@ const styles = StyleSheet.create({
     marginTop: 24,
     alignItems: 'center',
     padding: 12,
+  },
+  pagination: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 20,
+  },
+  pageButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.backgroundSecondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pageButtonActive: {
+    backgroundColor: Colors.brand,
   },
 });

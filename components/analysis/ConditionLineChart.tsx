@@ -8,12 +8,14 @@ import { DailyCondition, TimelineEvent } from '../../types';
 interface ConditionLineChartProps {
   dailyConditions: DailyCondition[];
   events?: TimelineEvent[];
+  selectedIndex?: number | null;
+  onDataPointPress?: (index: number) => void;
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CHART_WIDTH = SCREEN_WIDTH - 80;
 
-export function ConditionLineChart({ dailyConditions, events = [] }: ConditionLineChartProps) {
+export function ConditionLineChart({ dailyConditions, events = [], selectedIndex = null, onDataPointPress }: ConditionLineChartProps) {
   if (!dailyConditions || dailyConditions.length === 0) {
     return (
       <View style={styles.emptyContainer}>
@@ -102,6 +104,12 @@ export function ConditionLineChart({ dailyConditions, events = [] }: ConditionLi
   // Y축 라벨 섹션 개수
   const noOfSections = Math.max(maxY - minY, 2);
 
+  // 선택된 데이터 포인트 정보
+  const selectedData = selectedIndex !== null && selectedIndex >= 0 && selectedIndex < displayData.length
+    ? displayData[selectedIndex]
+    : null;
+  const selectedEvent = selectedData ? findEvent(selectedData.date) : null;
+
   return (
     <View style={styles.container}>
       <LineChart
@@ -179,7 +187,31 @@ export function ConditionLineChart({ dailyConditions, events = [] }: ConditionLi
             );
           },
         }}
+        onPress={(item: any, index: number) => {
+          onDataPointPress?.(index);
+        }}
       />
+
+      {/* 선택된 데이터 포인트 정보 카드 */}
+      {selectedData && (
+        <View style={styles.selectedInfoCard}>
+          <View style={styles.selectedInfoHeader}>
+            <Typography variant="bodySmall" color={Colors.textSecondary}>
+              {formatDate(selectedData.date)}
+            </Typography>
+            <Typography variant="h3" color={Colors.brand}>
+              {(selectedData as any).conditionScore ?? selectedData.score}점
+            </Typography>
+          </View>
+          {selectedEvent && (
+            <View style={styles.selectedEventBadge}>
+              <Typography variant="caption">
+                {selectedEvent.eventIcon} {selectedEvent.title}
+              </Typography>
+            </View>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -237,5 +269,26 @@ const styles = StyleSheet.create({
   pointerEventText: {
     fontSize: 9,
     marginTop: 2,
+  },
+  selectedInfoCard: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: Colors.brandLightest,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.brand,
+  },
+  selectedInfoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  selectedEventBadge: {
+    marginTop: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    backgroundColor: Colors.white,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
   },
 });

@@ -8,7 +8,7 @@ logger.log('[API] Initializing with base URL:', API_BASE_URL);
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 60000, // 60초 (이미지 업로드 등 대용량 요청 고려)
+  timeout: 300000, // 5분 (AI 분석 등 장시간 요청 고려)
   headers: {
     'Content-Type': 'application/json',
   },

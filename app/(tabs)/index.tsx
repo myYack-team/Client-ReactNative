@@ -303,7 +303,7 @@ export default function HomeScreen() {
 
   // 시간대 정보 매핑
   const TIMING_INFO: Record<MedicationTiming, { label: string }> = {
-    MORNING: { label: '오전' },
+    MORNING: { label: '아침' },
     AFTERNOON: { label: '점심' },
     EVENING: { label: '저녁' },
     AS_NEEDED: { label: '필요시' },
@@ -771,95 +771,85 @@ export default function HomeScreen() {
                 </View>
               </View>
 
-              {/* 시간 슬롯 목록 */}
-              {group.timeSlots.map((slot, slotIndex) => (
-                <View key={slot.time} style={styles.timeSlotContainer}>
-                  {/* 시간 라벨 */}
-                  <View style={styles.timeSlotHeader}>
-                    <View style={styles.timeSlotLabelContainer}>
-                      <Typography variant="body" style={styles.timeSlotLabel}>
-                        [{slot.time}]
-                      </Typography>
-                    </View>
-                  </View>
+              {/* 약물 목록 (시간순 정렬) */}
+              <View style={styles.medicationList}>
+                {group.timeSlots
+                  .flatMap((slot) => slot.medications.map((med) => ({ med, slotTime: slot.time })))
+                  .sort((a, b) => a.slotTime.localeCompare(b.slotTime))
+                  .map(({ med, slotTime }) => {
+                    const status = getMedStatus(med, slotTime);
+                    return (
+                      <View key={med.id} style={styles.medicationItemCompact}>
+                        <View style={styles.medicationRowCompact}>
+                          {/* 알림 시간 */}
+                          <Typography variant="caption" style={styles.medTimeLabel}>
+                            {slotTime}
+                          </Typography>
 
-                  {/* 약물 목록 */}
-                  <View style={styles.medicationList}>
-                    {slot.medications.map((med) => {
-                      const status = getMedStatus(med, slot.time);
-                      return (
-                        <View key={med.id} style={styles.medicationItemCompact}>
-                          <View style={styles.medicationRowCompact}>
-                            {/* 약물 이미지 썸네일 */}
-                            <View style={styles.medThumbnailContainerSmall}>
-                              {med.imageUrl ? (
-                                <Image source={{ uri: med.imageUrl }} style={styles.medThumbnailSmall} resizeMode="cover" />
-                              ) : (
-                                <View style={[styles.medThumbnailSmall, styles.medThumbnailPlaceholder]}>
-                                  <Image
-                                    source={med.isSupplement
-                                      ? require('../../assets/icons_iamge_processed/47_Leaf.png')
-                                      : require('../../assets/icons_iamge_processed/02_Pill.png')
-                                    }
-                                    style={styles.placeholderIcon}
-                                    accessibilityLabel={med.isSupplement ? 'Supplement placeholder' : 'Medication placeholder'}
-                                    resizeMode="contain"
-                                  />
-                                </View>
-                              )}
-                              {med.taken && (
-                                <View style={styles.takenOverlaySmall}>
-                                  <Image
-                                    source={require('../../assets/icons_iamge_processed/31_Checkmark.png')}
-                                    style={styles.checkmarkIcon}
-                                    accessibilityLabel="Taken checkmark"
-                                    resizeMode="contain"
-                                  />
-                                </View>
-                              )}
-                            </View>
-
-                            {/* 약물 정보 */}
-                            <View style={styles.medicationInfoCompact}>
-                              <Typography
-                                variant="body"
-                                style={med.taken ? StyleSheet.flatten([styles.medicationNameCompact, styles.medicationNameTaken]) : styles.medicationNameCompact}
-                                numberOfLines={1}
-                              >
-                                {getMedDisplayName(med)}
-                              </Typography>
-                            </View>
-
-                            {/* 복용 상태 표시 */}
-                            {status === 'pending' ? (
-                              <TouchableOpacity
-                                style={styles.takeButtonCompact}
-                                onPress={() => handleTakeMedication(med, group.timing)}
-                                disabled={processingMeds.has(med.id)}
-                              >
-                                <Typography variant="caption" color={Colors.white}>지금 복용</Typography>
-                              </TouchableOpacity>
-                            ) : status === 'taken' ? (
-                              <View style={styles.takenBadge}>
-                                <Typography variant="caption" color={Colors.primary}>복용 완료</Typography>
-                              </View>
+                          {/* 약물 이미지 썸네일 */}
+                          <View style={styles.medThumbnailContainerSmall}>
+                            {med.imageUrl ? (
+                              <Image source={{ uri: med.imageUrl }} style={styles.medThumbnailSmall} resizeMode="cover" />
                             ) : (
-                              <View style={styles.missedBadge}>
-                                <Typography variant="caption" color="#F44336">누락</Typography>
+                              <View style={[styles.medThumbnailSmall, styles.medThumbnailPlaceholder]}>
+                                <Image
+                                  source={med.isSupplement
+                                    ? require('../../assets/icons_iamge_processed/47_Leaf.png')
+                                    : require('../../assets/icons_iamge_processed/02_Pill.png')
+                                  }
+                                  style={styles.placeholderIcon}
+                                  accessibilityLabel={med.isSupplement ? 'Supplement placeholder' : 'Medication placeholder'}
+                                  resizeMode="contain"
+                                />
+                              </View>
+                            )}
+                            {med.taken && (
+                              <View style={styles.takenOverlaySmall}>
+                                <Image
+                                  source={require('../../assets/icons_iamge_processed/31_Checkmark.png')}
+                                  style={styles.checkmarkIcon}
+                                  accessibilityLabel="Taken checkmark"
+                                  resizeMode="contain"
+                                />
                               </View>
                             )}
                           </View>
-                        </View>
-                      );
-                    })}
-                  </View>
 
-                  {/* 구분선 (마지막 슬롯 제외) */}
-                  {slotIndex < group.timeSlots.length - 1 && (
-                    <View style={styles.slotDivider} />
-                  )}
-                </View>
-              ))}
+                          {/* 약물 정보 */}
+                          <View style={styles.medicationInfoCompact}>
+                            <Typography
+                              variant="body"
+                              style={med.taken ? StyleSheet.flatten([styles.medicationNameCompact, styles.medicationNameTaken]) : styles.medicationNameCompact}
+                              numberOfLines={1}
+                            >
+                              {getMedDisplayName(med)}
+                            </Typography>
+                          </View>
+
+                          {/* 복용 상태 표시 */}
+                          {status === 'pending' ? (
+                            <TouchableOpacity
+                              style={styles.takeButtonCompact}
+                              onPress={() => handleTakeMedication(med, group.timing)}
+                              disabled={processingMeds.has(med.id)}
+                            >
+                              <Typography variant="caption" color={Colors.white}>지금 복용</Typography>
+                            </TouchableOpacity>
+                          ) : status === 'taken' ? (
+                            <View style={styles.takenBadge}>
+                              <Typography variant="caption" color={Colors.primary}>복용 완료</Typography>
+                            </View>
+                          ) : (
+                            <View style={styles.missedBadge}>
+                              <Typography variant="caption" color="#F44336">누락</Typography>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    );
+                  })
+                }
+              </View>
 
               {/* 시간대 전체 완료 표시 */}
               {group.allTaken && (
@@ -1117,9 +1107,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 12,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.divider,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginHorizontal: -16,
+    marginTop: -16,
+    backgroundColor: '#F5F5F5',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
   },
   timingHeaderLeft: {
     flexDirection: 'row',
@@ -1147,26 +1141,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-  },
-  // 시간 슬롯 스타일
-  timeSlotContainer: {
-    marginBottom: 8,
-  },
-  timeSlotHeader: {
-    marginBottom: 8,
-  },
-  timeSlotLabelContainer: {
-    alignSelf: 'flex-start',
-  },
-  timeSlotLabel: {
-    color: '#2196F3',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  slotDivider: {
-    height: 1,
-    backgroundColor: Colors.divider,
-    marginVertical: 12,
   },
   // 컴팩트 약물 아이템 스타일
   medicationItemCompact: {
@@ -1210,11 +1184,17 @@ const styles = StyleSheet.create({
   medicationNameTaken: {
     color: Colors.textSecondary,
   },
+  medTimeLabel: {
+    color: Colors.secondary,
+    fontWeight: '500',
+    fontSize: 12,
+    minWidth: 40,
+  },
   takeButtonCompact: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.secondary,
     alignItems: 'center',
     justifyContent: 'center',
   },

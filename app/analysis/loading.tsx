@@ -280,6 +280,9 @@ export default function AnalysisLoadingScreen() {
 
   // 분석 실패 시 에러 알림 후 돌아가기
   useEffect(() => {
+    // 이미 완료되었거나 네비게이션 중이면 에러 알림 표시하지 않음
+    if (completedResult || isNavigatingRef.current) return;
+
     if (error && pendingAnalysis?.status === 'failed') {
       console.log('[AnalysisLoading] Analysis failed:', error);
       Alert.alert(
@@ -288,7 +291,7 @@ export default function AnalysisLoadingScreen() {
         [{ text: '확인', onPress: () => router.back() }]
       );
     }
-  }, [error, pendingAnalysis?.status]);
+  }, [error, pendingAnalysis?.status, completedResult]);
 
   // 진행률 업데이트
   useEffect(() => {

@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Typography } from '../../ui';
 import { Colors } from '../../../constants';
 import { PatternAnalysis } from '../../../types';
@@ -11,16 +11,23 @@ interface TrendTabProps {
 }
 
 export function TrendTab({ patternAnalysis }: TrendTabProps) {
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+
+  // Helper function to find graph index by date
+  const findIndexByDate = (date?: string): number => {
+    if (!date || !patternAnalysis?.dailyConditions || patternAnalysis.dailyConditions.length === 0) return -1;
+    return patternAnalysis.dailyConditions.findIndex(d => d.date === date);
+  };
   // 데이터 없음
   if (!patternAnalysis) {
     return (
       <View style={styles.emptyContainer}>
         <Typography variant="h2" style={styles.emptyIcon}>📈</Typography>
         <Typography variant="body" color={Colors.textSecondary} style={styles.emptyText}>
-          추세 분석 데이터가 없습니다.
+          리포트 데이터가 없습니다.
         </Typography>
         <Typography variant="caption" color={Colors.textTertiary} style={styles.emptySubText}>
-          건강 메모를 기록하면 추세 분석을 제공합니다.
+          건강 메모를 기록하면 리포트를 제공합니다.
         </Typography>
       </View>
     );
@@ -36,101 +43,114 @@ export function TrendTab({ patternAnalysis }: TrendTabProps) {
 
   return (
     <View style={styles.container}>
-      {/* 요약 섹션 */}
-      {summary && (
-        <View style={styles.summarySection}>
-          {/* 전반적 평가 */}
-          {summary.overallAssessment && (
-            <Typography variant="h4" style={styles.headline}>
-              {summary.overallAssessment}
-            </Typography>
-          )}
-
-          {/* 긍정적 포인트 */}
-          {summary.positivePoint && (
-            <View style={styles.pointItem}>
-              <Typography variant="body" color={Colors.primary}>✓</Typography>
-              <Typography variant="bodySmall" color={Colors.textSecondary} style={styles.pointText}>
-                {summary.positivePoint}
-              </Typography>
-            </View>
-          )}
-
-          {/* 개선 포인트 */}
-          {summary.improvementPoint && (
-            <View style={[styles.pointItem, { marginTop: 8 }]}>
-              <Typography variant="body" color={Colors.warning}>!</Typography>
-              <Typography variant="bodySmall" color={Colors.textSecondary} style={styles.pointText}>
-                {summary.improvementPoint}
-              </Typography>
-            </View>
-          )}
-
-          {/* 격려 메시지 */}
-          {summary.encouragement && (
-            <View style={styles.encouragementContainer}>
-              <Typography variant="caption" color={Colors.brand} style={styles.encouragementText}>
-                💪 {summary.encouragement}
-              </Typography>
-            </View>
-          )}
-        </View>
-      )}
-
       {/* 컨디션 라인 차트 */}
       {dailyConditions && dailyConditions.length > 0 && (
         <View style={styles.section}>
           <Typography variant="h4" style={styles.sectionTitle}>
-            컨디션 추이
+            복약-컨디션 그래프
           </Typography>
           <ConditionLineChart
             dailyConditions={dailyConditions}
             events={events}
+            selectedIndex={selectedIndex}
+            onDataPointPress={(index) => {
+              // 같은 포인트 재탭 시 토글
+              setSelectedIndex(prev => prev === index ? null : index);
+            }}
           />
         </View>
       )}
 
-      {/* 복약 순응도 분석 */}
+
+      {/* 복약 달성률 분석 */}
       {adherenceAnalysis && (
         <View style={styles.section}>
           <Typography variant="h4" style={styles.sectionTitle}>
-            복약 순응도
+            복약 달성률
           </Typography>
           <View style={styles.adherenceCard}>
-            <View style={styles.adherenceRateContainer}>
-              <Typography variant="h1" color={Colors.brand} style={styles.adherenceRate}>
+            {/* Progress Bar */}
+            <View style={styles.progressContainer}>
+              <View style={styles.progressBar}>
+                <View style={[styles.progressFill, { width: `${Math.round(adherenceAnalysis.overallRate)}%` }]} />
+              </View>
+              <Typography variant="h3" color={Colors.brand}>
                 {Math.round(adherenceAnalysis.overallRate)}%
-              </Typography>
-              <Typography variant="caption" color={Colors.textSecondary}>
-                전체 복약률
               </Typography>
             </View>
 
-            <View style={styles.adherenceDetails}>
+            {/* Combined Patterns */}
+            <View style={styles.patternGrid}>
               {/* 요일 패턴 */}
               {adherenceAnalysis.weekdayPattern && (
-                <View style={styles.adherenceItem}>
-                  <Typography variant="caption" color={Colors.textTertiary}>
-                    요일별
+                <View style={styles.patternItem}>
+                  <Typography variant="body" color={Colors.primary}>✓</Typography>
+                  <Typography variant="bodySmall" style={{ flex: 1 }}>
+                    {adherenceAnalysis.weekdayPattern.bestDay}이 가장 좋아요
                   </Typography>
-                  <Typography variant="bodySmall">
-                    {adherenceAnalysis.weekdayPattern.bestDay}요일이 가장 좋아요
-                  </Typography>
+                  {adherenceAnalysis.weekdayPattern.worstDay && (
+                    <>
+                      <Typography variant="body" color={Colors.warning}>!</Typography>
+                      <Typography variant="bodySmall" style={{ flex: 1 }}>
+                        {adherenceAnalysis.weekdayPattern.worstDay}을 조심하세요
+                      </Typography>
+                    </>
+                  )}
                 </View>
               )}
 
               {/* 시간대 패턴 */}
               {adherenceAnalysis.timingPattern && (
-                <View style={styles.adherenceItem}>
-                  <Typography variant="caption" color={Colors.textTertiary}>
-                    시간대별
-                  </Typography>
-                  <Typography variant="bodySmall">
+                <View style={styles.patternItem}>
+                  <Typography variant="body" color={Colors.primary}>✓</Typography>
+                  <Typography variant="bodySmall" style={{ flex: 1 }}>
                     {adherenceAnalysis.timingPattern.bestTiming}에 가장 잘 챙겨요
                   </Typography>
+                  {adherenceAnalysis.timingPattern.worstTiming && (
+                    <>
+                      <Typography variant="body" color={Colors.warning}>!</Typography>
+                      <Typography variant="bodySmall" style={{ flex: 1 }}>
+                        {adherenceAnalysis.timingPattern.worstTiming} 복약 놓침 주의
+                      </Typography>
+                    </>
+                  )}
                 </View>
               )}
             </View>
+          </View>
+        </View>
+      )}
+
+      {/* 주요 이벤트 */}
+      {events && events.length > 0 && (
+        <View style={styles.section}>
+          <Typography variant="h4" style={styles.sectionTitle}>
+            주요 이벤트
+          </Typography>
+          <View style={styles.eventList}>
+            {events.map((event, index) => {
+              const eventIndex = findIndexByDate(event.date);
+              const isSelected = selectedIndex === eventIndex;
+
+              return (
+                <TouchableOpacity
+                  key={`event-${index}`}
+                  style={[styles.eventCard, isSelected && styles.eventCardSelected]}
+                  onPress={() => {
+                    if (eventIndex >= 0) {
+                      setSelectedIndex(prev => prev === eventIndex ? null : eventIndex);
+                    }
+                  }}
+                >
+                  <Typography variant="caption" color={Colors.textTertiary}>
+                    {event.date}
+                  </Typography>
+                  <Typography variant="bodySmall" style={{ marginTop: 4 }}>
+                    {event.description}
+                  </Typography>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
       )}
@@ -173,35 +193,6 @@ const styles = StyleSheet.create({
   emptySubText: {
     textAlign: 'center',
   },
-  summarySection: {
-    marginBottom: 24,
-    padding: 16,
-    backgroundColor: Colors.brandLightest,
-    borderRadius: 12,
-  },
-  headline: {
-    marginBottom: 12,
-    color: Colors.brand,
-    lineHeight: 24,
-  },
-  pointItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  encouragementContainer: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: Colors.brand + '30',
-  },
-  encouragementText: {
-    fontStyle: 'italic',
-    lineHeight: 18,
-  },
-  pointText: {
-    flex: 1,
-  },
   section: {
     marginBottom: 24,
   },
@@ -215,22 +206,45 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  adherenceRateContainer: {
+  progressContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.divider,
-  },
-  adherenceRate: {
-    fontSize: 48,
-    fontWeight: '700',
-  },
-  adherenceDetails: {
     gap: 12,
+    marginBottom: 16,
   },
-  adherenceItem: {
-    gap: 2,
+  progressBar: {
+    flex: 1,
+    height: 12,
+    backgroundColor: Colors.backgroundSecondary,
+    borderRadius: 6,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: Colors.brand,
+    borderRadius: 6,
+  },
+  patternGrid: {
+    gap: 8,
+  },
+  patternItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  eventList: {
+    gap: 8,
+  },
+  eventCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  eventCardSelected: {
+    borderColor: Colors.brand,
+    backgroundColor: Colors.brandLightest,
   },
   cardList: {
     gap: 12,
