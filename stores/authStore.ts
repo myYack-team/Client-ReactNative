@@ -1,25 +1,25 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
-import { AxiosError } from 'axios';
+import axios from 'axios';
 import { User } from '../types';
 import { authService, userService } from '../services';
 import { clearSession } from '../services/api';
 import { logger } from '../utils/logger';
 
+/**
+ * 인증 관련 에러인지 판별
+ * - 401/403 HTTP 상태 코드
+ * - AUTH로 시작하는 서버 에러 코드
+ * 주의: 메시지 기반 매칭은 오탐(푸시 토큰 등) 위험이 있어 제외
+ */
 function isAuthError(error: unknown): boolean {
-  if (error instanceof AxiosError) {
+  if (axios.isAxiosError(error)) {
     const status = error.response?.status;
     if (status === 401 || status === 403) {
       return true;
     }
     const code = error.response?.data?.code;
     if (typeof code === 'string' && code.startsWith('AUTH')) {
-      return true;
-    }
-  }
-  if (error instanceof Error) {
-    const msg = error.message.toLowerCase();
-    if (msg.includes('unauthorized') || msg.includes('token') || msg.includes('auth')) {
       return true;
     }
   }
@@ -73,16 +73,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (isAuthError(error)) {
         logger.log('[Auth] Auth error - clearing tokens');
         await clearSession();
-        set({ isLoading: false, isAuthenticated: false, user: null });
-      } else {
-        // Network/5xx errors - keep tokens, show error
-        logger.log('[Auth] Non-auth error - keeping tokens');
-        set({
-          isLoading: false,
-          isAuthenticated: true,
-          error: '서버 연결에 실패했습니다. 네트워크를 확인해주세요.',
-        });
       }
+      // 에러 발생 시 무조건 미인증 상태로 설정 (로그인 페이지로 이동)
+      set({ isLoading: false, isAuthenticated: false, user: null });
     }
   },
 
@@ -146,11 +139,14 @@ export const useAuthStore = create<AuthState>((set) => ({
         isNewUser: result.isNewUser
       });
 
+      // 신규 유저이거나 약관 미동의 상태면 온보딩 필요
+      const needsOnboarding = result.isNewUser || !result.termsAgreed || !result.privacyAgreed;
+
       set({
         user,
         isAuthenticated: true,
         isLoading: false,
-        needsOnboarding: result.isNewUser
+        needsOnboarding
       });
 
       return {
