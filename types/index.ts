@@ -1085,6 +1085,7 @@ export interface PatternSummary {
 export interface DailyCondition {
   date: string;
   score: number;
+  content?: string;  // 메모 내용
 }
 
 // 타임라인 이벤트

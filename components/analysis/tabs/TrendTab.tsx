@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, StyleSheet, TouchableOpacity, ScrollView, LayoutChangeEvent } from 'react-native';
 import { Typography } from '../../ui';
 import { Colors } from '../../../constants';
 import { PatternAnalysis } from '../../../types';
@@ -8,15 +8,35 @@ import { PatternCard } from '../PatternCard';
 
 interface TrendTabProps {
   patternAnalysis?: PatternAnalysis;
+  scrollViewRef?: React.RefObject<ScrollView>;  // 부모 ScrollView ref
 }
 
-export function TrendTab({ patternAnalysis }: TrendTabProps) {
+export function TrendTab({ patternAnalysis, scrollViewRef }: TrendTabProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [highlightedEventDate, setHighlightedEventDate] = useState<string | null>(null);
+  const eventSectionRef = useRef<View>(null);
+  const [eventSectionY, setEventSectionY] = useState<number>(0);
 
   // Helper function to find graph index by date
   const findIndexByDate = (date?: string): number => {
     if (!date || !patternAnalysis?.dailyConditions || patternAnalysis.dailyConditions.length === 0) return -1;
     return patternAnalysis.dailyConditions.findIndex(d => d.date === date);
+  };
+
+  // 이벤트 라벨 클릭 시 해당 이벤트로 스크롤
+  const handleEventLabelPress = (eventDate: string) => {
+    setHighlightedEventDate(eventDate);
+    // 스크롤 to 주요 이벤트 섹션
+    if (scrollViewRef?.current && eventSectionY > 0) {
+      scrollViewRef.current.scrollTo({ y: eventSectionY - 20, animated: true });
+    }
+    // 3초 후 하이라이트 제거
+    setTimeout(() => setHighlightedEventDate(null), 3000);
+  };
+
+  // 이벤트 섹션 위치 측정
+  const onEventSectionLayout = (event: LayoutChangeEvent) => {
+    setEventSectionY(event.nativeEvent.layout.y);
   };
   // 데이터 없음
   if (!patternAnalysis) {
@@ -57,6 +77,7 @@ export function TrendTab({ patternAnalysis }: TrendTabProps) {
               // 같은 포인트 재탭 시 토글
               setSelectedIndex(prev => prev === index ? null : index);
             }}
+            onEventLabelPress={handleEventLabelPress}
           />
         </View>
       )}
@@ -123,7 +144,7 @@ export function TrendTab({ patternAnalysis }: TrendTabProps) {
 
       {/* 주요 이벤트 */}
       {events && events.length > 0 && (
-        <View style={styles.section}>
+        <View style={styles.section} ref={eventSectionRef} onLayout={onEventSectionLayout}>
           <Typography variant="h4" style={styles.sectionTitle}>
             주요 이벤트
           </Typography>
@@ -131,11 +152,16 @@ export function TrendTab({ patternAnalysis }: TrendTabProps) {
             {events.map((event, index) => {
               const eventIndex = findIndexByDate(event.date);
               const isSelected = selectedIndex === eventIndex;
+              const isHighlighted = highlightedEventDate === event.date;
 
               return (
                 <TouchableOpacity
                   key={`event-${index}`}
-                  style={[styles.eventCard, isSelected && styles.eventCardSelected]}
+                  style={[
+                    styles.eventCard,
+                    isSelected && styles.eventCardSelected,
+                    isHighlighted && styles.eventCardHighlighted,
+                  ]}
                   onPress={() => {
                     if (eventIndex >= 0) {
                       setSelectedIndex(prev => prev === eventIndex ? null : eventIndex);
@@ -244,6 +270,11 @@ const styles = StyleSheet.create({
   },
   eventCardSelected: {
     borderColor: Colors.brand,
+    backgroundColor: Colors.brandLightest,
+  },
+  eventCardHighlighted: {
+    borderColor: Colors.brand,
+    borderWidth: 2,
     backgroundColor: Colors.brandLightest,
   },
   cardList: {

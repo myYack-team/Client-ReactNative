@@ -9,10 +9,6 @@ import { analysisService } from '../services';
 // 캐시 만료 시간 (5분)
 const CACHE_DURATION = 5 * 60 * 1000;
 
-// 폴링 설정
-const POLLING_INTERVAL = 2000; // 2초
-const MAX_POLLING_TIME = 300000; // 5분 - 고성능 모델 + 대용량 데이터 분석 대응
-
 // 백그라운드 분석 상태 타입
 interface PendingAnalysis {
   reportId: number;
@@ -159,79 +155,14 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
       });
 
       const response = await analysisService.requestAnalysis();
-      const reportId = response.reportId;
 
-      // 2. 폴링 상태로 전환
+      // 서버가 동기 방식으로 완전한 결과를 반환하므로 바로 완료 처리
       set({
-        pendingAnalysis: { reportId, status: 'polling', startedAt },
+        pendingAnalysis: null,
+        completedResult: response as AnalysisResultExtended,
+        reportsExpiry: 0, // 레포트 목록 캐시 무효화
+        error: null,
       });
-
-      // 3. 폴링 시작
-      const pollResult = async (): Promise<boolean> => {
-        try {
-          const result = await analysisService.getAnalysisResult(reportId);
-          // 성공 - error도 명시적으로 null로 초기화
-          set({
-            pendingAnalysis: null,
-            completedResult: result as AnalysisResultExtended,
-            reportsExpiry: 0, // 레포트 목록 캐시 무효화
-            error: null,
-          });
-          return true;
-        } catch {
-          // 아직 분석 중 (계속 폴링)
-          return false;
-        }
-      };
-
-      // 초기 폴링 시도
-      const initialSuccess = await pollResult();
-      if (initialSuccess) return;
-
-      // 폴링 반복 (재시도 로직 포함)
-      let retryCount = 0;
-      const MAX_RETRIES = 3;
-
-      const pollInterval = setInterval(async () => {
-        const { pendingAnalysis: currentPending } = get();
-        const elapsed = Date.now() - startedAt;
-
-        // 분석이 취소되었거나 완료된 경우 중단
-        if (!currentPending || currentPending.status === 'completed' || currentPending.status === 'failed') {
-          clearInterval(pollInterval);
-          return;
-        }
-
-        // 타임아웃 체크
-        if (elapsed >= MAX_POLLING_TIME) {
-          clearInterval(pollInterval);
-          set({
-            pendingAnalysis: { reportId, status: 'failed', startedAt },
-            error: '분석 시간이 초과되었습니다. 잠시 후 다시 시도해주세요.',
-          });
-          return;
-        }
-
-        // 폴링 시도 (재시도 로직 포함)
-        try {
-          const success = await pollResult();
-          if (success) {
-            clearInterval(pollInterval);
-          }
-          retryCount = 0; // 성공 시 재시도 카운트 리셋
-        } catch (err) {
-          retryCount++;
-          console.log(`[AnalysisStore] Poll retry ${retryCount}/${MAX_RETRIES}`);
-
-          if (retryCount >= MAX_RETRIES) {
-            clearInterval(pollInterval);
-            set({
-              pendingAnalysis: { reportId, status: 'failed', startedAt },
-              error: '분석 결과를 불러오는데 실패했습니다.',
-            });
-          }
-        }
-      }, POLLING_INTERVAL);
 
     } catch (error) {
       const message = error instanceof Error ? error.message : '분석 요청에 실패했습니다.';

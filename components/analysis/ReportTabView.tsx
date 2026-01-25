@@ -36,6 +36,7 @@ interface ReportTabViewProps {
   foodSuggestions?: FoodSuggestion[];
   lifestyleTips?: LifestyleTip[];
   patternAnalysis?: PatternAnalysis;
+  scrollViewRef?: React.RefObject<ScrollView>;
 }
 
 export function ReportTabView({
@@ -44,6 +45,7 @@ export function ReportTabView({
   foodSuggestions = [],
   lifestyleTips = [],
   patternAnalysis,
+  scrollViewRef,
 }: ReportTabViewProps) {
   const [activeTab, setActiveTab] = useState<TabKey>('trend');
 
@@ -76,7 +78,7 @@ export function ReportTabView({
   const renderTabContent = () => {
     switch (activeTab) {
       case 'trend':
-        return <TrendTab patternAnalysis={patternAnalysis} />;
+        return <TrendTab patternAnalysis={patternAnalysis} scrollViewRef={scrollViewRef} />;
 
       case 'summary':
         return (

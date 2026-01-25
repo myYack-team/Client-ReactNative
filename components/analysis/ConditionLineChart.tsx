@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
 import { Typography } from '../ui';
 import { Colors } from '../../constants';
@@ -10,12 +10,22 @@ interface ConditionLineChartProps {
   events?: TimelineEvent[];
   selectedIndex?: number | null;
   onDataPointPress?: (index: number) => void;
+  onEventLabelPress?: (eventDate: string) => void;
 }
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CHART_WIDTH = SCREEN_WIDTH - 80;
+const POINT_SPACING = 50;
+const INITIAL_SPACING = 15;
+const Y_AXIS_LABEL_WIDTH = 24;
+const LABEL_WIDTH = 120;
 
-export function ConditionLineChart({ dailyConditions, events = [], selectedIndex = null, onDataPointPress }: ConditionLineChartProps) {
+export function ConditionLineChart({ dailyConditions, events = [], selectedIndex = null, onDataPointPress, onEventLabelPress }: ConditionLineChartProps) {
+  // 스크롤 위치 추적
+  const [scrollX, setScrollX] = useState(0);
+  // 포커스된 인덱스 (내부 관리)
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+
   if (!dailyConditions || dailyConditions.length === 0) {
     return (
       <View style={styles.emptyContainer}>
@@ -26,48 +36,17 @@ export function ConditionLineChart({ dailyConditions, events = [], selectedIndex
     );
   }
 
-  // 최대 7일치만 표시
-  const displayData = dailyConditions.slice(-7);
+  const displayData = dailyConditions;
 
-  // Y축 범위 계산 (데이터 기반 동적 범위)
-  // 서버 데이터는 conditionScore, 타입 정의는 score 둘 다 지원
-  const { minY, maxY, yAxisOffset } = useMemo(() => {
-    const scores = displayData.map(d => (d as any).conditionScore ?? d.score);
-    const min = Math.min(...scores);
-    const max = Math.max(...scores);
-
-    // 최소/최대 차이가 작으면 범위 확장
-    const range = max - min;
-    let adjustedMin = min;
-    let adjustedMax = max;
-
-    if (range < 2) {
-      adjustedMin = Math.max(0, min - 1);
-      adjustedMax = Math.min(10, max + 1);
-    } else {
-      adjustedMin = Math.max(0, min - 0.5);
-      adjustedMax = Math.min(10, max + 0.5);
-    }
-
-    return {
-      minY: Math.floor(adjustedMin),
-      maxY: Math.ceil(adjustedMax),
-      yAxisOffset: Math.floor(adjustedMin),
-    };
-  }, [displayData]);
-
-  // 날짜 포맷팅 (MM/DD)
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return `${date.getMonth() + 1}/${date.getDate()}`;
   };
 
-  // 이벤트 찾기
   const findEvent = (dateString: string) => {
     return events?.find((e) => e.date === dateString);
   };
 
-  // 차트 데이터 생성
   const chartData = useMemo(() => {
     return displayData.map((item, index) => {
       const event = findEvent(item.date);
@@ -77,9 +56,7 @@ export function ConditionLineChart({ dailyConditions, events = [], selectedIndex
         value: score,
         label: formatDate(item.date),
         labelTextStyle: styles.xAxisLabel,
-        // 이벤트가 있는 날은 다른 색상
         dataPointColor: event ? Colors.warning : Colors.brand,
-        // 커스텀 데이터 포인트 렌더링
         customDataPoint: () => (
           <View style={styles.dataPointContainer}>
             <View
@@ -101,129 +78,185 @@ export function ConditionLineChart({ dailyConditions, events = [], selectedIndex
     });
   }, [displayData, events]);
 
-  // Y축 라벨 섹션 개수
-  const noOfSections = Math.max(maxY - minY, 2);
-
-  // 선택된 데이터 포인트 정보
   const selectedData = selectedIndex !== null && selectedIndex >= 0 && selectedIndex < displayData.length
     ? displayData[selectedIndex]
     : null;
   const selectedEvent = selectedData ? findEvent(selectedData.date) : null;
 
+  // 외부 오버레이 라벨의 X 좌표 계산
+  const overlayLabelX = useMemo(() => {
+    if (focusedIndex === null) return 0;
+    // X = yAxisLabelWidth + initialSpacing + (index * spacing) - scrollX - (labelWidth / 2)
+    const baseX = Y_AXIS_LABEL_WIDTH + INITIAL_SPACING + (focusedIndex * POINT_SPACING) - scrollX;
+    // 라벨 중앙 정렬 및 화면 경계 제한
+    const centeredX = baseX - LABEL_WIDTH / 2;
+    return Math.max(8, Math.min(centeredX, CHART_WIDTH - LABEL_WIDTH + 8));
+  }, [focusedIndex, scrollX]);
+
+  // 포커스된 데이터 정보
+  const focusedData = focusedIndex !== null && focusedIndex >= 0 && focusedIndex < displayData.length
+    ? displayData[focusedIndex]
+    : null;
+  const focusedEvent = focusedData ? findEvent(focusedData.date) : null;
+
+  // 오버레이 라벨 텍스트 생성
+  const getOverlayLabelText = () => {
+    if (!focusedData) return '';
+    const dateStr = formatDate(focusedData.date);
+    const score = (focusedData as any).conditionScore ?? focusedData.score;
+    if (focusedEvent) {
+      return `${dateStr} ${focusedEvent.eventIcon} ${focusedEvent.title}`;
+    }
+    if ((focusedData as any).content) {
+      return `${dateStr} 📝 메모`;
+    }
+    return `${dateStr} ${score}점`;
+  };
+
   return (
-    <View style={styles.container}>
-      <LineChart
-        data={chartData}
-        width={CHART_WIDTH}
-        height={160}
-        // 곡선 설정
-        curved
-        curvature={0.2}
-        // 색상 설정
-        color={Colors.brand}
-        thickness={2}
-        // 데이터 포인트
-        dataPointsHeight={10}
-        dataPointsWidth={10}
-        dataPointsColor={Colors.brand}
-        // 영역 채우기 (그라데이션 효과)
-        areaChart
-        startFillColor={Colors.brand}
-        endFillColor={Colors.brandLightest}
-        startOpacity={0.3}
-        endOpacity={0.05}
-        // Y축 설정
-        yAxisOffset={yAxisOffset}
-        maxValue={maxY - yAxisOffset}
-        noOfSections={noOfSections}
-        yAxisColor="transparent"
-        yAxisTextStyle={styles.yAxisLabel}
-        yAxisLabelWidth={24}
-        formatYLabel={(label) => String(Math.round(Number(label) + yAxisOffset))}
-        // X축 설정
-        xAxisColor={Colors.divider}
-        xAxisLabelTextStyle={styles.xAxisLabel}
-        // 그리드
-        rulesColor={Colors.divider}
-        rulesType="solid"
-        // 값 표시
-        showValuesAsDataPointsText
-        textColor={Colors.brand}
-        textFontSize={11}
-        textShiftY={-10}
-        textShiftX={0}
-        // 간격
-        spacing={(CHART_WIDTH - 40) / Math.max(displayData.length - 1, 1)}
-        initialSpacing={15}
-        endSpacing={15}
-        // 애니메이션
-        isAnimated
-        animationDuration={800}
-        // 포인터 (터치 시)
-        pointerConfig={{
-          pointerStripUptoDataPoint: true,
-          pointerStripColor: Colors.brand,
-          pointerStripWidth: 1,
-          pointerColor: Colors.brand,
-          radius: 6,
-          pointerLabelWidth: 80,
-          pointerLabelHeight: 40,
-          pointerLabelComponent: (items: any) => {
-            const item = items[0];
-            const index = chartData.findIndex(d => d.value === item.value);
-            const event = index >= 0 ? findEvent(displayData[index]?.date) : null;
-
-            return (
-              <View style={styles.pointerLabel}>
-                <Typography variant="caption" color={Colors.white}>
-                  {item.value}점
-                </Typography>
-                {event && (
-                  <Typography variant="caption" color={Colors.white} style={styles.pointerEventText}>
-                    {event.title}
-                  </Typography>
-                )}
-              </View>
-            );
-          },
-        }}
-        onPress={(item: any, index: number) => {
-          onDataPointPress?.(index);
-        }}
-      />
-
-      {/* 선택된 데이터 포인트 정보 카드 */}
-      {selectedData && (
-        <View style={styles.selectedInfoCard}>
-          <View style={styles.selectedInfoHeader}>
-            <Typography variant="bodySmall" color={Colors.textSecondary}>
-              {formatDate(selectedData.date)}
-            </Typography>
-            <Typography variant="h3" color={Colors.brand}>
-              {(selectedData as any).conditionScore ?? selectedData.score}점
-            </Typography>
+    <View style={styles.wrapper}>
+      <View style={styles.container}>
+        {/* 외부 오버레이 라벨 (차트 위에 absolute로 배치) */}
+        {focusedIndex !== null && focusedData && (
+          <View
+            style={[styles.overlayLabelContainer, { left: overlayLabelX }]}
+            pointerEvents="box-none"
+          >
+            <TouchableOpacity
+              style={styles.overlayLabel}
+              onPress={() => {
+                if (focusedEvent && onEventLabelPress) {
+                  onEventLabelPress(focusedData.date);
+                }
+              }}
+              activeOpacity={focusedEvent ? 0.7 : 1}
+            >
+              <Typography variant="caption" color={Colors.textPrimary} numberOfLines={1}>
+                {getOverlayLabelText()}
+              </Typography>
+            </TouchableOpacity>
           </View>
-          {selectedEvent && (
-            <View style={styles.selectedEventBadge}>
-              <Typography variant="caption">
-                {selectedEvent.eventIcon} {selectedEvent.title}
+        )}
+
+        <LineChart
+          data={chartData}
+          width={CHART_WIDTH}
+          height={160}
+          curved
+          curvature={0.2}
+          color={Colors.brand}
+          thickness={2}
+          dataPointsHeight={10}
+          dataPointsWidth={10}
+          dataPointsColor={Colors.brand}
+          areaChart
+          startFillColor={Colors.brand}
+          endFillColor={Colors.brandLightest}
+          startOpacity={0.3}
+          endOpacity={0.05}
+          yAxisOffset={0}
+          maxValue={10}
+          noOfSections={5}
+          yAxisColor="transparent"
+          yAxisTextStyle={styles.yAxisLabel}
+          yAxisLabelWidth={Y_AXIS_LABEL_WIDTH}
+          xAxisColor={Colors.divider}
+          xAxisLabelTextStyle={styles.xAxisLabel}
+          rulesColor={Colors.divider}
+          rulesType="solid"
+          showValuesAsDataPointsText
+          textColor={Colors.brand}
+          textFontSize={11}
+          textShiftY={-10}
+          textShiftX={0}
+          spacing={POINT_SPACING}
+          initialSpacing={INITIAL_SPACING}
+          endSpacing={15}
+          scrollToEnd={true}
+          showScrollIndicator={true}
+          scrollAnimation={true}
+          isAnimated
+          animationDuration={800}
+          focusEnabled={true}
+          onFocus={(item: any, index: number) => {
+            setFocusedIndex(index);
+            onDataPointPress?.(index);
+          }}
+          onScroll={(event: any) => {
+            setScrollX(event.nativeEvent.contentOffset.x);
+          }}
+          scrollEventThrottle={16}
+          showStripOnFocus={true}
+          stripHeight={160}
+          stripWidth={1}
+          stripColor={Colors.textTertiary}
+          stripOpacity={0.5}
+          unFocusOnPressOut={false}
+          focusedDataPointRadius={8}
+          focusedDataPointColor={Colors.brand}
+        />
+
+        {/* 선택된 데이터 포인트 정보 카드 */}
+        {selectedData && (
+          <View style={styles.selectedInfoCard}>
+            <View style={styles.selectedInfoHeader}>
+              <Typography variant="bodySmall" color={Colors.textSecondary}>
+                {formatDate(selectedData.date)}
+              </Typography>
+              <Typography variant="h3" color={Colors.brand}>
+                {(selectedData as any).conditionScore ?? selectedData.score}점
               </Typography>
             </View>
-          )}
-        </View>
-      )}
+            {selectedEvent && (
+              <View style={styles.selectedEventBadge}>
+                <Typography variant="caption">
+                  {selectedEvent.eventIcon} {selectedEvent.title}
+                </Typography>
+              </View>
+            )}
+            {(selectedData as any).content && (
+              <View style={styles.memoContent}>
+                <Typography variant="bodySmall" color={Colors.textSecondary}>
+                  {(selectedData as any).content}
+                </Typography>
+              </View>
+            )}
+          </View>
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  wrapper: {},
   container: {
     backgroundColor: Colors.white,
     borderRadius: 12,
     padding: 16,
+    paddingTop: 40,
     paddingRight: 8,
     borderWidth: 1,
     borderColor: Colors.border,
+    position: 'relative',
+  },
+  overlayLabelContainer: {
+    position: 'absolute',
+    top: 8,
+    zIndex: 100,
+  },
+  overlayLabel: {
+    backgroundColor: 'rgba(240, 240, 240, 0.95)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+    minWidth: 80,
+    maxWidth: LABEL_WIDTH,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   emptyContainer: {
     height: 160,
@@ -259,17 +292,6 @@ const styles = StyleSheet.create({
   eventIcon: {
     fontSize: 12,
   },
-  pointerLabel: {
-    backgroundColor: Colors.brand,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  pointerEventText: {
-    fontSize: 9,
-    marginTop: 2,
-  },
   selectedInfoCard: {
     marginTop: 12,
     padding: 12,
@@ -290,5 +312,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: 4,
     alignSelf: 'flex-start',
+  },
+  memoContent: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: Colors.divider,
   },
 });

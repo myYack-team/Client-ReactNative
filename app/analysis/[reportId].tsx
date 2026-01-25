@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -19,6 +19,7 @@ import { analysisService } from '../../services';
 export default function ReportDetailScreen() {
   const { reportId } = useLocalSearchParams<{ reportId: string }>();
   const { deleteReport } = useAnalysisStore();
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const [result, setResult] = useState<AnalysisResultExtended | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -115,6 +116,7 @@ export default function ReportDetailScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView
+        ref={scrollViewRef}
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
@@ -156,6 +158,7 @@ export default function ReportDetailScreen() {
           foodSuggestions={result?.foodSuggestions || []}
           lifestyleTips={result?.lifestyleTips || []}
           patternAnalysis={result?.patternAnalysis}
+          scrollViewRef={scrollViewRef}
         />
 
         {/* 면책 조항 */}
