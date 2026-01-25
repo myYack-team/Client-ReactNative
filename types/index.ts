@@ -1009,6 +1009,34 @@ export interface HealthNoteListItem {
 
 // ========== 패턴 분석 관련 타입 (추세 탭용) ==========
 
+// 증상 클러스터 심각도
+export type SymptomSeverity = 'HIGH' | 'MEDIUM' | 'LOW';
+
+// 증상 클러스터 심각도 라벨 매핑
+export const SYMPTOM_SEVERITY_LABELS: Record<SymptomSeverity, string> = {
+  HIGH: '즉시 확인',
+  MEDIUM: '참고',
+  LOW: '알아두기',
+};
+
+// 증상 클러스터 심각도 색상 매핑
+export const SYMPTOM_SEVERITY_COLORS: Record<SymptomSeverity, { bg: string; text: string }> = {
+  HIGH: { bg: '#FFEBEE', text: '#D32F2F' },
+  MEDIUM: { bg: '#FFF3E0', text: '#E65100' },
+  LOW: { bg: '#E3F2FD', text: '#1565C0' },
+};
+
+// 증상 클러스터
+export interface SymptomCluster {
+  clusterName: string;
+  severity: SymptomSeverity;
+  occurrenceCount: number;
+  occurrenceDates: string[];
+  relatedMedications: string[];
+  description: string;
+  suggestion?: string;
+}
+
 // 패턴 분석 전체
 export interface PatternAnalysis {
   analysisStartDate?: string;
@@ -1019,6 +1047,7 @@ export interface PatternAnalysis {
   summary?: PatternSummary;
   dailyConditions?: DailyCondition[];
   events?: TimelineEvent[];
+  symptomClusters?: SymptomCluster[];
 }
 
 // 복약 순응도 분석

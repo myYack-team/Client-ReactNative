@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Dimensions, TouchableOpacity, Text } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
 import { Typography } from '../ui';
 import { Colors } from '../../constants';
@@ -18,7 +18,8 @@ const CHART_WIDTH = SCREEN_WIDTH - 80;
 const POINT_SPACING = 50;
 const INITIAL_SPACING = 15;
 const Y_AXIS_LABEL_WIDTH = 24;
-const LABEL_WIDTH = 120;
+const LABEL_WIDTH = 160;
+const MAX_LABEL_CHARS = 20;
 
 export function ConditionLineChart({ dailyConditions, events = [], selectedIndex = null, onDataPointPress, onEventLabelPress }: ConditionLineChartProps) {
   // 스크롤 위치 추적
@@ -99,40 +100,69 @@ export function ConditionLineChart({ dailyConditions, events = [], selectedIndex
     : null;
   const focusedEvent = focusedData ? findEvent(focusedData.date) : null;
 
-  // 오버레이 라벨 텍스트 생성
-  const getOverlayLabelText = () => {
-    if (!focusedData) return '';
-    const dateStr = formatDate(focusedData.date);
-    const score = (focusedData as any).conditionScore ?? focusedData.score;
-    if (focusedEvent) {
-      return `${dateStr} ${focusedEvent.eventIcon} ${focusedEvent.title}`;
-    }
-    if ((focusedData as any).content) {
-      return `${dateStr} 📝 메모`;
-    }
-    return `${dateStr} ${score}점`;
+  // 텍스트 truncate 함수 (잘릴 때 "더보기" 표시)
+  const truncateText = (text: string, maxLength: number) => {
+    if (text.length <= maxLength) return { text, isTruncated: false };
+    // 여유를 두고 자르고, 뒤에 "더보기" 추가
+    return { text: text.substring(0, maxLength - 3) + '...', isTruncated: true };
   };
+
+  // 오버레이 라벨 정보 생성
+  const getOverlayLabelInfo = () => {
+    if (!focusedData) return { text: '', isTruncated: false, isEvent: false, hasMemo: false, showLabel: false };
+    const content = (focusedData as any).content;
+
+    if (focusedEvent) {
+      // 이벤트: 이모지 + 제목
+      const labelText = `${focusedEvent.eventIcon} ${focusedEvent.title}`;
+      const truncated = truncateText(labelText, MAX_LABEL_CHARS);
+      return { ...truncated, isEvent: true, hasMemo: false, showLabel: true };
+    }
+    if (content) {
+      // 메모 있음: 메모 내용 간략히 표시
+      const memoText = `📝 ${content}`;
+      const truncated = truncateText(memoText, MAX_LABEL_CHARS);
+      return { ...truncated, isEvent: false, hasMemo: true, showLabel: true };
+    }
+    // 점수만 있는 날: 태그 표시 안함
+    return { text: '', isTruncated: false, isEvent: false, hasMemo: false, showLabel: false };
+  };
+
+  const overlayLabelInfo = getOverlayLabelInfo();
 
   return (
     <View style={styles.wrapper}>
       <View style={styles.container}>
-        {/* 외부 오버레이 라벨 (차트 위에 absolute로 배치) */}
-        {focusedIndex !== null && focusedData && (
+        {/* 외부 오버레이 라벨 (차트 위에 absolute로 배치) - 이벤트/메모가 있을 때만 표시 */}
+        {focusedIndex !== null && focusedData && overlayLabelInfo.showLabel && (
           <View
             style={[styles.overlayLabelContainer, { left: overlayLabelX }]}
             pointerEvents="box-none"
           >
             <TouchableOpacity
-              style={styles.overlayLabel}
+              style={[
+                styles.overlayLabel,
+                overlayLabelInfo.isEvent && styles.overlayLabelEvent,
+                overlayLabelInfo.hasMemo && styles.overlayLabelMemo,
+              ]}
               onPress={() => {
                 if (focusedEvent && onEventLabelPress) {
                   onEventLabelPress(focusedData.date);
                 }
               }}
-              activeOpacity={focusedEvent ? 0.7 : 1}
+              activeOpacity={focusedEvent || overlayLabelInfo.hasMemo ? 0.7 : 1}
             >
-              <Typography variant="caption" color={Colors.textPrimary} numberOfLines={1}>
-                {getOverlayLabelText()}
+              <Typography
+                variant="caption"
+                color={overlayLabelInfo.isEvent ? Colors.warning : Colors.textPrimary}
+                style={overlayLabelInfo.isEvent && styles.overlayLabelEventText}
+              >
+                {overlayLabelInfo.text}
+                {overlayLabelInfo.isTruncated && (
+                  <Text style={{ color: Colors.brand, fontWeight: '500' }}>
+                    {' 더보기'}
+                  </Text>
+                )}
               </Typography>
             </TouchableOpacity>
           </View>
@@ -198,20 +228,28 @@ export function ConditionLineChart({ dailyConditions, events = [], selectedIndex
 
         {/* 선택된 데이터 포인트 정보 카드 */}
         {selectedData && (
-          <View style={styles.selectedInfoCard}>
+          <View style={[
+            styles.selectedInfoCard,
+            selectedEvent && styles.selectedInfoCardWithEvent,
+          ]}>
             <View style={styles.selectedInfoHeader}>
               <Typography variant="bodySmall" color={Colors.textSecondary}>
                 {formatDate(selectedData.date)}
               </Typography>
-              <Typography variant="h3" color={Colors.brand}>
+              <Typography variant="h3" color={selectedEvent ? Colors.warning : Colors.brand}>
                 {(selectedData as any).conditionScore ?? selectedData.score}점
               </Typography>
             </View>
             {selectedEvent && (
               <View style={styles.selectedEventBadge}>
-                <Typography variant="caption">
+                <Typography variant="caption" color={Colors.warning} style={styles.eventTitleText}>
                   {selectedEvent.eventIcon} {selectedEvent.title}
                 </Typography>
+                {selectedEvent.description && (
+                  <Typography variant="bodySmall" color={Colors.textSecondary} style={styles.eventDescription}>
+                    {selectedEvent.description}
+                  </Typography>
+                )}
               </View>
             )}
             {(selectedData as any).content && (
@@ -250,13 +288,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 4,
-    minWidth: 80,
+    minWidth: 60,
     maxWidth: LABEL_WIDTH,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+  },
+  overlayLabelEvent: {
+    backgroundColor: 'rgba(255, 243, 224, 0.98)',
+    borderWidth: 1,
+    borderColor: Colors.warning,
+  },
+  overlayLabelMemo: {
+    backgroundColor: 'rgba(232, 245, 233, 0.98)',
+    borderWidth: 1,
+    borderColor: Colors.brand,
+  },
+  overlayLabelContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  overlayLabelEventText: {
+    fontWeight: '600',
   },
   emptyContainer: {
     height: 160,
@@ -300,6 +355,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.brand,
   },
+  selectedInfoCardWithEvent: {
+    backgroundColor: '#FFF8E1',
+    borderColor: Colors.warning,
+    borderWidth: 1.5,
+  },
   selectedInfoHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -307,11 +367,18 @@ const styles = StyleSheet.create({
   },
   selectedEventBadge: {
     marginTop: 8,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
     backgroundColor: Colors.white,
-    borderRadius: 4,
-    alignSelf: 'flex-start',
+    borderRadius: 6,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.warning,
+  },
+  eventTitleText: {
+    fontWeight: '600',
+  },
+  eventDescription: {
+    marginTop: 4,
   },
   memoContent: {
     marginTop: 8,
