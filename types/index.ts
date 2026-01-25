@@ -246,6 +246,7 @@ export interface ScheduleMedication {
   supplementTag?: SupplementTag;  // 영양제 태그 (영양제인 경우)
   isSupplement?: boolean;    // 영양제 여부
   imageUrl?: string;         // 약 이미지
+  reminderTime?: string;     // 개별 알림 시간 (HH:mm)
 }
 
 // 오늘의 복약 - 시간대별 스케줄

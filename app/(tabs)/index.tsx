@@ -775,7 +775,11 @@ export default function HomeScreen() {
               <View style={styles.medicationList}>
                 {group.timeSlots
                   .flatMap((slot) => slot.medications.map((med) => ({ med, slotTime: slot.time })))
-                  .sort((a, b) => a.slotTime.localeCompare(b.slotTime))
+                  .sort((a, b) => {
+                    const timeA = a.med.reminderTime || a.slotTime;
+                    const timeB = b.med.reminderTime || b.slotTime;
+                    return timeA.localeCompare(timeB);
+                  })
                   .map(({ med, slotTime }) => {
                     const status = getMedStatus(med, slotTime);
                     return (
@@ -783,7 +787,7 @@ export default function HomeScreen() {
                         <View style={styles.medicationRowCompact}>
                           {/* 알림 시간 */}
                           <Typography variant="caption" style={styles.medTimeLabel}>
-                            {slotTime}
+                            {med.reminderTime || slotTime}
                           </Typography>
 
                           {/* 약물 이미지 썸네일 */}
