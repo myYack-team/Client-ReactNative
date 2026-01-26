@@ -12,28 +12,35 @@ import { Colors, Shadows } from '../../constants';
 interface AnalysisButtonProps {
   isLoading: boolean;
   onPress: () => void;
-  weeklyRemainingCount?: number;
-  weeklyLimit?: number;
+  monthlyRemainingCount?: number;
+  monthlyLimit?: number;
 }
 
 export function AnalysisButton({
   isLoading,
   onPress,
-  weeklyRemainingCount,
-  weeklyLimit,
+  monthlyRemainingCount,
+  monthlyLimit,
 }: AnalysisButtonProps) {
-  const hasQuotaInfo = weeklyRemainingCount !== undefined && weeklyLimit !== undefined;
-  const isQuotaExceeded = hasQuotaInfo && weeklyRemainingCount <= 0;
+  const hasQuotaInfo = monthlyRemainingCount !== undefined && monthlyLimit !== undefined;
+  const isQuotaExceeded = hasQuotaInfo && monthlyRemainingCount <= 0;
   const isDisabled = isLoading || isQuotaExceeded;
 
   const getButtonText = () => {
     if (isLoading) return '분석 중...';
-    if (isQuotaExceeded) return '이번 주 분석 횟수를 모두 사용했어요';
+    if (isQuotaExceeded) return '이번 달 분석 횟수를 모두 사용했어요';
     return 'AI 약물 분석 시작하기';
   };
 
+  const getRemainingText = () => {
+    if (hasQuotaInfo && !isQuotaExceeded) {
+      return `이번 달 ${monthlyRemainingCount}회 남음`;
+    }
+    return null;
+  };
+
   const getSubText = () => {
-    if (isQuotaExceeded) return '다음 주 월요일에 다시 이용해주세요';
+    if (isQuotaExceeded) return '다음 달 1일에 다시 이용해주세요';
     return '복용 중인 약물의 작용 기전과 음식 상호작용을 알아보세요';
   };
 
@@ -81,7 +88,7 @@ export function AnalysisButton({
                 color={isQuotaExceeded ? Colors.error : Colors.brand}
                 style={styles.quotaText}
               >
-                {weeklyRemainingCount}/{weeklyLimit}
+                {getRemainingText() || `${monthlyRemainingCount}/${monthlyLimit}`}
               </Typography>
             </View>
           )}
