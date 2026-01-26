@@ -73,9 +73,13 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (isAuthError(error)) {
         logger.log('[Auth] Auth error - clearing tokens');
         await clearSession();
+        set({ isLoading: false, isAuthenticated: false, user: null });
+      } else {
+        // Network error: tokens exist but server unreachable
+        // Keep authenticated state so user can retry when online
+        logger.log('[Auth] Network error - preserving auth state');
+        set({ isLoading: false, isAuthenticated: true, user: null });
       }
-      // 에러 발생 시 무조건 미인증 상태로 설정 (로그인 페이지로 이동)
-      set({ isLoading: false, isAuthenticated: false, user: null });
     }
   },
 

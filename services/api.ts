@@ -106,7 +106,13 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (refreshError) {
         logger.error('[API] Token refresh failed:', refreshError);
-        await clearSession();
+        // 인증 에러(401/403)만 세션 삭제, 네트워크 에러나 서버 에러(5xx)는 토큰 유지
+        if (axios.isAxiosError(refreshError)) {
+          const status = refreshError.response?.status;
+          if (status === 401 || status === 403) {
+            await clearSession();
+          }
+        }
       }
     }
 
