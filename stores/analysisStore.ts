@@ -1,8 +1,10 @@
 import { create } from 'zustand';
+import { Alert } from 'react-native';
 import {
   AnalysisResult,
   AnalysisResultExtended,
   ReportSummary,
+  TemporaryNoteData,
 } from '../types';
 import { analysisService } from '../services';
 
@@ -33,6 +35,9 @@ interface AnalysisState {
   pendingAnalysis: PendingAnalysis | null;
   completedResult: AnalysisResultExtended | null;
 
+  // 데이터 부족 모달 상태
+  insufficientDataModalVisible: boolean;
+
   // Actions
   fetchReports: () => Promise<void>;
   requestAnalysis: () => Promise<number>;
@@ -45,6 +50,10 @@ interface AnalysisState {
   // 인라인 분석 액션 (새로 추가)
   startAnalysisInBackground: () => Promise<void>;
   clearCompletedResult: () => void;
+
+  // 데이터 충분성 확인 후 분석 시작
+  checkDataSufficiencyAndAnalyze: () => Promise<void>;
+  saveTemporaryNoteAndAnalyze: (data: TemporaryNoteData) => Promise<void>;
 }
 
 export const useAnalysisStore = create<AnalysisState>((set, get) => ({
@@ -58,6 +67,9 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
   // 인라인 분석 상태 초기값
   pendingAnalysis: null,
   completedResult: null,
+
+  // 데이터 부족 모달 초기값
+  insufficientDataModalVisible: false,
 
   fetchReports: async () => {
     const { reportsExpiry, reports } = get();
@@ -164,7 +176,21 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
         error: null,
       });
 
-    } catch (error) {
+    } catch (error: any) {
+      // 429: 월간 쿼터 초과
+      if (error?.response?.status === 429) {
+        Alert.alert(
+          'AI 분석 제한',
+          '이번 달 분석 횟수를 모두 사용했습니다.\n다음 달 1일에 초기화됩니다.',
+          [{ text: '확인' }]
+        );
+        set({
+          pendingAnalysis: null,
+          error: null,
+        });
+        return;
+      }
+
       const message = error instanceof Error ? error.message : '분석 요청에 실패했습니다.';
       set({
         pendingAnalysis: { reportId: 0, status: 'failed', startedAt },
@@ -175,4 +201,33 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
 
   // 완료된 결과 초기화
   clearCompletedResult: () => set({ completedResult: null, pendingAnalysis: null }),
+
+  // 데이터 충분성 확인 후 분석 시작
+  checkDataSufficiencyAndAnalyze: async () => {
+    try {
+      const result = await analysisService.checkDataSufficiency();
+      if (!result.isSufficient) {
+        set({ insufficientDataModalVisible: true });
+        return;
+      }
+      // 데이터 충분 -> 분석 진행
+      get().startAnalysisInBackground();
+    } catch (error) {
+      console.error('Data sufficiency check failed:', error);
+      // 에러 시에도 분석 진행
+      get().startAnalysisInBackground();
+    }
+  },
+
+  // 임시 메모 저장 후 분석 시작
+  saveTemporaryNoteAndAnalyze: async (data: TemporaryNoteData) => {
+    try {
+      await analysisService.saveTemporaryNote(data);
+      set({ insufficientDataModalVisible: false });
+      get().startAnalysisInBackground();
+    } catch (error) {
+      console.error('Failed to save temporary note:', error);
+      Alert.alert('저장 실패', '메모 저장에 실패했습니다.');
+    }
+  },
 }));

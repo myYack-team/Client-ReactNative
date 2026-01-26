@@ -17,6 +17,7 @@ import {
   ReportListItem,
   AnalysisProgressCard,
   AnalysisCompletedCard,
+  InsufficientDataModal,
 } from '../../components/analysis';
 import { Colors } from '../../constants';
 import { useAnalysisStore } from '../../stores';
@@ -33,6 +34,9 @@ export default function AnalysisScreen() {
     pendingAnalysis,
     completedResult,
     clearCompletedResult,
+    insufficientDataModalVisible,
+    checkDataSufficiencyAndAnalyze,
+    saveTemporaryNoteAndAnalyze,
   } = useAnalysisStore();
 
   // AI 동의 상태
@@ -79,6 +83,17 @@ export default function AnalysisScreen() {
     }, [])
   );
 
+  // 분석 완료 후 쿼터 정보 갱신
+  useEffect(() => {
+    if (completedResult) {
+      analysisService.getQuota().then((quota) => {
+        setQuotaInfo(quota);
+      }).catch((err) => {
+        console.error('Failed to refresh quota info after analysis:', err);
+      });
+    }
+  }, [completedResult]);
+
   // 새로고침
   const handleRefresh = async () => {
     await fetchReports();
@@ -103,7 +118,7 @@ export default function AnalysisScreen() {
     }
   };
 
-  // 분석 요청 - AI 동의 확인 후 로딩 페이지로 이동
+  // 분석 요청 - AI 동의 확인 후 데이터 충분성 확인
   const handleAnalysisRequest = () => {
     // AI 동의 확인
     if (!hasAiConsent) {
@@ -111,8 +126,7 @@ export default function AnalysisScreen() {
       return;
     }
 
-    console.log('[Analysis] Navigating to loading page...');
-    router.push('/analysis/loading');
+    checkDataSufficiencyAndAnalyze();
   };
 
   // 분석 완료 후 상세 보기
@@ -209,8 +223,8 @@ export default function AnalysisScreen() {
           <AnalysisButton
             onPress={handleAnalysisRequest}
             isLoading={isAnalyzing}
-            weeklyRemainingCount={quotaInfo?.weeklyRemainingCount}
-            weeklyLimit={quotaInfo?.weeklyLimit}
+            monthlyRemainingCount={quotaInfo?.monthlyRemainingCount}
+            monthlyLimit={quotaInfo?.monthlyLimit}
           />
         )}
 
@@ -293,6 +307,13 @@ export default function AnalysisScreen() {
         visible={showConsentModal}
         onAgree={handleConsent}
         onCancel={() => setShowConsentModal(false)}
+      />
+
+      {/* 데이터 부족 시 건강 메모 입력 모달 */}
+      <InsufficientDataModal
+        visible={insufficientDataModalVisible}
+        onClose={() => useAnalysisStore.setState({ insufficientDataModalVisible: false })}
+        onSubmit={saveTemporaryNoteAndAnalyze}
       />
     </SafeAreaView>
   );

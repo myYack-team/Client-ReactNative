@@ -815,12 +815,28 @@ export interface AnalysisRequestResponse extends AnalysisResult {
   quota?: QuotaInfo;
 }
 
-// Weekly quota info for AI analysis
+// Monthly quota info for AI analysis
 export interface QuotaInfo {
-  weeklyLimit: number;
-  weeklyUsedCount: number;
-  weeklyRemainingCount: number;
-  weeklyResetDate: string;
+  monthlyLimit: number;
+  monthlyUsedCount: number;
+  monthlyRemainingCount: number;
+  monthlyResetDate: string;  // ISO date string
+}
+
+// Data sufficiency check for AI analysis
+export interface DataSufficiencyCheck {
+  isSufficient: boolean;
+  totalDataCount: number;
+  intakeCount: number;
+  healthNoteCount: number;
+  requiredMinimum: number;
+}
+
+// Temporary note data for insufficient data modal
+export interface TemporaryNoteData {
+  conditionScore: number;
+  selectedSymptoms: string[];
+  additionalNote: string;
 }
 
 // ========== Q&A 관련 타입 ==========

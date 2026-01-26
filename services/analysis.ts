@@ -5,6 +5,8 @@ import {
   ReportListResponse,
   AnalysisRequestResponse,
   QuotaInfo,
+  DataSufficiencyCheck,
+  TemporaryNoteData,
 } from '../types';
 import { logger } from '../utils/logger';
 
@@ -56,5 +58,37 @@ export const analysisService = {
       throw new Error(response.data.message || '쿼터 정보를 불러오는데 실패했습니다.');
     }
     return response.data.result;
+  },
+
+  // 데이터 충분성 확인
+  async checkDataSufficiency(): Promise<DataSufficiencyCheck> {
+    logger.log('[analysisService] Checking data sufficiency...');
+    const response = await api.get<ApiResponse<DataSufficiencyCheck>>('/analysis/data-sufficiency');
+    if (!response.data.isSuccess || !response.data.result) {
+      throw new Error(response.data.message || '데이터 충분성 확인에 실패했습니다.');
+    }
+    return response.data.result;
+  },
+
+  // 임시 건강 메모 저장
+  async saveTemporaryNote(data: TemporaryNoteData): Promise<void> {
+    logger.log('[analysisService] Saving temporary note...');
+    const response = await api.post<ApiResponse<null>>('/analysis/temporary-notes', {
+      conditionScore: data.conditionScore,
+      symptoms: JSON.stringify(data.selectedSymptoms),
+      additionalNote: data.additionalNote,
+    });
+    if (!response.data.isSuccess) {
+      throw new Error(response.data.message || '임시 메모 저장에 실패했습니다.');
+    }
+  },
+
+  // 임시 건강 메모 전체 삭제
+  async deleteAllTemporaryNotes(): Promise<void> {
+    logger.log('[analysisService] Deleting all temporary notes...');
+    const response = await api.delete<ApiResponse<null>>('/analysis/temporary-notes');
+    if (!response.data.isSuccess) {
+      throw new Error(response.data.message || '임시 메모 삭제에 실패했습니다.');
+    }
   },
 };
