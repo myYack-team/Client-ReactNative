@@ -102,6 +102,7 @@ export default function HomeScreen() {
   const [selectedDateSchedules, setSelectedDateSchedules] = useState<TodaySchedule[]>([]);
 
   const today = getTodayString(); // 로컬 타임존 기준 오늘 날짜
+  const isSelectedDatePastOrToday = selectedDate <= today;
 
   // 오늘 날짜로 주간 달력 스크롤
   const scrollToToday = useCallback(() => {
@@ -505,7 +506,6 @@ export default function HomeScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, contentStyle, { paddingBottom: 40 + insets.bottom }]}
-        onTouchStart={scrollToToday}
         refreshControl={
           <RefreshControl
             refreshing={isLoading}
@@ -684,8 +684,8 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </Modal>
 
-        {/* 오늘의 컨디션 기록 카드 */}
-        {isSelectedDateToday && (
+        {/* 컨디션 기록 카드 */}
+        {isSelectedDatePastOrToday && (
           <TouchableOpacity
             style={styles.conditionCard}
             onPress={() => router.push(`/health-note/${selectedDate}`)}
@@ -699,7 +699,7 @@ export default function HomeScreen() {
               />
               <View style={styles.conditionCardText}>
                 <Typography variant="body" style={styles.conditionCardTitle}>
-                  오늘의 컨디션 기록
+                  {isSelectedDateToday ? '오늘의 컨디션 기록' : '이 날의 컨디션 기록'}
                 </Typography>
                 <Typography variant="caption" color={Colors.textSecondary}>
                   몸 상태와 메모를 남겨보세요

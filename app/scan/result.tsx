@@ -171,7 +171,14 @@ function DraggableTimeSlotList({
 }
 
 export default function ResultScreen() {
-  const { currentScanResult, currentImageUri, clearScanResult, isLoading } = useMedicationStore();
+  const {
+    currentScanResult,
+    currentImageUri,
+    clearScanResult,
+    isLoading,
+    invalidateScheduleCache,
+    invalidateMonthlySummaryCache,
+  } = useMedicationStore();
 
   // 초기 medications에 times 배열 추가 및 null 값 기본값 설정
   const [medications, setMedications] = useState<MedicationWithTimes[]>(() => {
@@ -395,6 +402,10 @@ export default function ResultScreen() {
       // 한번의 API 호출로 처방전 + 약물 일괄 등록
       const result = await prescriptionService.register(currentImageUri, request);
       console.log('[Register] Success:', result);
+
+      // 캐시 무효화 (등록 후 최신 데이터 반영)
+      invalidateScheduleCache();
+      invalidateMonthlySummaryCache();
 
       // 스캔 결과 정리 후 홈으로 이동
       clearScanResult();

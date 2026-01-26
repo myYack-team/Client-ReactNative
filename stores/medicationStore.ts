@@ -68,6 +68,8 @@ interface MedicationState {
   invalidateCache: (date?: string) => void;
   fetchMonthlySummary: (year: number, month: number) => Promise<MonthlySummaryResponse>;
   invalidateMonthlySummary: (yearMonth?: string) => void;
+  invalidateScheduleCache: () => void;
+  invalidateMonthlySummaryCache: (yearMonth?: string) => void;
 }
 
 export const useMedicationStore = create<MedicationState>((set, get) => ({
@@ -404,6 +406,35 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
 
   // 월별 복약 상태 캐시 무효화
   invalidateMonthlySummary: (yearMonth?: string) => {
+    const { monthlySummaryCache, monthlySummaryCacheExpiry } = get();
+    const newCache = new Map(monthlySummaryCache);
+    const newExpiry = new Map(monthlySummaryCacheExpiry);
+
+    if (yearMonth) {
+      // 특정 월만 무효화
+      newCache.delete(yearMonth);
+      newExpiry.delete(yearMonth);
+    } else {
+      // 전체 무효화
+      newCache.clear();
+      newExpiry.clear();
+    }
+
+    set({ monthlySummaryCache: newCache, monthlySummaryCacheExpiry: newExpiry });
+  },
+
+  // 스케줄 캐시 무효화 (외부 호출용)
+  invalidateScheduleCache: () => {
+    set({
+      scheduleCache: new Map(),
+      cacheExpiry: new Map(),
+      todayData: null,
+      todayDataExpiry: 0,
+    });
+  },
+
+  // 월별 복약 캐시 무효화 (외부 호출용)
+  invalidateMonthlySummaryCache: (yearMonth?: string) => {
     const { monthlySummaryCache, monthlySummaryCacheExpiry } = get();
     const newCache = new Map(monthlySummaryCache);
     const newExpiry = new Map(monthlySummaryCacheExpiry);
