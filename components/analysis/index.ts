@@ -11,3 +11,5 @@ export { AnalysisCompletedCard } from './AnalysisCompletedCard';
 export { ConditionLineChart } from './ConditionLineChart';
 export { PatternCard } from './PatternCard';
 export { InsightCard } from './InsightCard';
+export { SymptomChip } from './SymptomChip';
+export { InsufficientDataModal } from './InsufficientDataModal';
