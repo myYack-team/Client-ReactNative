@@ -83,6 +83,17 @@ export default function AnalysisScreen() {
     }, [])
   );
 
+  // 분석 완료 후 쿼터 정보 갱신
+  useEffect(() => {
+    if (completedResult) {
+      analysisService.getQuota().then((quota) => {
+        setQuotaInfo(quota);
+      }).catch((err) => {
+        console.error('Failed to refresh quota info after analysis:', err);
+      });
+    }
+  }, [completedResult]);
+
   // 새로고침
   const handleRefresh = async () => {
     await fetchReports();

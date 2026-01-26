@@ -22,6 +22,26 @@ interface InsufficientDataModalProps {
 
 const MAX_NOTE_LENGTH = 500;
 
+const SCORE_LABELS: Record<number, string> = {
+  0: '매우 나쁨',
+  1: '나쁨',
+  2: '좋지 않음',
+  3: '약간 불편',
+  4: '보통 이하',
+  5: '보통',
+  6: '괜찮음',
+  7: '좋음',
+  8: '매우 좋음',
+  9: '훌륭함',
+  10: '최상',
+};
+
+const getScoreColor = (score: number): string => {
+  if (score <= 3) return '#FF6B6B';
+  if (score <= 6) return '#FFB84D';
+  return '#4CAF50';
+};
+
 export function InsufficientDataModal({ visible, onClose, onSubmit }: InsufficientDataModalProps) {
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [conditionScore, setConditionScore] = useState<number>(5);
@@ -62,25 +82,6 @@ export function InsufficientDataModal({ visible, onClose, onSubmit }: Insufficie
     setAdditionalNote('');
   };
 
-  const scoreLabels: Record<number, string> = {
-    0: '매우 나쁨',
-    1: '나쁨',
-    2: '좋지 않음',
-    3: '약간 불편',
-    4: '보통 이하',
-    5: '보통',
-    6: '괜찮음',
-    7: '좋음',
-    8: '매우 좋음',
-    9: '훌륭함',
-    10: '최상',
-  };
-
-  const getScoreColor = (score: number): string => {
-    if (score <= 3) return '#FF6B6B';
-    if (score <= 6) return '#FFB84D';
-    return '#4CAF50';
-  };
 
   return (
     <Modal
@@ -131,7 +132,7 @@ export function InsufficientDataModal({ visible, onClose, onSubmit }: Insufficie
                   {conditionScore}
                 </Typography>
                 <Typography variant="bodySmall" color={Colors.textSecondary}>
-                  {scoreLabels[conditionScore]}
+                  {SCORE_LABELS[conditionScore]}
                 </Typography>
               </View>
               <View style={styles.scoreButtonsContainer}>
@@ -228,8 +229,7 @@ export function InsufficientDataModal({ visible, onClose, onSubmit }: Insufficie
             </Typography>
             <Typography variant="caption" color={Colors.textSecondary} style={styles.infoText}>
               입력하신 증상과 컨디션 정보는 AI 분석에 반영되어{'\n'}
-              더 개인화된 약물 상호작용 리포트를 제공합니다.{'\n'}
-              분석 완료 후 임시 데이터는 자동으로 삭제됩니다.
+              더 개인화된 약물 상호작용 리포트를 제공합니다.
             </Typography>
           </View>
         </ScrollView>
@@ -241,7 +241,7 @@ export function InsufficientDataModal({ visible, onClose, onSubmit }: Insufficie
             onPress={handleSkip}
           >
             <Typography variant="body" color={Colors.textSecondary}>
-              다음에 입력할게요
+              다음에 분석할게요
             </Typography>
           </TouchableOpacity>
           <TouchableOpacity
