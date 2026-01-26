@@ -283,6 +283,8 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
       get().invalidateCache(today);
       // 오늘 스케줄 캐시도 무효화
       set({ todayDataExpiry: 0 });
+      // 월별 요약 캐시 무효화 (주간 달력 상태 반영용)
+      get().invalidateMonthlySummary();
     } catch (error) {
       // 실패 시 롤백
       logger.error('Failed to record intake, rolling back:', error);

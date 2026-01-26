@@ -109,8 +109,9 @@ export default function HomeScreen() {
     const todayIndex = weekDates.findIndex((d) => d === today);
     if (todayIndex !== -1 && weekListRef.current) {
       weekListRef.current.scrollToIndex({
-        index: Math.max(0, todayIndex - 3),
+        index: todayIndex,
         animated: true,
+        viewPosition: 0.5,
       });
     }
   }, [weekDates, today]);
@@ -137,6 +138,13 @@ export default function HomeScreen() {
   useEffect(() => {
     loadScheduleForDate(selectedDate);
   }, [selectedDate, loadScheduleForDate]);
+
+  // 복용 기록 후 todayData 변경 시 월별 요약 갱신 (주간 달력 상태 반영)
+  useEffect(() => {
+    if (todayData) {
+      loadMonthlySummary(currentMonth.year, currentMonth.month);
+    }
+  }, [todayData]);
 
   const loadMonthlySummary = async (year: number, month: number) => {
     try {
@@ -200,8 +208,9 @@ export default function HomeScreen() {
     if (todayIndex !== -1 && weekListRef.current) {
       setTimeout(() => {
         weekListRef.current?.scrollToIndex({
-          index: Math.max(0, todayIndex - 3),
+          index: todayIndex,
           animated: false,
+          viewPosition: 0.5,
         });
       }, 100);
     }
@@ -214,6 +223,14 @@ export default function HomeScreen() {
 
   const handleWeekDayPress = (dateString: string) => {
     setSelectedDate(dateString);
+    const index = weekDates.findIndex((d) => d === dateString);
+    if (index !== -1 && weekListRef.current) {
+      weekListRef.current.scrollToIndex({
+        index,
+        animated: true,
+        viewPosition: 0.5,
+      });
+    }
   };
 
   const handleMonthChange = (month: { year: number; month: number }) => {
@@ -274,6 +291,10 @@ export default function HomeScreen() {
             styles.weekDayNumber,
             isSelected && { backgroundColor: Colors.primary },
             status === 'COMPLETE' && !isSelected && { backgroundColor: STATUS_COLORS.COMPLETE },
+            !isSelected && status !== 'COMPLETE' && status !== 'NONE' && {
+              borderWidth: 2,
+              borderColor: statusColor,
+            },
           ]}
         >
           <Typography
@@ -284,10 +305,6 @@ export default function HomeScreen() {
             {dayNum}
           </Typography>
         </View>
-        {/* 상태 점 */}
-        {status !== 'NONE' && status !== 'COMPLETE' && (
-          <View style={[styles.weekDayStatusDot, { backgroundColor: statusColor }]} />
-        )}
       </TouchableOpacity>
     );
   };
@@ -950,12 +967,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 4,
-  },
-  weekDayStatusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
     marginTop: 4,
   },
   modalOverlay: {
