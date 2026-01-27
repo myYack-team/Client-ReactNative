@@ -9,6 +9,17 @@ logger.log('[API] Initializing with base URL:', API_BASE_URL);
 // Single-flight token refresh promise
 let refreshPromise: Promise<{ accessToken: string; refreshToken: string }> | null = null;
 
+// 세션 무효화 콜백 (순환 의존성 방지를 위한 콜백 등록 패턴)
+let onSessionInvalidated: (() => void) | null = null;
+
+/**
+ * 세션 무효화 시 호출될 콜백을 등록합니다.
+ * authStore에서 호출하여 Zustand 상태 초기화 로직을 연결합니다.
+ */
+export function setSessionInvalidatedCallback(cb: () => void) {
+  onSessionInvalidated = cb;
+}
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 300000, // 5분 (AI 분석 등 장시간 요청 고려)
@@ -59,6 +70,11 @@ export async function clearSession(): Promise<void> {
   logger.log('[API] Clearing session');
   await SecureStore.deleteItemAsync('accessToken');
   await SecureStore.deleteItemAsync('refreshToken');
+  try {
+    onSessionInvalidated?.();
+  } catch (e) {
+    logger.error('[API] Session invalidation callback error:', e);
+  }
 }
 
 // Request 인터셉터: JWT 토큰 추가
@@ -112,6 +128,9 @@ api.interceptors.response.use(
           if (status === 401 || status === 403) {
             await clearSession();
           }
+        } else {
+          // Non-Axios 에러 (예: 'No refresh token') → 세션 정리
+          await clearSession();
         }
       }
     }
