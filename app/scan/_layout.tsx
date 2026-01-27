@@ -23,9 +23,9 @@ export default function ScanLayout() {
         }}
       />
       <Stack.Screen
-        name="crop"
+        name="preview"
         options={{
-          headerShown: false, // 크롭 화면도 헤더 숨김
+          headerShown: false,
         }}
       />
       <Stack.Screen
