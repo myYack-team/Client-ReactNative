@@ -14,7 +14,7 @@ import { FontSizes } from '../../constants/fonts';
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline' | 'kakao';
+  variant?: 'primary' | 'secondary' | 'outline' | 'danger' | 'kakao';
   size?: 'small' | 'medium' | 'large';
   disabled?: boolean;
   loading?: boolean;
@@ -38,8 +38,13 @@ export function Button({
   const getButtonStyle = (): ViewStyle => {
     const base: ViewStyle = {
       ...styles.button,
-      ...Shadows.medium,
     };
+
+    // outline/danger 변형은 그림자 없음 (Android elevation이 흰 박스로 보이는 현상 방지)
+    const needsShadow = variant !== 'outline' && variant !== 'danger';
+    if (needsShadow) {
+      Object.assign(base, Shadows.medium);
+    }
 
     switch (size) {
       case 'small':
@@ -70,6 +75,11 @@ export function Button({
         base.backgroundColor = 'transparent';
         base.borderWidth = 2;
         base.borderColor = Colors.primary;
+        break;
+      case 'danger':
+        base.backgroundColor = 'transparent';
+        base.borderWidth = 2;
+        base.borderColor = Colors.error;
         break;
       case 'kakao':
         base.backgroundColor = Colors.kakao;
@@ -108,6 +118,9 @@ export function Button({
       case 'outline':
         base.color = Colors.primary;
         break;
+      case 'danger':
+        base.color = Colors.error;
+        break;
       case 'kakao':
         base.color = Colors.kakaoText;
         break;
@@ -125,7 +138,7 @@ export function Button({
     >
       {loading ? (
         <ActivityIndicator
-          color={variant === 'outline' ? Colors.primary : Colors.white}
+          color={variant === 'outline' ? Colors.primary : variant === 'danger' ? Colors.error : Colors.white}
         />
       ) : (
         <Text style={[getTextStyle(), textStyle]}>{title}</Text>

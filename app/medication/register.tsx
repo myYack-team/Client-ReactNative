@@ -307,17 +307,16 @@ export default function MedicationRegisterScreen() {
               numberOfLines={3}
             />
           </View>
-        </ScrollView>
 
-        {/* 등록 버튼 */}
-        <View style={styles.footer}>
+          {/* 등록 버튼 */}
           <Button
             title="등록하기"
             onPress={handleSubmit}
             loading={isSubmitting}
             disabled={isSubmitting}
+            style={styles.submitButton}
           />
-        </View>
+        </ScrollView>
 
         {/* 시간 선택 피커 */}
         {showTimePicker && (
@@ -359,7 +358,6 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    paddingBottom: 100,
   },
   drugCard: {
     padding: 16,
@@ -471,14 +469,7 @@ const styles = StyleSheet.create({
     minHeight: 80,
     textAlignVertical: 'top',
   },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 16,
-    backgroundColor: Colors.background,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
+  submitButton: {
+    marginTop: 8,
   },
 });

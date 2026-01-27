@@ -693,17 +693,16 @@ export default function ResultScreen() {
         <Typography variant="caption" color={Colors.textSecondary} style={styles.notice}>
           정보가 맞지 않으면 터치해서 수정해주세요
         </Typography>
-      </ScrollView>
 
-      <View style={styles.footer}>
         <Button
           title="확인하고 등록"
           variant="primary"
           size="large"
           onPress={handleSubmit}
           loading={isLoading}
+          style={styles.submitButton}
         />
-      </View>
+      </ScrollView>
 
       {/* 중복 확인 모달 */}
       <Modal
@@ -776,7 +775,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 100,
   },
   warningCard: {
     backgroundColor: '#FFF3E0',
@@ -954,15 +952,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     backgroundColor: Colors.background,
   },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 20,
-    backgroundColor: Colors.background,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
+  submitButton: {
+    marginTop: 8,
   },
   // 체크박스 관련 스타일
   cardTopRow: {

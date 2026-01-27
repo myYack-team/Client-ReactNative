@@ -198,9 +198,7 @@ export default function SupplementRegisterScreen() {
               * 허위 정보 등록 시 삭제될 수 있습니다.
             </Typography>
           </Card>
-        </ScrollView>
 
-        <View style={styles.bottomButton}>
           <Button
             title="영양제 등록하기"
             variant="primary"
@@ -208,8 +206,9 @@ export default function SupplementRegisterScreen() {
             onPress={handleRegister}
             loading={isLoading}
             disabled={!name.trim() || !selectedTag}
+            style={styles.submitButton}
           />
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -228,7 +227,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 100,
   },
   description: {
     marginBottom: 24,
@@ -306,14 +304,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.backgroundSecondary,
     padding: 16,
   },
-  bottomButton: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 20,
-    backgroundColor: Colors.background,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
+  submitButton: {
+    marginTop: 8,
   },
 });
