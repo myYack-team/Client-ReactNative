@@ -130,8 +130,9 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchTodaySchedule();
+      loadScheduleForDate(selectedDate);
       loadMonthlySummary(currentMonth.year, currentMonth.month);
-    }, [currentMonth])
+    }, [currentMonth, selectedDate])
   );
 
   // 선택된 날짜가 변경되면 스케줄 로드
