@@ -62,11 +62,15 @@ export default function MedicationsScreen() {
       const loadData = async () => {
         const promises: Promise<void>[] = [];
 
-        if (medications.length === 0 || medNeedsRefresh) {
-          promises.push(fetchMedications().then(() => clearMedRefresh()));
+        // getState()로 최신 상태를 읽어 stale closure 방지
+        const medState = useMedicationStore.getState();
+        const suppState = useSupplementStore.getState();
+
+        if (medState.medications.length === 0 || medNeedsRefresh) {
+          promises.push(medState.fetchMedications().then(() => medState.clearNeedsRefresh()));
         }
-        if (userSupplements.length === 0 || suppNeedsRefresh) {
-          promises.push(fetchUserSupplements().then(() => clearSuppRefresh()));
+        if (suppState.userSupplements.length === 0 || suppNeedsRefresh) {
+          promises.push(suppState.fetchUserSupplements().then(() => suppState.clearNeedsRefresh()));
         }
 
         await Promise.all(promises);
@@ -75,6 +79,7 @@ export default function MedicationsScreen() {
       loadData().catch((err) => {
         console.error('Failed to load data:', err);
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- getState()로 최신 상태를 직접 읽으므로 store 변수는 의존성 불필요
     }, [medNeedsRefresh, suppNeedsRefresh])
   );
 
