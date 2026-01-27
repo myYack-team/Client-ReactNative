@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, Image } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,14 +6,23 @@ import { Button, Typography } from '../../components/ui';
 import { Colors } from '../../constants';
 
 export default function PreviewScreen() {
-  const { uri } = useLocalSearchParams<{ uri: string }>();
+  const params = useLocalSearchParams<{ uri: string }>();
+  const uri = Array.isArray(params.uri) ? params.uri[0] : params.uri;
+  const [isNavigating, setIsNavigating] = useState(false);
+
+  if (!uri) {
+    router.replace('/scan/camera');
+    return null;
+  }
 
   const handleRetake = () => {
     router.back();
   };
 
   const handleAnalyze = () => {
-    router.push({
+    if (isNavigating) return;
+    setIsNavigating(true);
+    router.replace({
       pathname: '/scan/loading',
       params: { uri },
     });
@@ -55,6 +64,7 @@ export default function PreviewScreen() {
             title="분석 시작"
             variant="primary"
             onPress={handleAnalyze}
+            disabled={isNavigating}
             style={styles.button}
           />
         </View>
