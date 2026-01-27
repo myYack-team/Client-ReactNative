@@ -64,6 +64,7 @@
           "sounds": []
         }
       ],
+      "./plugins/withLargerNotificationIcon",
       [
         "@react-native-seoul/kakao-login",
         {
