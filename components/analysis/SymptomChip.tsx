@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   View,
+  Image,
   StyleSheet,
   TouchableOpacity,
 } from 'react-native';
@@ -25,12 +26,11 @@ export function SymptomChip({ symptom, selected, onPress }: SymptomChipProps) {
       activeOpacity={0.7}
     >
       <View style={styles.content}>
-        <Typography
-          variant="h3"
-          style={styles.emoji}
-        >
-          {symptom.emoji}
-        </Typography>
+        <Image
+          source={symptom.icon}
+          style={styles.icon}
+          resizeMode="contain"
+        />
         <Typography
           variant="caption"
           color={selected ? symptom.color : Colors.textSecondary}
@@ -67,9 +67,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  emoji: {
-    fontSize: 28,
-    lineHeight: 36,
+  icon: {
+    width: 40,
+    height: 40,
   },
   label: {
     textAlign: 'center',
