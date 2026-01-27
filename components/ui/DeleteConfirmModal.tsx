@@ -89,7 +89,7 @@ export function DeleteConfirmModal({
               disabled={isDeleting}
             >
               {isDeleting ? (
-                <ActivityIndicator color={Colors.white} size="small" />
+                <ActivityIndicator color={Colors.error} size="small" />
               ) : (
                 <Text style={styles.confirmText}>확인</Text>
               )}
@@ -142,18 +142,22 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   confirmButton: {
-    backgroundColor: Colors.error,
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: Colors.error,
   },
   confirmText: {
     fontSize: 16,
     fontWeight: '600',
-    color: Colors.white,
+    color: Colors.error,
   },
   buttonDisabled: {
     opacity: 0.5,
   },
   confirmButtonDisabled: {
-    backgroundColor: Colors.error,
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: Colors.error,
     opacity: 0.7,
   },
   textDisabled: {
