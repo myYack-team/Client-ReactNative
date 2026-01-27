@@ -34,12 +34,13 @@ for (let h = 0; h < 24; h++) {
 }
 
 // 시간 문자열을 기반으로 적절한 MedicationTiming을 반환하는 헬퍼 함수
+// 서버의 MedicationTiming.fromTime()과 동일한 로직:
+// 03:00~10:59 → MORNING, 11:00~16:59 → AFTERNOON, 17:00~02:59 → EVENING
 const getTimingForTime = (time: string): MedicationTiming => {
   const [h] = time.split(':').map(Number);
-  if (h >= 6 && h < 12) return 'MORNING';
-  if (h >= 12 && h < 18) return 'AFTERNOON';
-  if (h >= 18 && h < 21) return 'EVENING';
-  return 'MORNING'; // 21:00~05:59 → MORNING (야간 복용은 드물므로 기본값)
+  if (h >= 3 && h < 11) return 'MORNING';
+  if (h >= 11 && h < 17) return 'AFTERNOON';
+  return 'EVENING'; // 17:00~02:59
 };
 
 // 시간 배열로부터 timings 배열을 생성

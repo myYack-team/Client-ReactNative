@@ -256,9 +256,10 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
 
     // 이전 상태 저장 (롤백용)
     const previousTodayData = todayData ? { ...todayData } : null;
+    const isToday = !date || date === today;
 
-    // 낙관적 업데이트 (UI 먼저 반영)
-    if (todayData?.schedules) {
+    // 낙관적 업데이트 (오늘 날짜일 때만 UI 먼저 반영)
+    if (isToday && todayData?.schedules) {
       const updatedSchedules = todayData.schedules.map((schedule) => {
         if (schedule.timing === timing) {
           const updatedMedications = schedule.medications.map((med) =>
@@ -276,6 +277,11 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
     }
 
     try {
+      // 미래 날짜 복용 기록 방지
+      if (date && date > today) {
+        throw new Error('미래 날짜에는 복용 기록을 할 수 없습니다.');
+      }
+
       // 선택된 날짜 기준으로 takenAt 생성 (과거 날짜 복용 기록 지원)
       let takenAt: string | undefined;
       if (date && date !== today) {
@@ -297,7 +303,7 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
       // 실패 시 롤백
       logger.error('Failed to record intake, rolling back:', error);
 
-      if (previousTodayData) {
+      if (isToday && previousTodayData) {
         set({ todayData: previousTodayData });
       }
 
