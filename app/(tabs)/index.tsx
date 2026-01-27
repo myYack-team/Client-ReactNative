@@ -342,9 +342,11 @@ export default function HomeScreen() {
   };
 
   // 약물 복용 상태 결정
-  type MedStatus = 'pending' | 'taken' | 'missed';
+  type MedStatus = 'pending' | 'taken' | 'missed' | 'future';
   const getMedStatus = (med: ScheduleMedication, slotTime: string): MedStatus => {
     if (med.taken) return 'taken';
+    // 미래 날짜이면 복용 버튼 비활성화
+    if (selectedDate > today) return 'future';
     if (isElapsedOver6Hours(slotTime, selectedDate)) return 'missed';
     return 'pending';
   };
@@ -410,7 +412,8 @@ export default function HomeScreen() {
     try {
       await recordIntake(
         notTakenMeds.map((m) => m.id),
-        schedule.timing
+        schedule.timing,
+        selectedDate
       );
     } catch (error) {
       console.error('Failed to record intake:', error);
@@ -426,7 +429,8 @@ export default function HomeScreen() {
     try {
       await recordIntake(
         notTakenMeds.map((m) => m.id),
-        timing
+        timing,
+        selectedDate
       );
     } catch (error) {
       console.error('Failed to record intake:', error);
@@ -440,7 +444,7 @@ export default function HomeScreen() {
 
     setProcessingMeds(prev => new Set(prev).add(med.id));
     try {
-      await recordIntake([med.id], timing);
+      await recordIntake([med.id], timing, selectedDate);
     } catch (error) {
       console.error('Failed to record intake:', error);
       Alert.alert('오류', '복용 기록에 실패했습니다. 다시 시도해주세요.');
@@ -772,7 +776,7 @@ export default function HomeScreen() {
                           slot.medications.filter(m => !m.taken).map(m => m.id)
                         );
                         if (allNotTakenMeds.length > 0) {
-                          recordIntake(allNotTakenMeds, group.timing);
+                          recordIntake(allNotTakenMeds, group.timing, selectedDate);
                         }
                       }}
                     >
@@ -859,6 +863,10 @@ export default function HomeScreen() {
                           ) : status === 'taken' ? (
                             <View style={styles.takenBadge}>
                               <Typography variant="caption" color={Colors.primary}>복용 완료</Typography>
+                            </View>
+                          ) : status === 'future' ? (
+                            <View style={styles.futureBadge}>
+                              <Typography variant="caption" color={Colors.textTertiary}>예정</Typography>
                             </View>
                           ) : (
                             <View style={styles.missedBadge}>
@@ -1223,6 +1231,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     backgroundColor: '#FFEBEE',
+    borderRadius: 12,
+  },
+  futureBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: Colors.backgroundSecondary,
     borderRadius: 12,
   },
   takeAllSlotButton: {

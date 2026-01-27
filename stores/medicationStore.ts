@@ -57,7 +57,7 @@ interface MedicationState {
   updateMedication: (id: number, data: Partial<CreateMedicationRequest>) => Promise<void>;
   deleteMedication: (id: number) => Promise<void>;
   deleteMedicationsBatch: (ids: number[]) => Promise<BatchDeleteResult>;
-  recordIntake: (medicationIds: number[], timing: MedicationTiming) => Promise<void>;
+  recordIntake: (medicationIds: number[], timing: MedicationTiming, date?: string) => Promise<void>;
   clearScanResult: () => void;
   clearError: () => void;
   clearScanError: () => void;
@@ -250,8 +250,9 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
     }
   },
 
-  recordIntake: async (medicationIds: number[], timing: MedicationTiming) => {
+  recordIntake: async (medicationIds: number[], timing: MedicationTiming, date?: string) => {
     const { todayData } = get();
+    const today = getTodayString(); // 로컬 타임존 기준 오늘 날짜
 
     // 이전 상태 저장 (롤백용)
     const previousTodayData = todayData ? { ...todayData } : null;
@@ -275,12 +276,19 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
     }
 
     try {
-      // 서버 호출
-      await intakeService.markAsTaken(medicationIds, timing);
+      // 선택된 날짜 기준으로 takenAt 생성 (과거 날짜 복용 기록 지원)
+      let takenAt: string | undefined;
+      if (date && date !== today) {
+        // 선택된 날짜의 현재 시각으로 takenAt 생성
+        const now = new Date();
+        takenAt = `${date}T${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+      }
 
-      // 성공 시 캐시 무효화 (낙관적 업데이트가 이미 적용되어 있으므로 fetchTodaySchedule 호출 불필요)
-      const today = getTodayString(); // 로컬 타임존 기준 오늘 날짜
-      get().invalidateCache(today);
+      // 서버 호출
+      await intakeService.markAsTaken(medicationIds, timing, takenAt);
+
+      // 성공 시 캐시 무효화
+      get().invalidateCache(date || today);
       // 오늘 스케줄 캐시도 무효화
       set({ todayDataExpiry: 0 });
       // 월별 요약 캐시 무효화 (주간 달력 상태 반영용)
