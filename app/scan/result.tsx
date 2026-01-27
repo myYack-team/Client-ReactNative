@@ -33,6 +33,20 @@ for (let h = 0; h < 24; h++) {
   }
 }
 
+// 시간 문자열을 기반으로 적절한 MedicationTiming을 반환하는 헬퍼 함수
+const getTimingForTime = (time: string): MedicationTiming => {
+  const [h] = time.split(':').map(Number);
+  if (h >= 6 && h < 12) return 'MORNING';
+  if (h >= 12 && h < 18) return 'AFTERNOON';
+  if (h >= 18 && h < 21) return 'EVENING';
+  return 'MORNING'; // 21:00~05:59 → MORNING (야간 복용은 드물므로 기본값)
+};
+
+// 시간 배열로부터 timings 배열을 생성
+const generateTimingsFromTimes = (times: string[]): MedicationTiming[] => {
+  return times.map(getTimingForTime);
+};
+
 // 확장된 약 정보 타입 (시간 배열 추가)
 interface MedicationWithTimes extends ScannedMedication {
   times: string[];
@@ -256,11 +270,26 @@ export default function ResultScreen() {
       prev.map((med, i) => {
         if (i !== index) return med;
 
-        // frequency 변경 시 times 배열도 업데이트
+        // frequency 변경 시 times 및 timings 배열도 업데이트
         if (field === 'frequency') {
           const newFrequency = value as number;
-          const newTimes = DEFAULT_TIMES[newFrequency] || DEFAULT_TIMES[1];
-          return { ...med, [field]: value, times: newTimes };
+          const currentTimes = med.times;
+          let newTimes: string[];
+
+          if (newFrequency > currentTimes.length) {
+            // 기존 시간 유지, 추가분만 DEFAULT_TIMES에서 가져옴
+            const defaultTimes = DEFAULT_TIMES[newFrequency] || DEFAULT_TIMES[1];
+            newTimes = [...currentTimes];
+            for (let j = currentTimes.length; j < newFrequency; j++) {
+              newTimes.push(defaultTimes[j] || defaultTimes[defaultTimes.length - 1]);
+            }
+          } else {
+            // 기존 시간 중 앞에서부터 유지
+            newTimes = currentTimes.slice(0, newFrequency);
+          }
+
+          const newTimings = generateTimingsFromTimes(newTimes);
+          return { ...med, [field]: value, times: newTimes, timings: newTimings };
         }
 
         return { ...med, [field]: value };
@@ -274,7 +303,7 @@ export default function ResultScreen() {
         if (i !== medIndex) return med;
         const newTimes = [...med.times];
         newTimes[timeIndex] = newTime;
-        return { ...med, times: newTimes };
+        return { ...med, times: newTimes, timings: generateTimingsFromTimes(newTimes) };
       })
     );
   };
@@ -289,10 +318,12 @@ export default function ResultScreen() {
         const [h] = lastTime.split(':').map(Number);
         const newHour = (h + 4) % 24;
         const newTime = `${newHour.toString().padStart(2, '0')}:00`;
+        const newTimes = [...med.times, newTime];
         return {
           ...med,
-          times: [...med.times, newTime],
-          frequency: med.times.length + 1,
+          times: newTimes,
+          timings: generateTimingsFromTimes(newTimes),
+          frequency: newTimes.length,
         };
       })
     );
@@ -307,6 +338,7 @@ export default function ResultScreen() {
         return {
           ...med,
           times: newTimes,
+          timings: generateTimingsFromTimes(newTimes),
           frequency: newTimes.length,
         };
       })
@@ -639,7 +671,7 @@ export default function ResultScreen() {
                 times={med.times}
                 onReorder={(newTimes) => {
                   setMedications(prev => prev.map((m, i) =>
-                    i === index ? { ...m, times: newTimes } : m
+                    i === index ? { ...m, times: newTimes, timings: generateTimingsFromTimes(newTimes) } : m
                   ));
                 }}
                 onUpdateTime={(timeIndex, newTime) => updateTime(index, timeIndex, newTime)}
