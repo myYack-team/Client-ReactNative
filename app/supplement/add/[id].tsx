@@ -91,12 +91,14 @@ export default function AddUserSupplementScreen() {
   const toggleTiming = (timing: MedicationTiming) => {
     if (selectedTimings.includes(timing)) {
       if (selectedTimings.length > 1) {
-        setSelectedTimings(selectedTimings.filter((t) => t !== timing));
-        setFrequency(Math.max(1, frequency - 1));
+        const newTimings = selectedTimings.filter((t) => t !== timing);
+        setSelectedTimings(newTimings);
+        setFrequency(newTimings.length);
       }
     } else {
-      setSelectedTimings([...selectedTimings, timing]);
-      setFrequency(frequency + 1);
+      const newTimings = [...selectedTimings, timing];
+      setSelectedTimings(newTimings);
+      setFrequency(newTimings.length);
     }
   };
 
@@ -212,27 +214,15 @@ export default function AddUserSupplementScreen() {
             </View>
           </View>
 
-          {/* 복용 횟수 */}
+          {/* 복용 횟수 (선택된 시간대 수에 연동) */}
           <View style={styles.inputSection}>
             <Typography variant="h4" style={styles.label}>
               하루 복용 횟수
             </Typography>
             <View style={styles.frequencyContainer}>
-              <TouchableOpacity
-                style={styles.frequencyButton}
-                onPress={() => setFrequency(Math.max(1, frequency - 1))}
-              >
-                <Typography variant="h3">-</Typography>
-              </TouchableOpacity>
               <Typography variant="h3" style={styles.frequencyValue}>
-                {frequency}회
+                {selectedTimings.length}회
               </Typography>
-              <TouchableOpacity
-                style={styles.frequencyButton}
-                onPress={() => setFrequency(frequency + 1)}
-              >
-                <Typography variant="h3">+</Typography>
-              </TouchableOpacity>
             </View>
           </View>
 
