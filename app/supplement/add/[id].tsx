@@ -241,17 +241,16 @@ export default function AddUserSupplementScreen() {
               numberOfLines={3}
             />
           </View>
-        </ScrollView>
 
-        <View style={styles.bottomButton}>
           <Button
             title="내 영양제에 추가"
             variant="primary"
             size="large"
             onPress={handleSave}
             loading={isSaving}
+            style={styles.submitButton}
           />
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -280,7 +279,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 100,
   },
   supplementCard: {
     marginBottom: 24,
@@ -345,14 +343,7 @@ const styles = StyleSheet.create({
     minWidth: 60,
     textAlign: 'center',
   },
-  bottomButton: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 20,
-    backgroundColor: Colors.background,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
+  submitButton: {
+    marginTop: 8,
   },
 });

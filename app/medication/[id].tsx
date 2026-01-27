@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Card, Typography, ExpandableText } from '../../components/ui';
@@ -10,7 +10,6 @@ import { Medication, TIMING_LABELS, MedicationTiming } from '../../types';
 
 export default function MedicationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const insets = useSafeAreaInsets();
   const { getMedicationDetail, deleteMedication, isLoading } = useMedicationStore();
   const [medication, setMedication] = useState<Medication | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(true);
@@ -256,19 +255,15 @@ export default function MedicationDetailScreen() {
             </Typography>
           </View>
         )}
-      </ScrollView>
-
-      <View style={[styles.footer, { paddingBottom: 20 + insets.bottom }]}>
         <Button
           title="삭제하기"
-          variant="outline"
+          variant="danger"
           size="large"
           onPress={handleDelete}
           loading={isLoading}
           style={styles.deleteButton}
-          textStyle={{ color: Colors.error }}
         />
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -293,7 +288,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 100,
   },
   headerCard: {
     marginBottom: 16,
@@ -337,18 +331,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF3E0',
     borderRadius: 8,
   },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 20,
-    backgroundColor: Colors.background,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
   deleteButton: {
-    borderColor: Colors.error,
+    marginTop: 8,
   },
   sourceSection: {
     flexDirection: 'row',
