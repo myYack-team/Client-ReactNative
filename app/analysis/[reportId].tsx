@@ -5,11 +5,10 @@ import {
   ScrollView,
   RefreshControl,
   Alert,
-  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams } from 'expo-router';
-import { Typography, Button, Card } from '../../components/ui';
+import { router, useLocalSearchParams, useNavigation } from 'expo-router';
+import { Typography, Button } from '../../components/ui';
 import { ReportTabView } from '../../components/analysis';
 import { Colors } from '../../constants';
 import { useAnalysisStore } from '../../stores';
@@ -19,6 +18,7 @@ import { analysisService } from '../../services';
 export default function ReportDetailScreen() {
   const { reportId } = useLocalSearchParams<{ reportId: string }>();
   const { deleteReport } = useAnalysisStore();
+  const navigation = useNavigation();
   const scrollViewRef = useRef<ScrollView>(null);
 
   const [result, setResult] = useState<AnalysisResultExtended | null>(null);
@@ -37,6 +37,26 @@ export default function ReportDetailScreen() {
       setError(null);
       const data = await analysisService.getAnalysisResult(parseInt(reportId));
       setResult(data as AnalysisResultExtended);
+
+      if (data) {
+        const mCount = data.mechanismGroups?.length || 0;
+        const fCount = (data.foodInteractions?.length || 0) + (data.foodSuggestions?.length || 0);
+        const tCount = data.lifestyleTips?.length || 0;
+        const trend = !!data.patternAnalysis;
+        const dateStr = data.analysisDate
+          ? new Date(data.analysisDate).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })
+          : '';
+        const summaryStr = `기전 ${mCount}개 · 음식 ${fCount}개 · 팁 ${tCount}개${trend ? ' · 추세 분석' : ''}`;
+
+        navigation.setOptions({
+          headerTitle: () => (
+            <View style={styles.headerTitleContainer}>
+              <Typography variant="bodySmall" style={styles.headerTitleDate}>{dateStr}</Typography>
+              <Typography variant="caption" color={Colors.textSecondary} numberOfLines={1}>{summaryStr}</Typography>
+            </View>
+          ),
+        });
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : '레포트를 불러오는데 실패했습니다.';
       setError(message);
@@ -106,13 +126,6 @@ export default function ReportDetailScreen() {
     );
   }
 
-  // 분석 결과 카운트 계산
-  const mechanismCount = result?.mechanismGroups?.length || 0;
-  const foodInteractionCount = result?.foodInteractions?.length || 0;
-  const foodSuggestionCount = result?.foodSuggestions?.length || 0;
-  const tipsCount = result?.lifestyleTips?.length || 0;
-  const hasTrend = !!result?.patternAnalysis;
-
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView
@@ -127,30 +140,6 @@ export default function ReportDetailScreen() {
           />
         }
       >
-        {/* 헤더 정보 */}
-        <Card style={styles.headerCard} variant="elevated">
-          <View style={styles.headerContent}>
-            <Image
-              source={require('../../assets/icons_iamge_processed/AI_Report.png')}
-              style={styles.headerIcon}
-              accessibilityLabel="Analysis report icon"
-              resizeMode="contain"
-            />
-            <View style={styles.headerTextContainer}>
-              <Typography variant="h4">
-                {result?.analysisDate ? new Date(result.analysisDate).toLocaleDateString('ko-KR', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                }) : ''}
-              </Typography>
-              <Typography variant="caption" color={Colors.textSecondary}>
-                기전 {mechanismCount}개 · 음식 {foodInteractionCount + foodSuggestionCount}개 · 팁 {tipsCount}개{hasTrend ? ' · 추세 분석' : ''}
-              </Typography>
-            </View>
-          </View>
-        </Card>
-
         {/* 탭 뷰 */}
         <ReportTabView
           mechanismGroups={result?.mechanismGroups || []}
@@ -217,24 +206,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 32,
   },
-  // 헤더 카드
-  headerCard: {
-    marginBottom: 16,
-    backgroundColor: Colors.brandLightest,
-    borderWidth: 1,
-    borderColor: Colors.brand,
-  },
-  headerContent: {
-    flexDirection: 'row',
+  // 헤더 타이틀
+  headerTitleContainer: {
     alignItems: 'center',
-    gap: 16,
   },
-  headerIcon: {
-    width: 40,
-    height: 40,
-  },
-  headerTextContainer: {
-    flex: 1,
+  headerTitleDate: {
+    fontWeight: '600',
   },
   // 면책 조항
   disclaimer: {

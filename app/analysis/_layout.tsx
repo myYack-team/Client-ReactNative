@@ -33,6 +33,7 @@ export default function AnalysisLayout() {
         name="[reportId]"
         options={{
           title: '분석 결과',
+          headerTitleAlign: 'center',
         }}
       />
     </Stack>

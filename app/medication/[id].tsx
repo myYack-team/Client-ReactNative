@@ -1,16 +1,25 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, ActivityIndicator, Image as RNImage } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { Button, Card, Typography, ExpandableText } from '../../components/ui';
-import { Colors } from '../../constants';
+import { Colors, API_BASE_URL } from '../../constants';
 import { useMedicationStore } from '../../stores';
 import { Medication, TIMING_LABELS, MedicationTiming } from '../../types';
+
+const getImageUrl = (imageUrl: string): string => {
+  if (imageUrl.startsWith('http')) return imageUrl;
+  const baseUrl = API_BASE_URL.replace(/\/api\/?$/, '');
+  const path = imageUrl.startsWith('/') ? imageUrl : `/${imageUrl}`;
+  return `${baseUrl}${path}`;
+};
 
 export default function MedicationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { getMedicationDetail, deleteMedication, isLoading } = useMedicationStore();
+  const navigation = useNavigation();
   const [medication, setMedication] = useState<Medication | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(true);
 
@@ -23,6 +32,9 @@ export default function MedicationDetailScreen() {
       setLoadingDetail(true);
       const data = await getMedicationDetail(parseInt(id));
       setMedication(data);
+      if (data) {
+        navigation.setOptions({ title: data.drugInfo?.displayName || data.drugName });
+      }
     } catch (error) {
       console.error('Failed to load medication:', error);
     } finally {
@@ -89,6 +101,26 @@ export default function MedicationDetailScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* 약 이미지 */}
+        {drugInfo?.imageUrl ? (
+          <View style={styles.drugImageContainer}>
+            <Image
+              source={{ uri: getImageUrl(drugInfo.imageUrl) }}
+              style={styles.drugImage}
+              contentFit="contain"
+              cachePolicy="memory-disk"
+            />
+          </View>
+        ) : (
+          <View style={styles.drugImagePlaceholder}>
+            <RNImage
+              source={require('../../assets/icons_iamge_processed/02_Pill.png')}
+              style={styles.placeholderIcon}
+              resizeMode="contain"
+            />
+          </View>
+        )}
+
         <Card variant="elevated" style={styles.headerCard}>
           <Typography variant="h2">{medication.drugName}</Typography>
           {drugInfo?.entpName && (
@@ -346,5 +378,31 @@ const styles = StyleSheet.create({
   sourceText: {
     flex: 1,
     lineHeight: 18,
+  },
+  drugImageContainer: {
+    width: '100%',
+    height: 200,
+    backgroundColor: Colors.backgroundSecondary,
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  drugImage: {
+    width: '100%',
+    height: '100%',
+  },
+  drugImagePlaceholder: {
+    width: '100%',
+    height: 160,
+    backgroundColor: Colors.backgroundSecondary,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  placeholderIcon: {
+    width: 64,
+    height: 64,
+    tintColor: Colors.textSecondary,
   },
 });

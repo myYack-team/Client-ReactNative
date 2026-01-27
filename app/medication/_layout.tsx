@@ -38,6 +38,7 @@ export default function MedicationLayout() {
         name="[id]"
         options={{
           title: '약 상세',
+          headerTitleAlign: 'left',
         }}
       />
     </Stack>
