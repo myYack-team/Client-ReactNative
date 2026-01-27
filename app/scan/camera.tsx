@@ -117,12 +117,12 @@ export default function CameraScreen() {
       });
 
       if (photo?.uri) {
-        // 세로 모드로 전환 후 로딩 화면으로 이동 (원본 이미지 전송)
+        // 세로 모드로 전환 후 미리보기 화면으로 이동
         await ScreenOrientation.lockAsync(
           ScreenOrientation.OrientationLock.PORTRAIT_UP
         );
         router.push({
-          pathname: '/scan/loading',
+          pathname: '/scan/preview',
           params: { uri: photo.uri },
         });
       }
@@ -144,9 +144,9 @@ export default function CameraScreen() {
     });
 
     if (!result.canceled && result.assets[0]) {
-      // 로딩 화면으로 이동 (원본 이미지 전송)
+      // 미리보기 화면으로 이동
       router.push({
-        pathname: '/scan/loading',
+        pathname: '/scan/preview',
         params: { uri: result.assets[0].uri },
       });
     }
