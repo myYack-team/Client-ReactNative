@@ -233,7 +233,7 @@ export default function MedicationRegisterScreen() {
                 </Typography>
                 <TouchableOpacity
                   style={styles.counterButton}
-                  onPress={() => setFrequency(Math.min(4, frequency + 1))}
+                  onPress={() => setFrequency(Math.min(6, frequency + 1))}
                 >
                   <Ionicons name="add" size={20} color={Colors.primary} />
                 </TouchableOpacity>
