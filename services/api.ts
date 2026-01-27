@@ -70,7 +70,11 @@ export async function clearSession(): Promise<void> {
   logger.log('[API] Clearing session');
   await SecureStore.deleteItemAsync('accessToken');
   await SecureStore.deleteItemAsync('refreshToken');
-  onSessionInvalidated?.();
+  try {
+    onSessionInvalidated?.();
+  } catch (e) {
+    logger.error('[API] Session invalidation callback error:', e);
+  }
 }
 
 // Request 인터셉터: JWT 토큰 추가
