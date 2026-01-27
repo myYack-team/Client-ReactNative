@@ -58,7 +58,7 @@ export default function PreviewScreen() {
             title="다시 촬영"
             variant="outline"
             onPress={handleRetake}
-            style={styles.button}
+            style={styles.outlineButton}
           />
           <Button
             title="분석 시작"
@@ -115,5 +115,10 @@ const styles = StyleSheet.create({
   },
   button: {
     flex: 1,
+  },
+  outlineButton: {
+    flex: 1,
+    elevation: 0,
+    shadowOpacity: 0,
   },
 });
