@@ -3,7 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import axios from 'axios';
 import { User } from '../types';
 import { authService, userService } from '../services';
-import { clearSession } from '../services/api';
+import { clearSession, setSessionInvalidatedCallback } from '../services/api';
 import { logger } from '../utils/logger';
 
 /**
@@ -187,3 +187,14 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   clearError: () => set({ error: null }),
 }));
+
+// 세션 무효화 시 Zustand 인증 상태도 함께 초기화
+setSessionInvalidatedCallback(() => {
+  useAuthStore.setState({
+    user: null,
+    isAuthenticated: false,
+    needsOnboarding: false,
+    error: null,
+    isLoading: false,
+  });
+});
