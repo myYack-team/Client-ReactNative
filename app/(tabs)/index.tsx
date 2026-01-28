@@ -978,6 +978,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 4,
+    overflow: 'hidden',
   },
   modalOverlay: {
     flex: 1,
