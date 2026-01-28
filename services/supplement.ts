@@ -1,6 +1,4 @@
-import api from './api';
-import { API_BASE_URL } from '../constants';
-import * as SecureStore from 'expo-secure-store';
+import api, { extractResult } from './api';
 import {
   ApiResponse,
   Supplement,
@@ -51,22 +49,12 @@ export const supplementService = {
       } as unknown as Blob);
     }
 
-    const token = await SecureStore.getItemAsync('accessToken');
-    const response = await fetch(`${API_BASE_URL}/supplements/with-image`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: formData,
-    });
+    const response = await api.post<ApiResponse<Supplement>>(
+      '/supplements/with-image',
+      formData,
+    );
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || '영양제 등록에 실패했습니다.');
-    }
-
-    const result: ApiResponse<Supplement> = await response.json();
-    return result.result!;
+    return extractResult(response, '영양제 등록에 실패했습니다.');
   },
 
   // 영양제 검색 (페이징)

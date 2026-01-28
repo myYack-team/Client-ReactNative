@@ -1,5 +1,4 @@
-import api from './api';
-import * as SecureStore from 'expo-secure-store';
+import api, { extractResult } from './api';
 import {
   ApiResponse,
   Prescription,
@@ -10,7 +9,6 @@ import {
   PrescriptionRegisterResponse,
   BatchDeleteResult,
 } from '../types';
-import { API_BASE_URL } from '../constants';
 import { logger } from '../utils/logger';
 
 export const prescriptionService = {
@@ -34,38 +32,16 @@ export const prescriptionService = {
       formData.append('prescriptionDate', prescriptionDate);
     }
 
-    const uploadUrl = `${API_BASE_URL}/prescriptions/upload`;
-    logger.log('[Upload] URL:', uploadUrl);
     logger.log('[Upload] Image URI:', imageUri);
 
-    // JWT 토큰 가져오기
-    const token = await SecureStore.getItemAsync('accessToken');
+    const response = await api.post<ApiResponse<PrescriptionUploadResponse>>(
+      '/prescriptions/upload',
+      formData,
+    );
 
-    const response = await fetch(uploadUrl, {
-      method: 'POST',
-      body: formData,
-      headers: {
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-      },
-      // Content-Type 헤더는 FormData 사용 시 자동 설정됨 (boundary 포함)
-    });
+    logger.log('[Upload] Response data:', JSON.stringify(response.data, null, 2));
 
-    logger.log('[Upload] Response status:', response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      logger.error('[Upload] Error response:', errorText);
-      throw new Error('이미지 업로드에 실패했습니다.');
-    }
-
-    const data = await response.json() as ApiResponse<PrescriptionUploadResponse>;
-    logger.log('[Upload] Response data:', JSON.stringify(data, null, 2));
-
-    if (!data.isSuccess || !data.result) {
-      throw new Error(data.message || '이미지 업로드에 실패했습니다.');
-    }
-
-    return data.result;
+    return extractResult(response, '이미지 업로드에 실패했습니다.');
   },
 
   // 처방전 목록 조회
@@ -123,38 +99,16 @@ export const prescriptionService = {
     // JSON 데이터 추가 (문자열로 전송, 서버에서 파싱)
     formData.append('data', JSON.stringify(request));
 
-    const registerUrl = `${API_BASE_URL}/prescriptions/register`;
-    logger.log('[Register] URL:', registerUrl);
     logger.log('[Register] Request:', JSON.stringify(request, null, 2));
 
-    // JWT 토큰 가져오기
-    const token = await SecureStore.getItemAsync('accessToken');
+    const response = await api.post<ApiResponse<PrescriptionRegisterResponse>>(
+      '/prescriptions/register',
+      formData,
+    );
 
-    const response = await fetch(registerUrl, {
-      method: 'POST',
-      body: formData,
-      headers: {
-        'Accept': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-      },
-    });
+    logger.log('[Register] Response data:', JSON.stringify(response.data, null, 2));
 
-    logger.log('[Register] Response status:', response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      logger.error('[Register] Error response:', errorText);
-      throw new Error('처방전 등록에 실패했습니다.');
-    }
-
-    const data = await response.json() as ApiResponse<PrescriptionRegisterResponse>;
-    logger.log('[Register] Response data:', JSON.stringify(data, null, 2));
-
-    if (!data.isSuccess || !data.result) {
-      throw new Error(data.message || '처방전 등록에 실패했습니다.');
-    }
-
-    return data.result;
+    return extractResult(response, '처방전 등록에 실패했습니다.');
   },
 
   // 처방전 일괄 삭제

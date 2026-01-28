@@ -8,14 +8,15 @@ import { logger } from '../utils/logger';
 
 /**
  * 인증 관련 에러인지 판별
- * - 401/403 HTTP 상태 코드
- * - AUTH로 시작하는 서버 에러 코드
+ * - 401 HTTP 상태 코드는 항상 인증 에러
+ * - AUTH로 시작하는 서버 에러 코드는 인증 에러
+ * - 403은 비즈니스 권한 에러(소유권 검증 실패 등)일 수 있으므로 제외
  * 주의: 메시지 기반 매칭은 오탐(푸시 토큰 등) 위험이 있어 제외
  */
 function isAuthError(error: unknown): boolean {
   if (axios.isAxiosError(error)) {
     const status = error.response?.status;
-    if (status === 401 || status === 403) {
+    if (status === 401) {
       return true;
     }
     const code = error.response?.data?.code;

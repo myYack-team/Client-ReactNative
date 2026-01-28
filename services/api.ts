@@ -32,7 +32,7 @@ const api = axios.create({
  * Single-flight token refresh
  * 여러 요청이 동시에 401을 받아도 토큰 갱신은 한 번만 수행
  */
-async function refreshTokenSingleFlight(): Promise<{ accessToken: string; refreshToken: string }> {
+export async function refreshTokenSingleFlight(): Promise<{ accessToken: string; refreshToken: string }> {
   if (refreshPromise) {
     logger.log('[API] Token refresh in progress - waiting for existing request');
     return refreshPromise;
@@ -108,8 +108,12 @@ api.interceptors.response.use(
   async (error: AxiosError<ApiResponse<unknown>>) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
-    // 401 에러 시 토큰 갱신 시도
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // 401 또는 에러코드 없는 403(서버가 인증 실패를 403으로 반환하는 경우 방어) 시 토큰 갱신 시도
+    const status = error.response?.status;
+    const errorCode = error.response?.data?.code;
+    const shouldRefresh = (status === 401 || (status === 403 && !errorCode)) && !originalRequest._retry;
+
+    if (shouldRefresh) {
       originalRequest._retry = true;
 
       try {

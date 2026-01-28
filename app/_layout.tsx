@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, AppState, AppStateStatus } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useAuthStore, useSettingsStore } from '../stores';
 import { notificationService, NOTIFICATION_ACTIONS } from '../services';
+import { refreshTokenSingleFlight } from '../services/api';
 import { Colors } from '../constants';
 import SplashScreen from '../components/SplashScreen';
 
@@ -14,6 +15,7 @@ export default function RootLayout() {
   const { initialize: initSettings, isLoading: settingsLoading } = useSettingsStore();
   const [showSplash, setShowSplash] = useState(true);
 
+  const appState = useRef(AppState.currentState);
   const notificationListener = useRef<Notifications.Subscription | null>(null);
   const responseListener = useRef<Notifications.Subscription | null>(null);
 
@@ -110,6 +112,27 @@ export default function RootLayout() {
       notificationService.initialize();
     }
   }, [isAuthenticated, authLoading]);
+
+  // 앱이 백그라운드에서 포그라운드로 복귀할 때 토큰 사전 갱신
+  // 24시간 이상 백그라운드 유지 후 복귀 시 만료된 토큰으로 인한 실패 방지
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      if (
+        appState.current?.match(/inactive|background/) &&
+        nextAppState === 'active' &&
+        isAuthenticated
+      ) {
+        refreshTokenSingleFlight().catch(() => {
+          // 갱신 실패 시 무시 — 이후 API 호출에서 인터셉터가 재시도
+        });
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isAuthenticated]);
 
   // 스플래시 스크린 표시
   if (showSplash) {
