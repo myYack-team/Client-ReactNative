@@ -58,6 +58,14 @@ export function ConditionLineChart({ dailyConditions, events = [], selectedIndex
     return `${date.getMonth() + 1}/${date.getDate()}`;
   };
 
+  const formatFullDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const findEvent = (dateString: string) => {
     return events?.find((e) => e.date === dateString);
   };
@@ -250,7 +258,7 @@ export function ConditionLineChart({ dailyConditions, events = [], selectedIndex
           ]}>
             <View style={styles.selectedInfoHeader}>
               <Typography variant="bodySmall" color={Colors.textSecondary}>
-                {formatDate(selectedData.date)}
+                {formatFullDate(selectedData.date)}
               </Typography>
               <Typography variant="h3" color={selectedEvent ? Colors.warning : Colors.brand}>
                 {(selectedData as any).conditionScore ?? selectedData.score}점

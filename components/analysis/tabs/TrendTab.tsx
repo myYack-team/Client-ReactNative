@@ -117,30 +117,33 @@ export function TrendTab({ patternAnalysis, scrollViewRef }: TrendTabProps) {
               const isHighlighted = highlightedEventDate === event.date;
 
               return (
-                <TouchableOpacity
-                  key={`event-${index}`}
-                  style={[
-                    styles.eventCard,
-                    isSelected && styles.eventCardSelected,
-                    isHighlighted && styles.eventCardHighlighted,
-                  ]}
-                  onPress={() => {
-                    if (eventIndex >= 0) {
-                      const isDeselecting = selectedIndex === eventIndex;
-                      setSelectedIndex(prev => prev === eventIndex ? null : eventIndex);
-                      if (!isDeselecting) {
-                        scrollToGraphCenter();
+                <View key={`event-${index}`}>
+                  <TouchableOpacity
+                    style={[
+                      styles.eventItem,
+                      isSelected && styles.eventItemSelected,
+                      isHighlighted && styles.eventItemHighlighted,
+                    ]}
+                    onPress={() => {
+                      if (eventIndex >= 0) {
+                        const isDeselecting = selectedIndex === eventIndex;
+                        setSelectedIndex(prev => prev === eventIndex ? null : eventIndex);
+                        if (!isDeselecting) {
+                          scrollToGraphCenter();
+                        }
                       }
-                    }
-                  }}
-                >
-                  <Typography variant="caption" color={Colors.textTertiary}>
-                    {event.date}
-                  </Typography>
-                  <Typography variant="bodySmall" style={{ marginTop: 4 }}>
-                    {event.description}
-                  </Typography>
-                </TouchableOpacity>
+                    }}
+                  >
+                    <Typography variant="caption" color={Colors.textTertiary} style={styles.eventDate}>
+                      {event.date}
+                    </Typography>
+                    <View style={[styles.eventColorBar, isSelected && styles.eventColorBarSelected]} />
+                    <Typography variant="bodySmall" style={styles.eventTitle}>
+                      {event.title}
+                    </Typography>
+                  </TouchableOpacity>
+                  {index < events.length - 1 && <View style={styles.eventDivider} />}
+                </View>
               );
             })}
           </View>
@@ -319,23 +322,40 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   eventList: {
-    gap: 8,
   },
-  eventCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
+  eventItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
   },
-  eventCardSelected: {
-    borderColor: Colors.brand,
+  eventDivider: {
+    height: 1,
+    backgroundColor: Colors.divider,
+    marginHorizontal: 24,
+  },
+  eventItemSelected: {
     backgroundColor: Colors.brandLightest,
   },
-  eventCardHighlighted: {
-    borderColor: Colors.brand,
-    borderWidth: 2,
+  eventItemHighlighted: {
     backgroundColor: Colors.brandLightest,
+  },
+  eventDate: {
+    width: 80,
+    fontSize: 12,
+  },
+  eventColorBar: {
+    width: 3,
+    height: 24,
+    backgroundColor: Colors.brand,
+    borderRadius: 2,
+    marginHorizontal: 10,
+  },
+  eventColorBarSelected: {
+    backgroundColor: Colors.brand,
+  },
+  eventTitle: {
+    flex: 1,
   },
   cardList: {
     gap: 12,
