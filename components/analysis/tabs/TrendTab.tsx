@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView, LayoutChangeEvent } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, LayoutChangeEvent, Dimensions } from 'react-native';
 import { Typography } from '../../ui';
 import { Colors } from '../../../constants';
-import { PatternAnalysis } from '../../../types';
+import { PatternAnalysis, SYMPTOM_SEVERITY_COLORS, SymptomSeverity } from '../../../types';
 import { ConditionLineChart } from '../ConditionLineChart';
 import { PatternCard } from '../PatternCard';
 
@@ -16,6 +16,8 @@ export function TrendTab({ patternAnalysis, scrollViewRef }: TrendTabProps) {
   const [highlightedEventDate, setHighlightedEventDate] = useState<string | null>(null);
   const eventSectionRef = useRef<View>(null);
   const [eventSectionY, setEventSectionY] = useState<number>(0);
+  const graphSectionY = useRef<number>(0);
+  const graphSectionHeight = useRef<number>(0);
 
   // Helper function to find graph index by date
   const findIndexByDate = (date?: string): number => {
@@ -32,6 +34,21 @@ export function TrendTab({ patternAnalysis, scrollViewRef }: TrendTabProps) {
     }
     // 3초 후 하이라이트 제거
     setTimeout(() => setHighlightedEventDate(null), 3000);
+  };
+
+  // 그래프 섹션 위치 측정
+  const onGraphSectionLayout = (event: LayoutChangeEvent) => {
+    graphSectionY.current = event.nativeEvent.layout.y;
+    graphSectionHeight.current = event.nativeEvent.layout.height;
+  };
+
+  // 그래프를 화면 중앙으로 스크롤 (새 선택 시에만 호출)
+  const scrollToGraphCenter = () => {
+    if (scrollViewRef?.current && graphSectionHeight.current > 0) {
+      const screenHeight = Dimensions.get('window').height;
+      const scrollY = graphSectionY.current - (screenHeight / 2) + (graphSectionHeight.current / 2);
+      scrollViewRef.current.scrollTo({ y: Math.max(0, scrollY), animated: true });
+    }
   };
 
   // 이벤트 섹션 위치 측정
@@ -59,13 +76,17 @@ export function TrendTab({ patternAnalysis, scrollViewRef }: TrendTabProps) {
     summary,
     dailyConditions,
     events,
+    symptomClusters,
   } = patternAnalysis;
+
+  // suggestion이 있는 클러스터만 필터링
+  const clustersWithSuggestions = symptomClusters?.filter(c => c.suggestion) ?? [];
 
   return (
     <View style={styles.container}>
       {/* 컨디션 라인 차트 */}
       {dailyConditions && dailyConditions.length > 0 && (
-        <View style={styles.section}>
+        <View style={styles.section} onLayout={onGraphSectionLayout}>
           <Typography variant="h4" style={styles.sectionTitle}>
             복약-컨디션 그래프
           </Typography>
@@ -82,6 +103,98 @@ export function TrendTab({ patternAnalysis, scrollViewRef }: TrendTabProps) {
         </View>
       )}
 
+
+      {/* 주요 이벤트 */}
+      {events && events.length > 0 && (
+        <View style={styles.section} ref={eventSectionRef} onLayout={onEventSectionLayout}>
+          <Typography variant="h4" style={styles.sectionTitle}>
+            주요 이벤트
+          </Typography>
+          <View style={styles.eventList}>
+            {events.map((event, index) => {
+              const eventIndex = findIndexByDate(event.date);
+              const isSelected = selectedIndex === eventIndex;
+              const isHighlighted = highlightedEventDate === event.date;
+
+              return (
+                <TouchableOpacity
+                  key={`event-${index}`}
+                  style={[
+                    styles.eventCard,
+                    isSelected && styles.eventCardSelected,
+                    isHighlighted && styles.eventCardHighlighted,
+                  ]}
+                  onPress={() => {
+                    if (eventIndex >= 0) {
+                      const isDeselecting = selectedIndex === eventIndex;
+                      setSelectedIndex(prev => prev === eventIndex ? null : eventIndex);
+                      if (!isDeselecting) {
+                        scrollToGraphCenter();
+                      }
+                    }
+                  }}
+                >
+                  <Typography variant="caption" color={Colors.textTertiary}>
+                    {event.date}
+                  </Typography>
+                  <Typography variant="bodySmall" style={{ marginTop: 4 }}>
+                    {event.description}
+                  </Typography>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      )}
+
+      {/* AI 분석 */}
+      {clustersWithSuggestions.length > 0 && (
+        <View style={styles.section}>
+          <Typography variant="h4" style={styles.sectionTitle}>
+            AI 분석
+          </Typography>
+          <View style={styles.aiAnalysisList}>
+            {clustersWithSuggestions.map((cluster, index) => (
+              <View key={`ai-cluster-${index}`} style={styles.aiAnalysisCard}>
+                <View style={styles.aiAnalysisHeader}>
+                  <Typography variant="bodySmall" color={Colors.secondaryLight} style={styles.aiClusterName}>
+                    {cluster.clusterName}
+                  </Typography>
+                  <View style={[
+                    styles.severityBadge,
+                    { backgroundColor: (SYMPTOM_SEVERITY_COLORS[cluster.severity as SymptomSeverity] ?? SYMPTOM_SEVERITY_COLORS.LOW).bg },
+                  ]}>
+                    <Typography
+                      variant="caption"
+                      color={(SYMPTOM_SEVERITY_COLORS[cluster.severity as SymptomSeverity] ?? SYMPTOM_SEVERITY_COLORS.LOW).text}
+                      style={styles.severityText}
+                    >
+                      {cluster.severity === 'HIGH' ? '높음' : cluster.severity === 'MEDIUM' ? '보통' : '낮음'}
+                    </Typography>
+                  </View>
+                </View>
+                <Typography variant="bodySmall" color={Colors.text} style={styles.aiSuggestionText}>
+                  {cluster.suggestion}
+                </Typography>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* 패턴 카드 */}
+      {patterns && patterns.length > 0 && (
+        <View style={styles.section}>
+          <Typography variant="h4" style={styles.sectionTitle}>
+            발견된 패턴
+          </Typography>
+          <View style={styles.cardList}>
+            {patterns.map((pattern, index) => (
+              <PatternCard key={`pattern-${index}`} pattern={pattern} />
+            ))}
+          </View>
+        </View>
+      )}
 
       {/* 복약 달성률 분석 */}
       {adherenceAnalysis && (
@@ -138,59 +251,6 @@ export function TrendTab({ patternAnalysis, scrollViewRef }: TrendTabProps) {
                 </View>
               )}
             </View>
-          </View>
-        </View>
-      )}
-
-      {/* 주요 이벤트 */}
-      {events && events.length > 0 && (
-        <View style={styles.section} ref={eventSectionRef} onLayout={onEventSectionLayout}>
-          <Typography variant="h4" style={styles.sectionTitle}>
-            주요 이벤트
-          </Typography>
-          <View style={styles.eventList}>
-            {events.map((event, index) => {
-              const eventIndex = findIndexByDate(event.date);
-              const isSelected = selectedIndex === eventIndex;
-              const isHighlighted = highlightedEventDate === event.date;
-
-              return (
-                <TouchableOpacity
-                  key={`event-${index}`}
-                  style={[
-                    styles.eventCard,
-                    isSelected && styles.eventCardSelected,
-                    isHighlighted && styles.eventCardHighlighted,
-                  ]}
-                  onPress={() => {
-                    if (eventIndex >= 0) {
-                      setSelectedIndex(prev => prev === eventIndex ? null : eventIndex);
-                    }
-                  }}
-                >
-                  <Typography variant="caption" color={Colors.textTertiary}>
-                    {event.date}
-                  </Typography>
-                  <Typography variant="bodySmall" style={{ marginTop: 4 }}>
-                    {event.description}
-                  </Typography>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-      )}
-
-      {/* 패턴 카드 */}
-      {patterns && patterns.length > 0 && (
-        <View style={styles.section}>
-          <Typography variant="h4" style={styles.sectionTitle}>
-            발견된 패턴
-          </Typography>
-          <View style={styles.cardList}>
-            {patterns.map((pattern, index) => (
-              <PatternCard key={`pattern-${index}`} pattern={pattern} />
-            ))}
           </View>
         </View>
       )}
@@ -279,5 +339,38 @@ const styles = StyleSheet.create({
   },
   cardList: {
     gap: 12,
+  },
+  aiAnalysisList: {
+    gap: 10,
+  },
+  aiAnalysisCard: {
+    backgroundColor: '#E3F2FD',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.secondaryLight,
+  },
+  aiAnalysisHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  aiClusterName: {
+    fontWeight: '600',
+    flex: 1,
+  },
+  severityBadge: {
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginLeft: 8,
+  },
+  severityText: {
+    fontWeight: '600',
+    fontSize: 11,
+  },
+  aiSuggestionText: {
+    lineHeight: 20,
   },
 });

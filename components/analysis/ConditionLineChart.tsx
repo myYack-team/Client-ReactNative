@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, Dimensions, TouchableOpacity, Text } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
 import { Typography } from '../ui';
@@ -26,6 +26,20 @@ export function ConditionLineChart({ dailyConditions, events = [], selectedIndex
   const [scrollX, setScrollX] = useState(0);
   // 포커스된 인덱스 (내부 관리)
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+  // 차트 내부 ScrollView 접근용 ref
+  const chartScrollRef = useRef<any>(null);
+
+  // 이벤트 카드 클릭 시 차트 수평 스크롤
+  useEffect(() => {
+    if (selectedIndex !== null && selectedIndex >= 0 && chartScrollRef.current) {
+      const targetX = INITIAL_SPACING + (selectedIndex * POINT_SPACING) - (CHART_WIDTH / 2);
+      const clampedX = Math.max(0, targetX);
+      setTimeout(() => {
+        chartScrollRef.current?.scrollTo?.({ x: clampedX, animated: true });
+      }, 100);
+      setFocusedIndex(selectedIndex);
+    }
+  }, [selectedIndex]);
 
   if (!dailyConditions || dailyConditions.length === 0) {
     return (
@@ -68,9 +82,9 @@ export function ConditionLineChart({ dailyConditions, events = [], selectedIndex
             />
             {event && (
               <View style={styles.eventMarker}>
-                <Typography variant="caption" style={styles.eventIcon}>
+                <Text style={styles.eventIcon}>
                   {event.eventIcon}
-                </Typography>
+                </Text>
               </View>
             )}
           </View>
@@ -170,6 +184,8 @@ export function ConditionLineChart({ dailyConditions, events = [], selectedIndex
 
         <LineChart
           data={chartData}
+          scrollRef={chartScrollRef}
+          focusedDataPointIndex={selectedIndex ?? undefined}
           width={CHART_WIDTH}
           height={160}
           curved
@@ -202,7 +218,7 @@ export function ConditionLineChart({ dailyConditions, events = [], selectedIndex
           spacing={POINT_SPACING}
           initialSpacing={INITIAL_SPACING}
           endSpacing={15}
-          scrollToEnd={true}
+          scrollToEnd={selectedIndex === null}
           showScrollIndicator={true}
           scrollAnimation={true}
           isAnimated
@@ -332,6 +348,7 @@ const styles = StyleSheet.create({
   },
   dataPointContainer: {
     alignItems: 'center',
+    overflow: 'visible',
   },
   dataPoint: {
     width: 10,
@@ -343,6 +360,8 @@ const styles = StyleSheet.create({
   eventMarker: {
     position: 'absolute',
     top: 14,
+    minWidth: 20,
+    alignItems: 'center',
   },
   eventIcon: {
     fontSize: 12,
