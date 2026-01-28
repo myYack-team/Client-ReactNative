@@ -51,9 +51,9 @@ interface AnalysisState {
   startAnalysisInBackground: () => Promise<void>;
   clearCompletedResult: () => void;
 
-  // 데이터 충분성 확인 후 분석 시작
-  checkDataSufficiencyAndAnalyze: () => Promise<void>;
-  saveTemporaryNoteAndAnalyze: (data: TemporaryNoteData) => Promise<void>;
+  // 데이터 충분성 확인
+  checkDataSufficiency: () => Promise<boolean>;
+  saveTemporaryNote: (data: TemporaryNoteData) => Promise<void>;
 }
 
 export const useAnalysisStore = create<AnalysisState>((set, get) => ({
@@ -202,32 +202,32 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
   // 완료된 결과 초기화
   clearCompletedResult: () => set({ completedResult: null, pendingAnalysis: null }),
 
-  // 데이터 충분성 확인 후 분석 시작
-  checkDataSufficiencyAndAnalyze: async () => {
+  // 데이터 충분성 확인
+  checkDataSufficiency: async () => {
     try {
       const result = await analysisService.checkDataSufficiency();
       if (!result.isSufficient) {
         set({ insufficientDataModalVisible: true });
-        return;
+        return false;
       }
-      // 데이터 충분 -> 분석 진행
-      get().startAnalysisInBackground();
+      // 데이터 충분
+      return true;
     } catch (error) {
       console.error('Data sufficiency check failed:', error);
       // 에러 시에도 분석 진행
-      get().startAnalysisInBackground();
+      return true;
     }
   },
 
-  // 임시 메모 저장 후 분석 시작
-  saveTemporaryNoteAndAnalyze: async (data: TemporaryNoteData) => {
+  // 임시 메모 저장
+  saveTemporaryNote: async (data: TemporaryNoteData) => {
     try {
       await analysisService.saveTemporaryNote(data);
       set({ insufficientDataModalVisible: false });
-      get().startAnalysisInBackground();
     } catch (error) {
       console.error('Failed to save temporary note:', error);
       Alert.alert('저장 실패', '메모 저장에 실패했습니다.');
+      throw error;
     }
   },
 }));

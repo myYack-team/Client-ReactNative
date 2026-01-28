@@ -35,8 +35,8 @@ export default function AnalysisScreen() {
     completedResult,
     clearCompletedResult,
     insufficientDataModalVisible,
-    checkDataSufficiencyAndAnalyze,
-    saveTemporaryNoteAndAnalyze,
+    checkDataSufficiency,
+    saveTemporaryNote,
   } = useAnalysisStore();
 
   // AI 동의 상태
@@ -119,14 +119,17 @@ export default function AnalysisScreen() {
   };
 
   // 분석 요청 - AI 동의 확인 후 데이터 충분성 확인
-  const handleAnalysisRequest = () => {
+  const handleAnalysisRequest = async () => {
     // AI 동의 확인
     if (!hasAiConsent) {
       setShowConsentModal(true);
       return;
     }
 
-    checkDataSufficiencyAndAnalyze();
+    const isSufficient = await checkDataSufficiency();
+    if (isSufficient) {
+      router.push('/analysis/loading');
+    }
   };
 
   // 분석 완료 후 상세 보기
@@ -142,6 +145,12 @@ export default function AnalysisScreen() {
   const handleDismissCompleted = () => {
     clearCompletedResult();
     fetchReports();
+  };
+
+  // 임시 메모 저장 후 로딩 화면으로 이동
+  const handleSaveTemporaryNote = async (data: any) => {
+    await saveTemporaryNote(data);
+    router.push('/analysis/loading');
   };
 
   // 분석 중인지 확인 (pendingAnalysis가 loading 또는 polling 상태)
@@ -313,7 +322,7 @@ export default function AnalysisScreen() {
       <InsufficientDataModal
         visible={insufficientDataModalVisible}
         onClose={() => useAnalysisStore.setState({ insufficientDataModalVisible: false })}
-        onSubmit={saveTemporaryNoteAndAnalyze}
+        onSubmit={handleSaveTemporaryNote}
       />
     </SafeAreaView>
   );
