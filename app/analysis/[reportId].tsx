@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   disclaimerText: {
-    textAlign: 'center',
+    textAlign: 'left',
     lineHeight: 18,
   },
   deleteButton: {

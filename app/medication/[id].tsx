@@ -282,8 +282,7 @@ export default function MedicationDetailScreen() {
           <View style={styles.sourceSection}>
             <Ionicons name="information-circle-outline" size={20} color={Colors.textSecondary} />
             <Typography variant="caption" color={Colors.textSecondary} style={styles.sourceText}>
-              약물 정보는 식품의약품안전처 공공데이터를 기반으로{'\n'}
-              제공되며, 참고용으로만 사용해 주세요.
+              약물 정보는 식품의약품안전처 공공데이터를 기반으로 제공되며, 참고용으로만 사용해 주세요.
             </Typography>
           </View>
         )}
