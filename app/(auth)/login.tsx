@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Image, Dimensions, ActivityIndicator, Alert } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, StyleSheet, Image, Dimensions, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import * as KakaoLogin from '@react-native-seoul/kakao-login';
@@ -10,9 +10,15 @@ import { authService } from '../../services/auth';
 
 const { width } = Dimensions.get('window');
 
+const LOGO_TAP_THRESHOLD = 5;
+const TAP_TIME_LIMIT = 5000; // 5 seconds
+
 export default function LoginScreen() {
   const { isLoading, error, clearError } = useAuthStore();
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [showTestLogin, setShowTestLogin] = useState(false);
+  const [tapCount, setTapCount] = useState(0);
+  const [lastTapTime, setLastTapTime] = useState(0);
 
   // 에러 표시
   useEffect(() => {
@@ -21,6 +27,64 @@ export default function LoginScreen() {
       clearError();
     }
   }, [error]);
+
+  // Logo tap handler for hidden test login
+  const handleLogoTap = useCallback(async () => {
+    const now = Date.now();
+
+    // Reset if time limit exceeded
+    if (now - lastTapTime > TAP_TIME_LIMIT) {
+      setTapCount(1);
+      setLastTapTime(now);
+      return;
+    }
+
+    const newTapCount = tapCount + 1;
+    setTapCount(newTapCount);
+    setLastTapTime(now);
+
+    // When threshold reached, check test login status
+    if (newTapCount >= LOGO_TAP_THRESHOLD) {
+      setTapCount(0);
+      try {
+        const status = await authService.getTestLoginStatus();
+        if (status.enabled) {
+          setShowTestLogin(true);
+        }
+        // If disabled, do nothing (security - no indication)
+      } catch (err) {
+        console.log('[Login] Test login status check failed');
+      }
+    }
+  }, [tapCount, lastTapTime]);
+
+  // Test login handler
+  const handleTestLogin = async () => {
+    try {
+      setIsAuthenticating(true);
+      console.log('[Login] 테스트 로그인 시작');
+
+      const result = await authService.testLogin();
+      console.log('[Login] 테스트 로그인 성공');
+
+      // Save tokens using existing store method
+      const { useAuthStore: store } = require('../../stores/authStore');
+      await store.getState().handleOAuthCallback(
+        result.accessToken,
+        result.refreshToken,
+        result.isNewUser
+      );
+
+      // Go to home (test account already has consent)
+      router.replace('/(tabs)');
+
+    } catch (err: any) {
+      console.error('[Login] 테스트 로그인 에러:', err);
+      Alert.alert('로그인 실패', err.message || '테스트 로그인에 실패했습니다.');
+    } finally {
+      setIsAuthenticating(false);
+    }
+  };
 
   const handleKakaoLogin = async () => {
     try {
@@ -83,17 +147,34 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.logoSection}>
-          <Image
-            source={require('../../assets/logo.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
+          <TouchableOpacity onPress={handleLogoTap} activeOpacity={1}>
+            <Image
+              source={require('../../assets/logo.png')}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+          </TouchableOpacity>
           <Typography variant="body" color={Colors.textSecondary} style={styles.tagline}>
             AI와 함께하는 약/영양제 관리
           </Typography>
         </View>
 
         <View style={styles.buttonSection}>
+          {showTestLogin && !showLoading && (
+            <View style={styles.testLoginContainer}>
+              <Button
+                title="테스트 로그인"
+                onPress={handleTestLogin}
+                variant="outline"
+                style={{ marginBottom: 16 }}
+              />
+              <TouchableOpacity onPress={() => setShowTestLogin(false)}>
+                <Typography variant="caption" color={Colors.textSecondary}>
+                  취소
+                </Typography>
+              </TouchableOpacity>
+            </View>
+          )}
           {showLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={Colors.primary} />
@@ -162,5 +243,9 @@ const styles = StyleSheet.create({
   terms: {
     textAlign: 'center',
     marginTop: 16,
+  },
+  testLoginContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
   },
 });
