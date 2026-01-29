@@ -44,6 +44,12 @@ interface ExchangeCodeResponse {
   privacyAgreed: boolean;
 }
 
+// 테스트 로그인 상태 응답
+interface TestLoginStatusResponse {
+  enabled: boolean;
+  updatedAt?: string;
+}
+
 export const authService = {
   /**
    * 카카오 액세스 토큰으로 서버 로그인
@@ -128,5 +134,55 @@ export const authService = {
     } catch {
       // 서버 로그아웃 실패해도 무시 (로컬 토큰은 삭제됨)
     }
+  },
+
+  /**
+   * 테스트 로그인 상태 조회 (인증 불필요)
+   */
+  async getTestLoginStatus(): Promise<TestLoginStatusResponse> {
+    const response = await axios.get<ApiResponse<TestLoginStatusResponse>>(
+      `${API_BASE_URL}/admin/test-login/status`
+    );
+
+    if (!response.data.result) {
+      throw new Error('테스트 로그인 상태 조회에 실패했습니다.');
+    }
+
+    return response.data.result;
+  },
+
+  /**
+   * 테스트 로그인 (Google Play Store 심사용)
+   * No parameters - server returns test account tokens directly
+   */
+  async testLogin(): Promise<AuthTokens & { user: User; isNewUser: boolean; termsAgreed: boolean; privacyAgreed: boolean }> {
+    const response = await axios.post<ApiResponse<LoginResponse>>(
+      `${API_BASE_URL}/auth/test-login`,
+      {},
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+
+    if (!response.data.result) {
+      throw new Error('테스트 로그인에 실패했습니다.');
+    }
+
+    const { accessToken, refreshToken, user, isNewUser, termsAgreed, privacyAgreed } = response.data.result;
+
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        kakaoId: user.kakaoId,
+        name: user.name || user.nickname || '',
+        email: user.email,
+        profileImage: user.profileImage,
+        fontSize: 'MEDIUM',
+        createdAt: new Date().toISOString(),
+      },
+      isNewUser,
+      termsAgreed: termsAgreed ?? false,
+      privacyAgreed: privacyAgreed ?? false,
+    };
   },
 };
