@@ -119,7 +119,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ user, isAuthenticated: true, isLoading: false, needsOnboarding: isNewUser });
     } catch (error) {
       logger.error('[Auth] OAuth callback failed:', error);
-      await clearSession();
+      await clearSession({ notify: false });
       set({
         isLoading: false,
         error: '로그인 처리 중 오류가 발생했습니다.',
@@ -161,7 +161,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       };
     } catch (error) {
       logger.error('[Auth] Code exchange failed:', error);
-      await clearSession();
+      await clearSession({ notify: false });
       set({
         isLoading: false,
         isAuthenticated: false,
@@ -181,7 +181,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch {
       // 서버 로그아웃 실패해도 로컬은 정리
     } finally {
-      await clearSession();
+      await clearSession({ notify: false });
       set({ user: null, isAuthenticated: false, needsOnboarding: false });
     }
   },

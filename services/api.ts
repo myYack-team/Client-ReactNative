@@ -65,15 +65,18 @@ export async function refreshTokenSingleFlight(): Promise<{ accessToken: string;
 
 /**
  * 세션 정리 (토큰 삭제)
+ * @param notify - true면 onSessionInvalidated 콜백 호출 (기본값: true)
  */
-export async function clearSession(): Promise<void> {
+export async function clearSession({ notify = true } = {}): Promise<void> {
   logger.log('[API] Clearing session');
   await SecureStore.deleteItemAsync('accessToken');
   await SecureStore.deleteItemAsync('refreshToken');
-  try {
-    onSessionInvalidated?.();
-  } catch (e) {
-    logger.error('[API] Session invalidation callback error:', e);
+  if (notify) {
+    try {
+      onSessionInvalidated?.();
+    } catch (e) {
+      logger.error('[API] Session invalidation callback error:', e);
+    }
   }
 }
 
