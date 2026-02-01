@@ -8,9 +8,25 @@ import { useAuthStore } from '../../stores';
 import { userService } from '../../services';
 
 export default function EditProfileScreen() {
-  const { user } = useAuthStore();
+  const { user, fetchUser } = useAuthStore();
   const [name, setName] = useState(user?.name || '');
+  const [phone, setPhone] = useState(user?.phone?.replace(/-/g, '') || '');
   const [isLoading, setIsLoading] = useState(false);
+
+  // 전화번호 포맷팅 (숫자만)
+  const handlePhoneChange = (text: string) => {
+    const numbersOnly = text.replace(/[^0-9]/g, '');
+    if (numbersOnly.length <= 11) {
+      setPhone(numbersOnly);
+    }
+  };
+
+  // 전화번호 표시 포맷
+  const getFormattedPhone = (phoneNumber: string) => {
+    if (phoneNumber.length <= 3) return phoneNumber;
+    if (phoneNumber.length <= 7) return `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3)}`;
+    return `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3, 7)}-${phoneNumber.slice(7)}`;
+  };
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -18,14 +34,37 @@ export default function EditProfileScreen() {
       return;
     }
 
-    if (name.trim() === user?.name) {
+    // 전화번호 유효성 검사 (입력된 경우만)
+    if (phone && phone.length !== 11) {
+      Alert.alert('알림', '전화번호를 올바르게 입력해주세요. (11자리)');
+      return;
+    }
+
+    if (phone && !phone.startsWith('010')) {
+      Alert.alert('알림', '휴대폰 번호는 010으로 시작해야 합니다.');
+      return;
+    }
+
+    const nameChanged = name.trim() !== user?.name;
+    const phoneChanged = phone !== (user?.phone?.replace(/-/g, '') || '');
+
+    if (!nameChanged && !phoneChanged) {
       router.back();
       return;
     }
 
     setIsLoading(true);
     try {
-      await userService.updateMe({ name: name.trim() });
+      // 이름 변경
+      if (nameChanged) {
+        await userService.updateMe({ name: name.trim() });
+      }
+      // 전화번호 변경
+      if (phoneChanged) {
+        await userService.updatePhone(phone);
+      }
+      // 유저 정보 갱신
+      await fetchUser();
       Alert.alert('완료', '프로필이 수정되었습니다.', [
         { text: '확인', onPress: () => router.back() }
       ]);
@@ -72,6 +111,23 @@ export default function EditProfileScreen() {
             placeholderTextColor={Colors.textSecondary}
             maxLength={20}
           />
+        </Card>
+
+        {/* 전화번호 입력 */}
+        <Card style={styles.inputCard} variant="elevated">
+          <Typography variant="body" style={styles.inputLabel}>전화번호</Typography>
+          <TextInput
+            style={styles.textInput}
+            value={getFormattedPhone(phone)}
+            onChangeText={handlePhoneChange}
+            placeholder="010-1234-5678"
+            placeholderTextColor={Colors.textSecondary}
+            keyboardType="phone-pad"
+            maxLength={13}
+          />
+          <Typography variant="caption" color={Colors.textSecondary} style={styles.inputHint}>
+            가족 연동 시 사용됩니다
+          </Typography>
         </Card>
 
         {/* 이메일 (읽기 전용) */}
@@ -163,6 +219,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     backgroundColor: Colors.backgroundSecondary,
+  },
+  inputHint: {
+    marginTop: 8,
   },
   saveButton: {
     marginTop: 'auto',

@@ -35,6 +35,7 @@ interface AuthState {
   needsOnboarding: boolean;
 
   initialize: () => Promise<void>;
+  fetchUser: () => Promise<void>;
   loginWithKakao: (kakaoAccessToken: string) => Promise<void>;
   handleOAuthCallback: (accessToken: string, refreshToken: string, isNewUser: boolean) => Promise<void>;
   exchangeCodeAndLogin: (code: string) => Promise<{
@@ -81,6 +82,15 @@ export const useAuthStore = create<AuthState>((set) => ({
         logger.log('[Auth] Network error - preserving auth state');
         set({ isLoading: false, isAuthenticated: true, user: null });
       }
+    }
+  },
+
+  fetchUser: async () => {
+    try {
+      const user = await userService.getMe();
+      set({ user });
+    } catch (error) {
+      logger.error('[Auth] Fetch user failed:', error);
     }
   },
 
