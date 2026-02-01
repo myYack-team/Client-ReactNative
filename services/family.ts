@@ -44,13 +44,13 @@ export const familyService = {
 
   // 가족의 오늘의 복약 스케줄 조회
   async getFamilyTodaySchedule(userId: number): Promise<FamilyTodaySchedule> {
-    const response = await api.get<ApiResponse<FamilyTodaySchedule>>(`/family/${userId}/today`);
+    const response = await api.get<ApiResponse<FamilyTodaySchedule>>(`/family/protected/${userId}/today`);
     return response.data.result!;
   },
 
   // 가족의 특정 날짜 복약 스케줄 조회
   async getFamilyScheduleForDate(userId: number, date: string): Promise<TodaySchedule[]> {
-    const response = await api.get<ApiResponse<{ schedules: TodaySchedule[] }>>(`/family/${userId}/schedule`, {
+    const response = await api.get<ApiResponse<{ schedules: TodaySchedule[] }>>(`/family/protected/${userId}/schedule`, {
       params: { date },
     });
     return response.data.result!.schedules;
@@ -58,7 +58,7 @@ export const familyService = {
 
   // 가족의 월별 복약 요약 조회
   async getFamilyMonthlySummary(userId: number, year: number, month: number): Promise<MonthlySummaryResponse> {
-    const response = await api.get<ApiResponse<MonthlySummaryResponse>>(`/family/${userId}/monthly-summary`, {
+    const response = await api.get<ApiResponse<MonthlySummaryResponse>>(`/family/protected/${userId}/monthly-summary`, {
       params: { year, month },
     });
     return response.data.result!;
