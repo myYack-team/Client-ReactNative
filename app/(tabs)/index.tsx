@@ -516,7 +516,20 @@ export default function HomeScreen() {
 
   // 표시할 스케줄 (선택된 날짜 기준)
   const schedules = selectedDateSchedules;
-  const summary = isSelectedDateToday ? todayData?.summary : null;
+
+  // summary 계산: 오늘이면 todayData 사용, 아니면 schedules에서 계산
+  const summary = useMemo(() => {
+    if (isSelectedDateToday && todayData?.summary) {
+      return todayData.summary;
+    }
+    // 과거/미래 날짜: schedules에서 직접 계산
+    if (schedules.length === 0) return null;
+    const allMedications = schedules.flatMap((s) => s.medications);
+    const totalMedications = allMedications.length;
+    const takenCount = allMedications.filter((m) => m.taken).length;
+    if (totalMedications === 0) return null;
+    return { totalMedications, takenCount };
+  }, [isSelectedDateToday, todayData?.summary, schedules]);
 
   // TimePeriodGroup으로 변환 (useMemo로 성능 최적화)
   const timePeriodGroups = useMemo(() => transformToTimePeriodGroups(schedules), [schedules]);
