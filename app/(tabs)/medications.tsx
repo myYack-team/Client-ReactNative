@@ -4,6 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 import { Card, Typography, DeleteConfirmModal, Toast, SupplementTagBadge } from '../../components/ui';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants';
 import { useResponsive } from '../../hooks';
 import { useMedicationStore, useSupplementStore } from '../../stores';
@@ -339,11 +340,15 @@ export default function MedicationsScreen() {
               </>
             )}
           </View>
-          {isSelectMode && (
+          {isSelectMode ? (
             <TouchableOpacity onPress={() => setShowDeleteModal(true)}>
               <Typography variant="body" color={Colors.error} style={styles.deleteButton}>
                 삭제
               </Typography>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity style={styles.settingsButton} onPress={() => router.push('/settings')}>
+              <Ionicons name="settings-outline" size={24} color={Colors.textSecondary} />
             </TouchableOpacity>
           )}
         </View>
@@ -446,6 +451,9 @@ const styles = StyleSheet.create({
   deleteButton: {
     fontWeight: '600',
     fontSize: 16,
+  },
+  settingsButton: {
+    padding: 4,
   },
   selectAllContainer: {
     flexDirection: 'row',

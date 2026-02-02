@@ -7,12 +7,20 @@ export * from './responsive';
 export * from './termsContent';
 export * from './Symptoms';
 
+// 로컬 테스트 시 true로 변경 (커밋 전 반드시 false로 원복!)
+const LOCAL_TEST = false;
+
 /**
  * 개발 환경에서 Expo 개발 서버의 IP를 자동으로 감지하여 API URL 생성
  * - 개발: Expo 서버 IP 사용 (예: http://192.168.x.x:8080/api)
  * - 프로덕션: 고정 도메인 사용
  */
 const getApiBaseUrl = (): string => {
+  // 로컬 테스트 모드
+  if (LOCAL_TEST) {
+    return 'http://localhost:8080/api';
+  }
+
   // 프로덕션 환경에서는 고정 도메인 사용
   if (!__DEV__) {
     return 'https://api.myyak.xyz/api';

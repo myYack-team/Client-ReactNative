@@ -13,6 +13,12 @@
         "EXPO_PUBLIC_API_BASE_URL": "https://api.myyak.xyz/api"
       }
     },
+    "local-test": {
+      "extends": "preview",
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "http://YOUR_PC_IP:8080/api"
+      }
+    },
     "preview": {
       "distribution": "internal",
       "android": {
