@@ -104,4 +104,9 @@ export const userService = {
     });
     return response.data.result!;
   },
+
+  // 전화번호 업데이트
+  async updatePhone(phone: string): Promise<void> {
+    await api.patch('/users/me/phone', { phone });
+  },
 };

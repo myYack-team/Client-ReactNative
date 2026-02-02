@@ -54,6 +54,7 @@ interface AnalysisState {
   // 데이터 충분성 확인
   checkDataSufficiency: () => Promise<boolean>;
   saveTemporaryNote: (data: TemporaryNoteData) => Promise<void>;
+  reset: () => void;
 }
 
 export const useAnalysisStore = create<AnalysisState>((set, get) => ({
@@ -230,4 +231,17 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
       throw error;
     }
   },
+
+  // 스토어 초기화 (로그아웃 시 호출)
+  reset: () => set({
+    currentResult: null,
+    reports: [],
+    isLoading: false,
+    isAnalyzing: false,
+    error: null,
+    reportsExpiry: 0,
+    pendingAnalysis: null,
+    completedResult: null,
+    insufficientDataModalVisible: false,
+  }),
 }));

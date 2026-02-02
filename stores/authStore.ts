@@ -5,6 +5,10 @@ import { User } from '../types';
 import { authService, userService } from '../services';
 import { clearSession, setSessionInvalidatedCallback } from '../services/api';
 import { logger } from '../utils/logger';
+import { useMedicationStore } from './medicationStore';
+import { useSupplementStore } from './supplementStore';
+import { useAnalysisStore } from './analysisStore';
+import { useFamilyStore } from './familyStore';
 
 /**
  * 인증 관련 에러인지 판별
@@ -35,6 +39,7 @@ interface AuthState {
   needsOnboarding: boolean;
 
   initialize: () => Promise<void>;
+  fetchUser: () => Promise<void>;
   loginWithKakao: (kakaoAccessToken: string) => Promise<void>;
   handleOAuthCallback: (accessToken: string, refreshToken: string, isNewUser: boolean) => Promise<void>;
   exchangeCodeAndLogin: (code: string) => Promise<{
@@ -81,6 +86,15 @@ export const useAuthStore = create<AuthState>((set) => ({
         logger.log('[Auth] Network error - preserving auth state');
         set({ isLoading: false, isAuthenticated: true, user: null });
       }
+    }
+  },
+
+  fetchUser: async () => {
+    try {
+      const user = await userService.getMe();
+      set({ user });
+    } catch (error) {
+      logger.error('[Auth] Fetch user failed:', error);
     }
   },
 
@@ -182,6 +196,11 @@ export const useAuthStore = create<AuthState>((set) => ({
       // 서버 로그아웃 실패해도 로컬은 정리
     } finally {
       await clearSession({ notify: false });
+      // 모든 스토어 초기화 (다른 사용자 데이터 표시 방지)
+      useMedicationStore.getState().reset();
+      useSupplementStore.getState().reset();
+      useAnalysisStore.getState().reset();
+      useFamilyStore.getState().reset();
       set({ user: null, isAuthenticated: false, needsOnboarding: false });
     }
   },
@@ -191,6 +210,11 @@ export const useAuthStore = create<AuthState>((set) => ({
 
 // 세션 무효화 시 Zustand 인증 상태도 함께 초기화
 setSessionInvalidatedCallback(() => {
+  // 모든 스토어 초기화 (다른 사용자 데이터 표시 방지)
+  useMedicationStore.getState().reset();
+  useSupplementStore.getState().reset();
+  useAnalysisStore.getState().reset();
+  useFamilyStore.getState().reset();
   useAuthStore.setState({
     user: null,
     isAuthenticated: false,

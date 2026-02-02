@@ -44,7 +44,7 @@ function MenuSection({ title, children }: MenuSectionProps) {
   );
 }
 
-export default function ProfileScreen() {
+export default function SettingsScreen() {
   const { contentStyle } = useResponsive();
   const insets = useSafeAreaInsets();
   const { user, logout } = useAuthStore();
@@ -68,7 +68,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['bottom']}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, contentStyle, { paddingBottom: 40 + insets.bottom }]}

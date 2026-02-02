@@ -27,6 +27,7 @@ interface SupplementState {
   clearError: () => void;
   clearNeedsRefresh: () => void;
   setNeedsRefresh: () => void;
+  reset: () => void;
 }
 
 export const useSupplementStore = create<SupplementState>((set, get) => ({
@@ -151,4 +152,12 @@ export const useSupplementStore = create<SupplementState>((set, get) => ({
   clearError: () => set({ error: null }),
   clearNeedsRefresh: () => set({ needsRefresh: false }),
   setNeedsRefresh: () => set({ needsRefresh: true }),
+
+  // 스토어 초기화 (로그아웃 시 호출)
+  reset: () => set({
+    userSupplements: [],
+    isLoading: false,
+    error: null,
+    needsRefresh: false,
+  }),
 }));

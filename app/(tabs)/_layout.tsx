@@ -11,7 +11,7 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
     medications: '약',
     history: '처방',
     analysis: '분석',
-    profile: '내 정보',
+    family: '가족',
   };
 
   const iconImages: Record<string, any> = {
@@ -19,7 +19,7 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
     medications: require('../../assets/icons_iamge_processed/02_Pill.png'),
     history: require('../../assets/icons_iamge_processed/03_Clipboard.png'),
     analysis: require('../../assets/icons_iamge_processed/04_AI.png'),
-    profile: require('../../assets/icons_iamge_processed/05_User.png'),
+    family: require('../../assets/icons_iamge_processed/20_Heart.png'),
   };
 
   return (
@@ -94,10 +94,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="family"
         options={{
-          title: '내 정보',
-          tabBarIcon: ({ focused }) => <TabIcon name="profile" focused={focused} />,
+          title: '가족',
+          tabBarIcon: ({ focused }) => <TabIcon name="family" focused={focused} />,
         }}
       />
     </Tabs>

@@ -155,9 +155,74 @@ export interface User {
   kakaoId: string;
   name: string;
   email?: string;
+  phone?: string;
   profileImage?: string;
   fontSize: FontSize;
   createdAt: string;
+}
+
+// ========== 가족 연동 관련 타입 ==========
+
+// 가족 연동 요청 상태
+export type FamilyLinkRequestStatus = 'PENDING' | 'ACCEPTED' | 'REJECTED';
+
+// 연동된 가족 정보
+export interface LinkedFamily {
+  linkId: number;
+  userId: number;
+  name: string;
+  profileImage?: string;
+  phone: string;  // 마스킹 형식 (010-xxxx-5678)
+  linkedAt: string;
+  isGuardian: boolean;  // 현재 사용자가 보호자인지 여부
+}
+
+// 보호자 정보
+export interface Guardian {
+  linkId: number;
+  userId: number;
+  name: string;
+  profileImage?: string;
+  linkedAt: string;
+}
+
+// 대기 중인 요청 정보
+export interface PendingRequest {
+  requestId: number;
+  userId: number;
+  name: string;
+  profileImage?: string;
+  phone: string;  // 마스킹 형식
+  requestedAt: string;
+}
+
+// 가족 연동 현황
+export interface FamilyLinkStatus {
+  linkedFamilies: LinkedFamily[];
+  receivedRequests: PendingRequest[];
+  sentRequests: PendingRequest[];
+  guardians: Guardian[];
+  maxLinkCount: number;
+}
+
+// 연동 요청 전송 결과
+export interface SendRequestResult {
+  requestId: number;
+  targetName: string;
+  message: string;
+}
+
+// 가족의 오늘의 복약 스케줄
+export interface FamilyTodaySchedule {
+  familyUserId: number;
+  familyUserName: string;
+  familyProfileImage?: string;
+  todaySchedule: TodayResponse;
+}
+
+// 가족 알림 설정
+export interface FamilyNotificationSettings {
+  familyNotificationEnabled: boolean;
 }
 
 // 약물 정보 (식약처 API 기반)
