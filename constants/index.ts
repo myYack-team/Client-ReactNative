@@ -7,31 +7,29 @@ export * from './responsive';
 export * from './termsContent';
 export * from './Symptoms';
 
-/**
- * API Base URL 결정 로직
- * 1. 환경변수(EXPO_PUBLIC_API_BASE_URL)가 설정되어 있으면 우선 사용
- * 2. 프로덕션 빌드(__DEV__=false)에서는 고정 도메인 사용
- * 3. 개발 환경에서는 Expo 서버 IP 자동 감지
- *
- * 로컬 테스트 시: LOCAL_TEST를 true로 변경
- */
-const LOCAL_TEST = true; // 로컬 테스트 시 true로 변경
+// 로컬 테스트 시 true로 변경 (커밋 전 반드시 false로 원복!)
+const LOCAL_TEST = false;
 
+/**
+ * 개발 환경에서 Expo 개발 서버의 IP를 자동으로 감지하여 API URL 생성
+ * - 개발: Expo 서버 IP 사용 (예: http://192.168.x.x:8080/api)
+ * - 프로덕션: 고정 도메인 사용
+ */
 const getApiBaseUrl = (): string => {
   // 로컬 테스트 모드
   if (LOCAL_TEST) {
     return 'http://localhost:8080/api';
   }
 
-  // 환경변수가 설정되어 있으면 우선 사용 (로컬 테스트 빌드 지원)
-  const envApiUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
-  if (envApiUrl) {
-    return envApiUrl;
-  }
-
   // 프로덕션 환경에서는 고정 도메인 사용
   if (!__DEV__) {
     return 'https://api.myyak.xyz/api';
+  }
+
+  // 개발 환경에서만 환경변수 사용
+  const envApiUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
+  if (envApiUrl) {
+    return envApiUrl;
   }
 
   // Expo 개발 서버 URL에서 IP 추출
