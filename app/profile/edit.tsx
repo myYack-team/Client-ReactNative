@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TextInput, Image, Alert } from 'react-native';
+import { View, StyleSheet, TextInput, Image, Alert, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Card, Typography, Button } from '../../components/ui';
@@ -78,7 +78,17 @@ export default function EditProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
-      <View style={styles.content}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoid}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
         {/* 프로필 이미지 */}
         <Card style={styles.imageCard} variant="elevated">
           <View style={styles.imageContainer}>
@@ -152,7 +162,8 @@ export default function EditProfileScreen() {
           disabled={isLoading}
           style={styles.saveButton}
         />
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -162,9 +173,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  content: {
+  keyboardAvoid: {
     flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
     padding: 20,
+    paddingBottom: 40,
   },
   imageCard: {
     marginBottom: 16,
@@ -224,6 +241,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   saveButton: {
-    marginTop: 'auto',
+    marginTop: 24,
   },
 });
