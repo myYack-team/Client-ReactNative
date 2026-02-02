@@ -132,8 +132,7 @@ export default function HomeScreen() {
       fetchTodaySchedule();
       loadScheduleForDate(selectedDate);
       loadMonthlySummary(currentMonth.year, currentMonth.month);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- 포커스 복귀 시 항상 최신 데이터 로드
-    }, [])
+    }, [selectedDate, currentMonth.year, currentMonth.month, fetchTodaySchedule, loadScheduleForDate])
   );
 
   // 선택된 날짜가 변경되면 스케줄 로드
