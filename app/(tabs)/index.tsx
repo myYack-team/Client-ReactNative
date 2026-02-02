@@ -40,6 +40,9 @@ const STATUS_COLORS: Record<DayStatus, string> = {
   NONE: 'transparent',   // 예정된 약 없음
 };
 
+// COMPLETE 상태용 연한 배경색
+const COMPLETE_BG_COLOR = '#E8F5E9';  // 연한 녹색 배경
+
 // 요일별 색상
 const DAY_OF_WEEK_COLORS = {
   SUNDAY: '#F44336',     // 일요일 - 빨간색
@@ -149,10 +152,20 @@ export default function HomeScreen() {
 
   const loadMonthlySummary = async (year: number, month: number) => {
     try {
-      // store의 캐싱 함수 사용
-      const data = await fetchMonthlySummary(year, month);
-      setMonthlySummary(data.days);
-      updateMarkedDates(data.days);
+      // 주간 달력이 ±21일을 커버하므로 이전/다음 월 데이터도 로드
+      const prevMonth = month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
+      const nextMonth = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
+
+      const [prevData, currentData, nextData] = await Promise.all([
+        fetchMonthlySummary(prevMonth.year, prevMonth.month),
+        fetchMonthlySummary(year, month),
+        fetchMonthlySummary(nextMonth.year, nextMonth.month),
+      ]);
+
+      // 3개월 데이터 병합
+      const allDays = [...prevData.days, ...currentData.days, ...nextData.days];
+      setMonthlySummary(allDays);
+      updateMarkedDates(allDays);
     } catch (error) {
       console.error('Failed to load monthly summary:', error);
     }
@@ -222,8 +235,34 @@ export default function HomeScreen() {
     setShowCalendarModal(false);
   };
 
-  const handleWeekDayPress = (dateString: string) => {
+  const handleWeekDayPress = async (dateString: string) => {
     setSelectedDate(dateString);
+
+    // 선택한 날짜의 월 데이터가 monthlySummary에 없으면 해당 월 데이터 로드
+    const [year, month] = dateString.split('-').map(Number);
+    const monthPrefix = `${year}-${String(month).padStart(2, '0')}`;
+    const hasDataForMonth = monthlySummary.some(d => d.date.startsWith(monthPrefix));
+
+    if (!hasDataForMonth) {
+      // 해당 월 데이터만 추가 로드 (기존 데이터에 병합)
+      try {
+        const newData = await fetchMonthlySummary(year, month);
+        setMonthlySummary(prev => {
+          // 중복 제거하며 병합
+          const existingDates = new Set(prev.map(d => d.date));
+          const newDays = newData.days.filter(d => !existingDates.has(d.date));
+          return [...prev, ...newDays];
+        });
+      } catch (error) {
+        console.error('Failed to load monthly summary:', error);
+      }
+    }
+
+    // 달력 모달의 currentMonth 업데이트
+    if (year !== currentMonth.year || month !== currentMonth.month) {
+      setCurrentMonth({ year, month });
+    }
+
     const index = weekDates.findIndex((d) => d === dateString);
     if (index !== -1 && weekListRef.current) {
       weekListRef.current.scrollToIndex({
@@ -290,18 +329,28 @@ export default function HomeScreen() {
         <View
           style={[
             styles.weekDayNumber,
-            isSelected && { backgroundColor: Colors.primary },
-            status === 'COMPLETE' && !isSelected && { backgroundColor: STATUS_COLORS.COMPLETE },
-            !isSelected && status !== 'COMPLETE' && status !== 'NONE' && {
+            // COMPLETE: 연한 배경색 + 녹색 테두리
+            status === 'COMPLETE' && {
+              backgroundColor: COMPLETE_BG_COLOR,
+              borderWidth: 2,
+              borderColor: STATUS_COLORS.COMPLETE,
+            },
+            // PARTIAL/MISSED/PENDING: 테두리만
+            status !== 'COMPLETE' && status !== 'NONE' && {
               borderWidth: 2,
               borderColor: statusColor,
+            },
+            // 선택된 날짜는 굵은 테두리로 표시 (기존 테두리 덮어씀)
+            isSelected && {
+              borderWidth: 3,
+              borderColor: Colors.primary,
             },
           ]}
         >
           <Typography
             variant="body"
-            color={isSelected || status === 'COMPLETE' ? Colors.white : isToday ? Colors.primary : dayOfWeekColor}
-            style={isToday ? { fontWeight: 'bold' } : undefined}
+            color={isToday ? Colors.primary : status === 'COMPLETE' ? STATUS_COLORS.COMPLETE : dayOfWeekColor}
+            style={(isToday || isSelected) ? { fontWeight: 'bold' } : undefined}
           >
             {dayNum}
           </Typography>

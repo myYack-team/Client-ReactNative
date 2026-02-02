@@ -39,6 +39,9 @@ const STATUS_COLORS: Record<DayStatus, string> = {
   NONE: 'transparent',
 };
 
+// COMPLETE 상태용 연한 배경색
+const COMPLETE_BG_COLOR = '#E8F5E9';
+
 // 요일별 색상
 const DAY_OF_WEEK_COLORS = {
   SUNDAY: '#F44336',
@@ -342,8 +345,30 @@ function LinkedFamilyView({
     return DAY_OF_WEEK_COLORS.WEEKDAY;
   };
 
-  const handleWeekDayPress = (dateString: string) => {
+  const handleWeekDayPress = async (dateString: string) => {
     setSelectedDate(dateString);
+
+    // 선택한 날짜의 월 데이터가 monthlySummary에 없으면 해당 월 데이터 추가 로드
+    if (linkedFamily) {
+      const [year, month] = dateString.split('-').map(Number);
+      const monthPrefix = `${year}-${String(month).padStart(2, '0')}`;
+      const hasDataForMonth = monthlySummary.some(d => d.date.startsWith(monthPrefix));
+
+      if (!hasDataForMonth) {
+        try {
+          const newSummary = await fetchFamilyMonthlySummary(linkedFamily.userId, year, month);
+          setMonthlySummary(prev => {
+            // 중복 제거하며 병합
+            const existingDates = new Set(prev.map(d => d.date));
+            const newDays = (newSummary?.days || []).filter(d => !existingDates.has(d.date));
+            return [...prev, ...newDays];
+          });
+        } catch (error) {
+          console.error('Failed to load monthly summary:', error);
+        }
+      }
+    }
+
     const index = weekDates.findIndex((d) => d === dateString);
     if (index !== -1 && weekListRef.current) {
       weekListRef.current.scrollToIndex({
@@ -380,18 +405,28 @@ function LinkedFamilyView({
         <View
           style={[
             styles.weekDayNumber,
-            isSelected && { backgroundColor: Colors.primary },
-            status === 'COMPLETE' && !isSelected && { backgroundColor: STATUS_COLORS.COMPLETE },
-            !isSelected && status !== 'COMPLETE' && status !== 'NONE' && {
+            // COMPLETE: 연한 배경색 + 녹색 테두리
+            status === 'COMPLETE' && {
+              backgroundColor: COMPLETE_BG_COLOR,
+              borderWidth: 2,
+              borderColor: STATUS_COLORS.COMPLETE,
+            },
+            // PARTIAL/MISSED/PENDING: 테두리만
+            status !== 'COMPLETE' && status !== 'NONE' && {
               borderWidth: 2,
               borderColor: statusColor,
+            },
+            // 선택된 날짜는 굵은 테두리로 표시 (기존 테두리 덮어씀)
+            isSelected && {
+              borderWidth: 3,
+              borderColor: Colors.primary,
             },
           ]}
         >
           <Typography
             variant="body"
-            color={isSelected || status === 'COMPLETE' ? Colors.white : isToday ? Colors.primary : dayOfWeekColor}
-            style={isToday ? { fontWeight: 'bold' } : undefined}
+            color={isToday ? Colors.primary : status === 'COMPLETE' ? STATUS_COLORS.COMPLETE : dayOfWeekColor}
+            style={(isToday || isSelected) ? { fontWeight: 'bold' } : undefined}
           >
             {dayNum}
           </Typography>
@@ -694,12 +729,28 @@ export default function FamilyScreen() {
   const loadFamilyData = async (userId: number, date: string) => {
     setIsLoadingLocal(true);
     try {
-      const [schedules, summary] = await Promise.all([
+      const year = new Date(date).getFullYear();
+      const month = new Date(date).getMonth() + 1;
+
+      // 주간 달력이 ±21일을 커버하므로 이전/다음 월 데이터도 로드
+      const prevMonth = month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
+      const nextMonth = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
+
+      const [schedules, prevSummary, currentSummary, nextSummary] = await Promise.all([
         fetchFamilyScheduleForDate(userId, date),
-        fetchFamilyMonthlySummary(userId, new Date(date).getFullYear(), new Date(date).getMonth() + 1),
+        fetchFamilyMonthlySummary(userId, prevMonth.year, prevMonth.month),
+        fetchFamilyMonthlySummary(userId, year, month),
+        fetchFamilyMonthlySummary(userId, nextMonth.year, nextMonth.month),
       ]);
+
       setFamilySchedules(schedules || []);
-      setMonthlySummary(summary?.days || []);
+      // 3개월 데이터 병합
+      const allDays = [
+        ...(prevSummary?.days || []),
+        ...(currentSummary?.days || []),
+        ...(nextSummary?.days || []),
+      ];
+      setMonthlySummary(allDays);
     } catch (error) {
       console.error('Failed to load family data:', error);
       setFamilySchedules([]);
