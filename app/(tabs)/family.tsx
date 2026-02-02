@@ -265,6 +265,7 @@ function LinkedFamilyView({
   monthlySummary,
   isLoading,
   onRefresh,
+  onMonthChange,
 }: {
   family: LinkedFamily;
   selectedDate: string;
@@ -273,6 +274,7 @@ function LinkedFamilyView({
   monthlySummary: DaySummary[];
   isLoading: boolean;
   onRefresh: () => void;
+  onMonthChange: (year: number, month: number) => void;
 }) {
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [weekDates] = useState(generateWeekDates());
@@ -288,7 +290,7 @@ function LinkedFamilyView({
   // 마킹 날짜 업데이트
   useEffect(() => {
     const marked: MarkedDates = {};
-    monthlySummary.forEach((day) => {
+    (monthlySummary || []).forEach((day) => {
       const isToday = day.date === today;
       const statusColor = STATUS_COLORS[day.status as DayStatus] || 'transparent';
 
@@ -323,7 +325,7 @@ function LinkedFamilyView({
   }, [monthlySummary, selectedDate, today]);
 
   const getDayStatus = (dateString: string): DayStatus => {
-    const daySummary = monthlySummary.find((d) => d.date === dateString);
+    const daySummary = (monthlySummary || []).find((d) => d.date === dateString);
     if (daySummary) {
       return daySummary.status as DayStatus;
     }
@@ -593,7 +595,10 @@ function LinkedFamilyView({
                   onVisibleMonthsChange={(months) => {
                     if (months.length > 0) {
                       const visibleMonth = months[0];
-                      setCurrentMonth({ year: visibleMonth.year, month: visibleMonth.month });
+                      if (visibleMonth.year !== currentMonth.year || visibleMonth.month !== currentMonth.month) {
+                        setCurrentMonth({ year: visibleMonth.year, month: visibleMonth.month });
+                        onMonthChange(visibleMonth.year, visibleMonth.month);
+                      }
                     }
                   }}
                   horizontal={true}
@@ -693,10 +698,12 @@ export default function FamilyScreen() {
         fetchFamilyScheduleForDate(userId, date),
         fetchFamilyMonthlySummary(userId, new Date(date).getFullYear(), new Date(date).getMonth() + 1),
       ]);
-      setFamilySchedules(schedules);
-      setMonthlySummary(summary.days);
+      setFamilySchedules(schedules || []);
+      setMonthlySummary(summary?.days || []);
     } catch (error) {
       console.error('Failed to load family data:', error);
+      setFamilySchedules([]);
+      setMonthlySummary([]);
     } finally {
       setIsLoadingLocal(false);
     }
@@ -706,6 +713,17 @@ export default function FamilyScreen() {
     await fetchLinkStatus();
     if (linkedFamily) {
       await loadFamilyData(linkedFamily.userId, selectedDate);
+    }
+  };
+
+  // 달력 모달에서 월이 변경될 때 해당 월의 summary 로드
+  const handleMonthChange = async (year: number, month: number) => {
+    if (!linkedFamily) return;
+    try {
+      const summary = await fetchFamilyMonthlySummary(linkedFamily.userId, year, month);
+      setMonthlySummary(summary?.days || []);
+    } catch (error) {
+      console.error('Failed to load monthly summary:', error);
     }
   };
 
@@ -842,6 +860,7 @@ export default function FamilyScreen() {
             monthlySummary={monthlySummary}
             isLoading={isLoadingLocal || isLoadingSchedule}
             onRefresh={handleRefresh}
+            onMonthChange={handleMonthChange}
           />
         )}
 

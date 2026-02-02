@@ -50,10 +50,10 @@ export const familyService = {
 
   // 가족의 특정 날짜 복약 스케줄 조회
   async getFamilyScheduleForDate(userId: number, date: string): Promise<TodaySchedule[]> {
-    const response = await api.get<ApiResponse<{ schedules: TodaySchedule[] }>>(`/family/protected/${userId}/schedule`, {
+    const response = await api.get<ApiResponse<FamilyTodaySchedule>>(`/family/protected/${userId}/schedule`, {
       params: { date },
     });
-    return response.data.result!.schedules;
+    return response.data.result?.todaySchedule?.schedules || [];
   },
 
   // 가족의 월별 복약 요약 조회
