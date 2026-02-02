@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1011843181466",
+    "project_id": "myyak-7def0",
+    "storage_bucket": "myyak-7def0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1011843181466:android:9fa03a370c68a2b35de823",
+        "android_client_info": {
+          "package_name": "com.myyak.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDCYd19qtMZdZpaq0ev_hzJBOBLGkBuoA4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
