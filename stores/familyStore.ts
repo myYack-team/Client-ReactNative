@@ -50,6 +50,7 @@ interface FamilyState {
   updateNotificationSettings: (enabled: boolean) => Promise<void>;
   clearError: () => void;
   invalidateCache: () => void;
+  reset: () => void;
 }
 
 export const useFamilyStore = create<FamilyState>((set, get) => ({
@@ -267,4 +268,18 @@ export const useFamilyStore = create<FamilyState>((set, get) => ({
       familyMonthlySummaryCacheExpiry: new Map(),
     });
   },
+
+  // 스토어 초기화 (로그아웃 시 호출)
+  reset: () => set({
+    linkStatus: null,
+    isLoadingStatus: false,
+    selectedFamilySchedule: null,
+    isLoadingSchedule: false,
+    scheduleCache: new Map(),
+    scheduleCacheExpiry: new Map(),
+    familyMonthlySummaryCache: new Map(),
+    familyMonthlySummaryCacheExpiry: new Map(),
+    notificationSettings: null,
+    error: null,
+  }),
 }));

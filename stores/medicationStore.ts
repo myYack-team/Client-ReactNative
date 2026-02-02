@@ -70,6 +70,7 @@ interface MedicationState {
   invalidateMonthlySummary: (yearMonth?: string) => void;
   invalidateScheduleCache: () => void;
   invalidateMonthlySummaryCache: (yearMonth?: string) => void;
+  reset: () => void;
 }
 
 export const useMedicationStore = create<MedicationState>((set, get) => ({
@@ -467,4 +468,23 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
 
     set({ monthlySummaryCache: newCache, monthlySummaryCacheExpiry: newExpiry });
   },
+
+  // 스토어 전체 초기화 (로그아웃 시 호출)
+  reset: () => set({
+    medications: [],
+    todayData: null,
+    todayDataExpiry: 0,
+    currentScanResult: null,
+    currentImageUri: null,
+    currentPrescriptionId: null,
+    isLoading: false,
+    error: null,
+    scanError: null,
+    needsRefresh: false,
+    scheduleCache: new Map(),
+    cacheExpiry: new Map(),
+    isLoadingSchedule: false,
+    monthlySummaryCache: new Map(),
+    monthlySummaryCacheExpiry: new Map(),
+  }),
 }));
