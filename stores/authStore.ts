@@ -5,6 +5,7 @@ import { User } from '../types';
 import { authService, userService } from '../services';
 import { clearSession, setSessionInvalidatedCallback } from '../services/api';
 import { logger } from '../utils/logger';
+import { useMedicationStore } from './medicationStore';
 
 /**
  * 인증 관련 에러인지 판별
@@ -192,6 +193,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       // 서버 로그아웃 실패해도 로컬은 정리
     } finally {
       await clearSession({ notify: false });
+      // 복약 관련 캐시 초기화 (다른 사용자 데이터 표시 방지)
+      useMedicationStore.getState().invalidateScheduleCache();
+      useMedicationStore.getState().invalidateMonthlySummaryCache();
       set({ user: null, isAuthenticated: false, needsOnboarding: false });
     }
   },
@@ -201,6 +205,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 
 // 세션 무효화 시 Zustand 인증 상태도 함께 초기화
 setSessionInvalidatedCallback(() => {
+  // 복약 관련 캐시 초기화 (다른 사용자 데이터 표시 방지)
+  useMedicationStore.getState().invalidateScheduleCache();
+  useMedicationStore.getState().invalidateMonthlySummaryCache();
   useAuthStore.setState({
     user: null,
     isAuthenticated: false,
