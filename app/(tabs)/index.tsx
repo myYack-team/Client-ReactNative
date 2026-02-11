@@ -41,7 +41,6 @@ const STATUS_COLORS: Record<DayStatus, string> = {
 };
 
 // COMPLETE 상태용 연한 배경색
-const COMPLETE_BG_COLOR = '#E8F5E9';  // 연한 녹색 배경
 
 // 요일별 색상
 const DAY_OF_WEEK_COLORS = {
@@ -345,12 +344,11 @@ export default function HomeScreen() {
           style={[
             styles.weekDayNumber,
             // 항상 borderWidth를 유지하여 Android compositing 버그 방지
-            // NONE 상태에서도 transparent border를 적용 (borderWidth 3→0 전환 방지)
             {
-              backgroundColor: status === 'COMPLETE' ? COMPLETE_BG_COLOR : Colors.background,
-              borderWidth: isSelected ? 3 : 2,
+              backgroundColor: isSelected ? Colors.secondary : Colors.background,
+              borderWidth: 2,
               borderColor: isSelected
-                ? Colors.primary
+                ? Colors.secondary
                 : status === 'COMPLETE'
                   ? STATUS_COLORS.COMPLETE
                   : status !== 'NONE'
@@ -361,7 +359,7 @@ export default function HomeScreen() {
         >
           <Typography
             variant="body"
-            color={isToday ? Colors.primary : dayOfWeekColor}
+            color={isSelected ? Colors.white : isToday ? Colors.primary : dayOfWeekColor}
             style={(isToday || isSelected) ? { fontWeight: 'bold' } : undefined}
           >
             {dayNum}
