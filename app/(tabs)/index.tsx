@@ -47,7 +47,7 @@ const COMPLETE_BG_COLOR = '#E8F5E9';  // 연한 녹색 배경
 const DAY_OF_WEEK_COLORS = {
   SUNDAY: '#F44336',     // 일요일 - 빨간색
   SATURDAY: '#2196F3',   // 토요일 - 파란색
-  WEEKDAY: Colors.textSecondary,  // 평일 - 기본 회색
+  WEEKDAY: Colors.textPrimary,  // 평일 - 기본 텍스트 색상
 };
 
 type FontWeight = 'normal' | 'bold' | '100' | '200' | '300' | '400' | '500' | '600' | '700' | '800' | '900';
@@ -152,20 +152,39 @@ export default function HomeScreen() {
 
   const loadMonthlySummary = async (year: number, month: number) => {
     try {
-      // 주간 달력이 ±21일을 커버하므로 이전/다음 월 데이터도 로드
+      // 주간 달력이 ±21일을 커버하므로 해당 범위의 모든 월을 로드
+      const monthsToLoad = new Set<string>();
+
+      // 선택 월 ±1
       const prevMonth = month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
       const nextMonth = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
+      monthsToLoad.add(`${prevMonth.year}-${prevMonth.month}`);
+      monthsToLoad.add(`${year}-${month}`);
+      monthsToLoad.add(`${nextMonth.year}-${nextMonth.month}`);
 
-      const [prevData, currentData, nextData] = await Promise.all([
-        fetchMonthlySummary(prevMonth.year, prevMonth.month),
-        fetchMonthlySummary(year, month),
-        fetchMonthlySummary(nextMonth.year, nextMonth.month),
-      ]);
+      // 주간 달력 전체 범위도 커버 (오늘 ±21일)
+      const todayDate = new Date();
+      const startDate = addDays(todayDate, -21);
+      const endDate = addDays(todayDate, 21);
+      monthsToLoad.add(`${startDate.getFullYear()}-${startDate.getMonth() + 1}`);
+      monthsToLoad.add(`${endDate.getFullYear()}-${endDate.getMonth() + 1}`);
 
-      // 3개월 데이터 병합
-      const allDays = [...prevData.days, ...currentData.days, ...nextData.days];
-      setMonthlySummary(allDays);
-      updateMarkedDates(allDays);
+      const monthEntries = Array.from(monthsToLoad).map(key => {
+        const [y, m] = key.split('-').map(Number);
+        return { year: y, month: m };
+      });
+
+      const results = await Promise.all(
+        monthEntries.map(({ year: y, month: m }) => fetchMonthlySummary(y, m))
+      );
+
+      const allDays = results.flatMap(r => r.days);
+      // 중복 제거하며 기존 데이터와 병합
+      setMonthlySummary(prev => {
+        const merged = new Map(prev.map(d => [d.date, d]));
+        allDays.forEach(d => merged.set(d.date, d));
+        return Array.from(merged.values());
+      });
     } catch (error) {
       console.error('Failed to load monthly summary:', error);
     }
@@ -214,7 +233,7 @@ export default function HomeScreen() {
     if (monthlySummary.length > 0) {
       updateMarkedDates(monthlySummary);
     }
-  }, [selectedDate]);
+  }, [selectedDate, monthlySummary]);
 
   // 주간 달력 초기 스크롤 위치 설정 (오늘 날짜가 중앙에 오도록)
   useEffect(() => {
@@ -284,11 +303,7 @@ export default function HomeScreen() {
     if (daySummary) {
       return daySummary.status as DayStatus;
     }
-    // 기본 상태: 오늘이면 PENDING, 미래면 PENDING, 과거면 NONE
-    const dateObj = new Date(dateString);
-    const todayObj = new Date(today);
-    if (dateString === today) return 'PENDING';
-    if (dateObj > todayObj) return 'PENDING';
+    // 서버 데이터 없는 날짜는 NONE (PENDING은 서버가 결정하는 상태)
     return 'NONE';
   };
 
@@ -329,21 +344,18 @@ export default function HomeScreen() {
         <View
           style={[
             styles.weekDayNumber,
-            // COMPLETE: 연한 배경색 + 녹색 테두리
-            status === 'COMPLETE' && {
-              backgroundColor: COMPLETE_BG_COLOR,
-              borderWidth: 2,
-              borderColor: STATUS_COLORS.COMPLETE,
-            },
-            // PARTIAL/MISSED/PENDING: 테두리만
-            status !== 'COMPLETE' && status !== 'NONE' && {
-              borderWidth: 2,
-              borderColor: statusColor,
-            },
-            // 선택된 날짜는 굵은 테두리로 표시 (기존 테두리 덮어씀)
-            isSelected && {
-              borderWidth: 3,
-              borderColor: Colors.primary,
+            // 항상 borderWidth를 유지하여 Android compositing 버그 방지
+            // NONE 상태에서도 transparent border를 적용 (borderWidth 3→0 전환 방지)
+            {
+              backgroundColor: status === 'COMPLETE' ? COMPLETE_BG_COLOR : Colors.background,
+              borderWidth: isSelected ? 3 : 2,
+              borderColor: isSelected
+                ? Colors.primary
+                : status === 'COMPLETE'
+                  ? STATUS_COLORS.COMPLETE
+                  : status !== 'NONE'
+                    ? statusColor
+                    : 'transparent',
             },
           ]}
         >
@@ -631,6 +643,7 @@ export default function HomeScreen() {
           <FlatList
             ref={weekListRef}
             data={weekDates}
+            extraData={`${selectedDate}_${monthlySummary.length}`}
             renderItem={renderWeekDayItem}
             keyExtractor={(item) => item}
             horizontal
@@ -1040,6 +1053,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 4,
     overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   modalOverlay: {
     flex: 1,
