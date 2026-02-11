@@ -51,9 +51,9 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textSecondary,
         tabBarStyle: {
-          height: (fontSize.sm > 14 ? 80 : 70) + insets.bottom,
-          paddingTop: 10,
-          paddingBottom: insets.bottom + 12,
+          height: (fontSize.sm > 14 ? 64 : 56) + insets.bottom,
+          paddingTop: 8,
+          paddingBottom: insets.bottom + 8,
           borderTopWidth: 1,
           borderTopColor: Colors.border,
           backgroundColor: Colors.background,
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   tabIcon: {
     alignItems: 'center',
     justifyContent: 'center',
-    height: 28,
+    height: 24,
   },
   iconImage: {
     width: 24,
