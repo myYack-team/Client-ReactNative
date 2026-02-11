@@ -419,7 +419,7 @@ function LinkedFamilyView({
         >
           <Typography
             variant="body"
-            color={isToday ? Colors.primary : status === 'COMPLETE' ? STATUS_COLORS.COMPLETE : dayOfWeekColor}
+            color={isToday ? Colors.primary : dayOfWeekColor}
             style={(isToday || isSelected) ? { fontWeight: 'bold' } : undefined}
           >
             {dayNum}
