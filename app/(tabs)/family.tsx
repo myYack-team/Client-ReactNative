@@ -81,7 +81,7 @@ function EmptyFamilyView({ onConnectPress }: { onConnectPress: () => void }) {
   return (
     <View style={styles.emptyContainer}>
       <Image
-        source={require('../../assets/icons_iamge_processed/20_Heart.png')}
+        source={require('../../assets/icons_iamge_processed/family.png')}
         style={styles.emptyIcon}
         accessibilityLabel="Family icon"
         resizeMode="contain"
