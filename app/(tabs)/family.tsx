@@ -40,13 +40,12 @@ const STATUS_COLORS: Record<DayStatus, string> = {
 };
 
 // COMPLETE 상태용 연한 배경색
-const COMPLETE_BG_COLOR = '#E8F5E9';
 
 // 요일별 색상
 const DAY_OF_WEEK_COLORS = {
   SUNDAY: '#F44336',
   SATURDAY: '#2196F3',
-  WEEKDAY: Colors.textSecondary,
+  WEEKDAY: Colors.textPrimary,
 };
 
 type FontWeight = 'normal' | 'bold' | '100' | '200' | '300' | '400' | '500' | '600' | '700' | '800' | '900';
@@ -82,7 +81,7 @@ function EmptyFamilyView({ onConnectPress }: { onConnectPress: () => void }) {
   return (
     <View style={styles.emptyContainer}>
       <Image
-        source={require('../../assets/icons_iamge_processed/20_Heart.png')}
+        source={require('../../assets/icons_iamge_processed/family.png')}
         style={styles.emptyIcon}
         accessibilityLabel="Family icon"
         resizeMode="contain"
@@ -332,10 +331,7 @@ function LinkedFamilyView({
     if (daySummary) {
       return daySummary.status as DayStatus;
     }
-    const dateObj = new Date(dateString);
-    const todayObj = new Date(today);
-    if (dateString === today) return 'PENDING';
-    if (dateObj > todayObj) return 'PENDING';
+    // 서버 데이터 없는 날짜는 NONE (PENDING은 서버가 결정하는 상태)
     return 'NONE';
   };
 
@@ -405,27 +401,23 @@ function LinkedFamilyView({
         <View
           style={[
             styles.weekDayNumber,
-            // COMPLETE: 연한 배경색 + 녹색 테두리
-            status === 'COMPLETE' && {
-              backgroundColor: COMPLETE_BG_COLOR,
+            // 항상 borderWidth를 유지하여 Android compositing 버그 방지
+            {
+              backgroundColor: isSelected ? Colors.secondary : Colors.background,
               borderWidth: 2,
-              borderColor: STATUS_COLORS.COMPLETE,
-            },
-            // PARTIAL/MISSED/PENDING: 테두리만
-            status !== 'COMPLETE' && status !== 'NONE' && {
-              borderWidth: 2,
-              borderColor: statusColor,
-            },
-            // 선택된 날짜는 굵은 테두리로 표시 (기존 테두리 덮어씀)
-            isSelected && {
-              borderWidth: 3,
-              borderColor: Colors.primary,
+              borderColor: isSelected
+                ? Colors.secondary
+                : status === 'COMPLETE'
+                  ? STATUS_COLORS.COMPLETE
+                  : status !== 'NONE'
+                    ? statusColor
+                    : 'transparent',
             },
           ]}
         >
           <Typography
             variant="body"
-            color={isToday ? Colors.primary : status === 'COMPLETE' ? STATUS_COLORS.COMPLETE : dayOfWeekColor}
+            color={isSelected ? Colors.white : isToday ? Colors.primary : dayOfWeekColor}
             style={(isToday || isSelected) ? { fontWeight: 'bold' } : undefined}
           >
             {dayNum}
@@ -496,6 +488,7 @@ function LinkedFamilyView({
         <FlatList
           ref={weekListRef}
           data={weekDates}
+          extraData={`${selectedDate}_${(monthlySummary || []).length}`}
           renderItem={renderWeekDayItem}
           keyExtractor={(item) => item}
           horizontal
@@ -732,25 +725,41 @@ export default function FamilyScreen() {
       const year = new Date(date).getFullYear();
       const month = new Date(date).getMonth() + 1;
 
-      // 주간 달력이 ±21일을 커버하므로 이전/다음 월 데이터도 로드
+      // 주간 달력이 ±21일을 커버하므로 해당 범위의 모든 월을 로드
+      const monthsToLoad = new Set<string>();
+
+      // 선택 월 ±1
       const prevMonth = month === 1 ? { year: year - 1, month: 12 } : { year, month: month - 1 };
       const nextMonth = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
+      monthsToLoad.add(`${prevMonth.year}-${prevMonth.month}`);
+      monthsToLoad.add(`${year}-${month}`);
+      monthsToLoad.add(`${nextMonth.year}-${nextMonth.month}`);
 
-      const [schedules, prevSummary, currentSummary, nextSummary] = await Promise.all([
+      // 주간 달력 전체 범위도 커버 (오늘 ±21일)
+      const todayDate = new Date();
+      const startDate = addDays(todayDate, -21);
+      const endDate = addDays(todayDate, 21);
+      monthsToLoad.add(`${startDate.getFullYear()}-${startDate.getMonth() + 1}`);
+      monthsToLoad.add(`${endDate.getFullYear()}-${endDate.getMonth() + 1}`);
+
+      const monthEntries = Array.from(monthsToLoad).map(key => {
+        const [y, m] = key.split('-').map(Number);
+        return { year: y, month: m };
+      });
+
+      const [schedules, ...summaryResults] = await Promise.all([
         fetchFamilyScheduleForDate(userId, date),
-        fetchFamilyMonthlySummary(userId, prevMonth.year, prevMonth.month),
-        fetchFamilyMonthlySummary(userId, year, month),
-        fetchFamilyMonthlySummary(userId, nextMonth.year, nextMonth.month),
+        ...monthEntries.map(({ year: y, month: m }) => fetchFamilyMonthlySummary(userId, y, m)),
       ]);
 
       setFamilySchedules(schedules || []);
-      // 3개월 데이터 병합
-      const allDays = [
-        ...(prevSummary?.days || []),
-        ...(currentSummary?.days || []),
-        ...(nextSummary?.days || []),
-      ];
-      setMonthlySummary(allDays);
+      const allDays = summaryResults.flatMap(r => r?.days || []);
+      // 중복 제거하며 기존 데이터와 병합
+      setMonthlySummary(prev => {
+        const merged = new Map(prev.map(d => [d.date, d]));
+        allDays.forEach(d => merged.set(d.date, d));
+        return Array.from(merged.values());
+      });
     } catch (error) {
       console.error('Failed to load family data:', error);
       setFamilySchedules([]);
@@ -1133,6 +1142,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 4,
     overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   // Cards
   emptyCard: {

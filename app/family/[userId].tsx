@@ -214,11 +214,17 @@ export default function FamilyUserDetailScreen() {
         <View
           style={[
             styles.weekDayNumber,
-            isSelected && { backgroundColor: Colors.primary },
-            status === 'COMPLETE' && !isSelected && { backgroundColor: STATUS_COLORS.COMPLETE },
-            !isSelected && status !== 'COMPLETE' && status !== 'NONE' && {
+            // 항상 borderWidth를 유지하여 Android compositing 버그 방지
+            {
+              backgroundColor: isSelected
+                ? Colors.primary
+                : status === 'COMPLETE'
+                  ? STATUS_COLORS.COMPLETE
+                  : Colors.background,
               borderWidth: 2,
-              borderColor: statusColor,
+              borderColor: !isSelected && status !== 'COMPLETE' && status !== 'NONE'
+                ? statusColor
+                : 'transparent',
             },
           ]}
         >
@@ -308,6 +314,7 @@ export default function FamilyUserDetailScreen() {
           <FlatList
             ref={weekListRef}
             data={weekDates}
+            extraData={`${selectedDate}_${monthlySummary.length}`}
             renderItem={renderWeekDayItem}
             keyExtractor={(item) => item}
             horizontal
@@ -562,6 +569,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 4,
     overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   emptyCard: {
     alignItems: 'center',

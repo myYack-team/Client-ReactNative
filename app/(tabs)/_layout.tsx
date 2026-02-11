@@ -11,7 +11,7 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
     medications: '약',
     history: '처방',
     analysis: '분석',
-    family: '가족',
+    family: '가족연동',
   };
 
   const iconImages: Record<string, any> = {
@@ -19,7 +19,7 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
     medications: require('../../assets/icons_iamge_processed/02_Pill.png'),
     history: require('../../assets/icons_iamge_processed/03_Clipboard.png'),
     analysis: require('../../assets/icons_iamge_processed/04_AI.png'),
-    family: require('../../assets/icons_iamge_processed/20_Heart.png'),
+    family: require('../../assets/icons_iamge_processed/family.png'),
   };
 
   return (
@@ -51,9 +51,9 @@ export default function TabLayout() {
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textSecondary,
         tabBarStyle: {
-          height: (fontSize.sm > 14 ? 80 : 70) + insets.bottom,
-          paddingTop: 10,
-          paddingBottom: insets.bottom + 12,
+          height: (fontSize.sm > 14 ? 64 : 56) + insets.bottom,
+          paddingTop: 8,
+          paddingBottom: insets.bottom + 8,
           borderTopWidth: 1,
           borderTopColor: Colors.border,
           backgroundColor: Colors.background,
@@ -96,7 +96,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="family"
         options={{
-          title: '가족',
+          title: '가족연동',
           tabBarIcon: ({ focused }) => <TabIcon name="family" focused={focused} />,
         }}
       />
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   tabIcon: {
     alignItems: 'center',
     justifyContent: 'center',
-    height: 28,
+    height: 24,
   },
   iconImage: {
     width: 24,
