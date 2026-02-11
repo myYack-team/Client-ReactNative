@@ -37,6 +37,11 @@ export const prescriptionService = {
     const response = await api.post<ApiResponse<PrescriptionUploadResponse>>(
       '/prescriptions/upload',
       formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
     );
 
     logger.log('[Upload] Response data:', JSON.stringify(response.data, null, 2));
@@ -104,6 +109,11 @@ export const prescriptionService = {
     const response = await api.post<ApiResponse<PrescriptionRegisterResponse>>(
       '/prescriptions/register',
       formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      }
     );
 
     logger.log('[Register] Response data:', JSON.stringify(response.data, null, 2));
