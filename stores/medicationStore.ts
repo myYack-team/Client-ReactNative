@@ -255,8 +255,16 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
     const { todayData } = get();
     const today = getTodayString(); // 로컬 타임존 기준 오늘 날짜
 
-    // 이전 상태 저장 (롤백용)
-    const previousTodayData = todayData ? { ...todayData } : null;
+    // 이전 상태 저장 (롤백용 - deep copy)
+    const previousTodayData = todayData
+      ? {
+          ...todayData,
+          schedules: todayData.schedules?.map(s => ({
+            ...s,
+            medications: [...s.medications],
+          })),
+        }
+      : null;
     const isToday = !date || date === today;
 
     // 낙관적 업데이트 (오늘 날짜일 때만 UI 먼저 반영)
@@ -274,6 +282,8 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
 
       set({
         todayData: { ...todayData, schedules: updatedSchedules },
+        // 낙관적 업데이트 시 캐시 유효기간 갱신 → fetchTodaySchedule 재요청 방지
+        todayDataExpiry: Date.now() + CACHE_DURATION,
       });
     }
 
@@ -294,10 +304,8 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
       // 서버 호출
       await intakeService.markAsTaken(medicationIds, timing, takenAt);
 
-      // 성공 시 캐시 무효화
+      // 성공 시 날짜별 스케줄 캐시만 무효화 (todayData는 낙관적 업데이트 유지)
       get().invalidateCache(date || today);
-      // 오늘 스케줄 캐시도 무효화
-      set({ todayDataExpiry: 0 });
       // 월별 요약 캐시 무효화 (주간 달력 상태 반영용)
       get().invalidateMonthlySummary();
     } catch (error) {
