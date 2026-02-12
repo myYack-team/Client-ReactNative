@@ -118,23 +118,31 @@ export default function HomeScreen() {
     }
   }, [weekDates, today]);
 
-  // 선택된 날짜의 스케줄 가져오기 (오늘이면 todayData 재사용, 아니면 캐시/API)
+  // 선택된 날짜의 스케줄 가져오기 (todayData dependency 제거하여 연쇄 재실행 방지)
   const loadScheduleForDate = useCallback(async (date: string) => {
-    // 오늘 날짜이고 todayData가 있으면 재사용 (중복 호출 방지)
-    if (date === today && todayData?.schedules) {
-      setSelectedDateSchedules(todayData.schedules);
-      return;
+    if (date === today) {
+      const currentTodayData = useMedicationStore.getState().todayData;
+      if (currentTodayData?.schedules) {
+        setSelectedDateSchedules(currentTodayData.schedules);
+        return;
+      }
     }
     const schedules = await fetchScheduleForDate(date);
     setSelectedDateSchedules(schedules);
-  }, [today, todayData, fetchScheduleForDate]);
+  }, [today, fetchScheduleForDate]);
+
+  // todayData 변경 시 오늘 날짜면 UI 자동 동기화 (서버 재요청 없음)
+  useEffect(() => {
+    if (selectedDate === today && todayData?.schedules) {
+      setSelectedDateSchedules(todayData.schedules);
+    }
+  }, [selectedDate, today, todayData]);
 
   useFocusEffect(
     useCallback(() => {
       fetchTodaySchedule();
-      loadScheduleForDate(selectedDate);
       loadMonthlySummary(currentMonth.year, currentMonth.month);
-    }, [selectedDate, currentMonth.year, currentMonth.month, fetchTodaySchedule, loadScheduleForDate])
+    }, [currentMonth.year, currentMonth.month, fetchTodaySchedule])
   );
 
   // 선택된 날짜가 변경되면 스케줄 로드
