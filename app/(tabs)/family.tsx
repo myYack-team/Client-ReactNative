@@ -3,7 +3,8 @@ import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Modal, 
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
 import { CalendarList, LocaleConfig } from 'react-native-calendars';
-import { Button, Card, Typography, TabHeader } from '../../components/ui';
+import { Button, Card, Typography } from '../../components/ui';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants';
 import { useResponsive } from '../../hooks';
 import { useFamilyStore, useAuthStore } from '../../stores';
@@ -866,17 +867,28 @@ export default function FamilyScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <TabHeader
-        title="가족"
-        showSettingsButton={true}
-        rightContent={
-          hasLinkedFamilies && (
-            <TouchableOpacity onPress={handleSettingsPress} style={styles.familySettingsButton}>
-              <Typography variant="caption" color={Colors.primary}>가족 설정</Typography>
-            </TouchableOpacity>
-          )
-        }
-      />
+      {/* 헤더 */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <View style={styles.headerTitleRow}>
+            <Image
+              source={require('../../assets/icons_iamge_processed/family.png')}
+              style={styles.headerIcon}
+              accessibilityLabel="Family icon"
+              resizeMode="contain"
+            />
+            <Typography variant="h2">가족연동</Typography>
+          </View>
+          <Typography variant="body" color={Colors.textSecondary}>
+            가족의 복약 현황을 함께 관리해요
+          </Typography>
+        </View>
+        {hasLinkedFamilies && (
+          <TouchableOpacity style={styles.settingsButton} onPress={handleSettingsPress}>
+            <Ionicons name="settings-outline" size={24} color={Colors.textSecondary} />
+          </TouchableOpacity>
+        )}
+      </View>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, contentStyle, { paddingBottom: 40 + insets.bottom }]}
@@ -1099,12 +1111,27 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
   },
-  familySettingsButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors.primary,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  headerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerIcon: {
+    width: 28,
+    height: 28,
+  },
+  settingsButton: {
+    padding: 4,
   },
   dateHeader: {
     flexDirection: 'row',

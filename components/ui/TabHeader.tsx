@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { Typography } from './Typography';
 import { Colors } from '../../constants';
 
@@ -24,7 +25,7 @@ export function TabHeader({ title, showSettingsButton = true, rightContent }: Ta
         {rightContent}
         {showSettingsButton && (
           <TouchableOpacity style={styles.settingsButton} onPress={handleSettingsPress}>
-            <Text style={styles.settingsIcon}>&#9881;</Text>
+            <Ionicons name="settings-outline" size={24} color={Colors.textSecondary} />
           </TouchableOpacity>
         )}
       </View>
@@ -51,9 +52,5 @@ const styles = StyleSheet.create({
   },
   settingsButton: {
     padding: 4,
-  },
-  settingsIcon: {
-    fontSize: 24,
-    color: Colors.textSecondary,
   },
 });
