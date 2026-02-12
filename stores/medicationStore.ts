@@ -313,7 +313,7 @@ export const useMedicationStore = create<MedicationState>((set, get) => ({
       logger.error('Failed to record intake, rolling back:', error);
 
       if (isToday && previousTodayData) {
-        set({ todayData: previousTodayData });
+        set({ todayData: previousTodayData, todayDataExpiry: 0 });
       }
 
       const message = error instanceof Error ? error.message : '복약 기록에 실패했습니다.';
