@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Card, Typography, DeleteConfirmModal, Toast } from '../../components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, API_BASE_URL } from '../../constants';
