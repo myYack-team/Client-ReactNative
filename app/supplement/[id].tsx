@@ -1,21 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, Alert, Modal, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Typography, Button, Card, SupplementTagBadge } from '../../components/ui';
 import { Colors } from '../../constants';
 import { supplementService } from '../../services';
-import { SupplementDetail } from '../../types';
+import { SupplementDetail, UserSupplementDetail, MedicationTiming, TIMING_LABELS, UpdateUserSupplementRequest } from '../../types';
 
 export default function SupplementDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, userSupplementId } = useLocalSearchParams<{ id: string; userSupplementId?: string }>();
   const [supplement, setSupplement] = useState<SupplementDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [userSupplement, setUserSupplement] = useState<UserSupplementDetail | null>(null);
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [editDosage, setEditDosage] = useState('');
+  const [editFrequency, setEditFrequency] = useState('');
+  const [editTimings, setEditTimings] = useState<MedicationTiming[]>([]);
+  const [editMemo, setEditMemo] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     loadSupplementDetail();
-  }, [id]);
+    loadUserSupplementDetail();
+  }, [id, userSupplementId]);
 
   const loadSupplementDetail = async () => {
     if (!id) return;
@@ -28,6 +36,76 @@ export default function SupplementDetailScreen() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const loadUserSupplementDetail = async () => {
+    if (!userSupplementId) return;
+    try {
+      const data = await supplementService.getUserSupplementDetail(parseInt(userSupplementId));
+      setUserSupplement(data);
+    } catch (error) {
+      console.error('Failed to load user supplement detail:', error);
+    }
+  };
+
+  const handleOpenEditModal = () => {
+    if (!userSupplement) return;
+    setEditDosage(userSupplement.dosage);
+    setEditFrequency(String(userSupplement.frequency));
+    setEditTimings(userSupplement.timings);
+    setEditMemo(userSupplement.memo || '');
+    setIsEditModalVisible(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!userSupplementId) return;
+    setIsSaving(true);
+    try {
+      const updateData: UpdateUserSupplementRequest = {
+        dosage: editDosage,
+        frequency: parseInt(editFrequency),
+        timings: editTimings,
+        memo: editMemo || undefined,
+      };
+      await supplementService.updateUserSupplement(parseInt(userSupplementId), updateData);
+      await loadUserSupplementDetail();
+      setIsEditModalVisible(false);
+      Alert.alert('수정 완료', '복용 정보가 수정되었습니다.');
+    } catch (error) {
+      Alert.alert('오류', '수정에 실패했습니다.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = () => {
+    Alert.alert(
+      '영양제 삭제',
+      '내 영양제 목록에서 삭제하시겠어요?',
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '삭제',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await supplementService.deleteUserSupplement(parseInt(userSupplementId!));
+              router.back();
+            } catch (error) {
+              Alert.alert('오류', '삭제에 실패했습니다.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const toggleTiming = (timing: MedicationTiming) => {
+    setEditTimings(prev =>
+      prev.includes(timing)
+        ? prev.filter(t => t !== timing)
+        : [...prev, timing]
+    );
   };
 
   if (isLoading) {
@@ -125,31 +203,174 @@ export default function SupplementDetailScreen() {
             </Typography>
           </View>
         </Card>
+
+        {/* 내 복용 정보 - userSupplement가 있을 때만 표시 */}
+        {userSupplement && (
+          <Card style={styles.infoCard}>
+            <Typography variant="h4" style={styles.sectionTitle}>
+              내 복용 정보
+            </Typography>
+            <View style={styles.infoRow}>
+              <Typography variant="bodySmall" color={Colors.textSecondary}>복용량</Typography>
+              <Typography variant="bodySmall">{userSupplement.dosage}</Typography>
+            </View>
+            <View style={styles.infoRow}>
+              <Typography variant="bodySmall" color={Colors.textSecondary}>복용 횟수</Typography>
+              <Typography variant="bodySmall">하루 {userSupplement.frequency}회</Typography>
+            </View>
+            <View style={styles.infoRow}>
+              <Typography variant="bodySmall" color={Colors.textSecondary}>복용 시간</Typography>
+              <Typography variant="bodySmall">
+                {userSupplement.timings.map(t => TIMING_LABELS[t]).join(', ')}
+              </Typography>
+            </View>
+            <View style={styles.infoRow}>
+              <Typography variant="bodySmall" color={Colors.textSecondary}>시작일</Typography>
+              <Typography variant="bodySmall">
+                {new Date(userSupplement.startDate).toLocaleDateString('ko-KR')}
+              </Typography>
+            </View>
+            {userSupplement.memo && (
+              <View style={styles.infoRow}>
+                <Typography variant="bodySmall" color={Colors.textSecondary}>메모</Typography>
+                <Typography variant="bodySmall">{userSupplement.memo}</Typography>
+              </View>
+            )}
+          </Card>
+        )}
       </ScrollView>
 
       {/* 하단 버튼 */}
       <View style={styles.bottomButton}>
-        <Button
-          title="내 영양제에 추가하기"
-          variant="primary"
-          size="large"
-          onPress={() => {
-            // 이미 로드된 데이터를 params로 전달하여 중복 API 호출 방지
-            router.push({
-              pathname: `/supplement/add/${supplement.id}`,
-              params: {
-                supplementData: JSON.stringify({
-                  id: supplement.id,
-                  name: supplement.name,
-                  tag: supplement.tag,
-                  tagLabel: supplement.tagLabel,
-                  description: supplement.description,
-                }),
-              },
-            });
-          }}
-        />
+        {userSupplementId ? (
+          <View style={styles.buttonRow}>
+            <Button
+              title="수정하기"
+              variant="primary"
+              size="large"
+              onPress={handleOpenEditModal}
+              style={styles.flexButton}
+            />
+            <Button
+              title="삭제하기"
+              variant="danger"
+              size="large"
+              onPress={handleDelete}
+              style={styles.flexButton}
+            />
+          </View>
+        ) : (
+          <Button
+            title="내 영양제에 추가하기"
+            variant="primary"
+            size="large"
+            onPress={() => {
+              router.push({
+                pathname: `/supplement/add/${supplement.id}`,
+                params: {
+                  supplementData: JSON.stringify({
+                    id: supplement.id,
+                    name: supplement.name,
+                    tag: supplement.tag,
+                    tagLabel: supplement.tagLabel,
+                    description: supplement.description,
+                  }),
+                },
+              });
+            }}
+          />
+        )}
       </View>
+
+      {/* 수정 모달 */}
+      <Modal
+        visible={isEditModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsEditModalVisible(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Typography variant="h3">복용 정보 수정</Typography>
+              <TouchableOpacity onPress={() => setIsEditModalVisible(false)}>
+                <Ionicons name="close" size={24} color={Colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              <Typography variant="bodySmall" color={Colors.textSecondary} style={styles.fieldLabel}>
+                복용량
+              </Typography>
+              <TextInput
+                style={styles.input}
+                value={editDosage}
+                onChangeText={setEditDosage}
+                placeholder="예: 1정"
+              />
+
+              <Typography variant="bodySmall" color={Colors.textSecondary} style={styles.fieldLabel}>
+                하루 복용 횟수
+              </Typography>
+              <TextInput
+                style={styles.input}
+                value={editFrequency}
+                onChangeText={setEditFrequency}
+                placeholder="예: 2"
+                keyboardType="number-pad"
+              />
+
+              <Typography variant="bodySmall" color={Colors.textSecondary} style={styles.fieldLabel}>
+                복용 시간
+              </Typography>
+              <View style={styles.timingContainer}>
+                {(['MORNING', 'LUNCH', 'DINNER', 'BEFORE_SLEEP'] as MedicationTiming[]).map((timing) => (
+                  <TouchableOpacity
+                    key={timing}
+                    style={[
+                      styles.timingChip,
+                      editTimings.includes(timing) && styles.timingChipSelected,
+                    ]}
+                    onPress={() => toggleTiming(timing)}
+                  >
+                    <Typography
+                      variant="bodySmall"
+                      color={editTimings.includes(timing) ? '#FFFFFF' : Colors.textSecondary}
+                    >
+                      {TIMING_LABELS[timing]}
+                    </Typography>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Typography variant="bodySmall" color={Colors.textSecondary} style={styles.fieldLabel}>
+                메모
+              </Typography>
+              <TextInput
+                style={[styles.input, styles.memoInput]}
+                value={editMemo}
+                onChangeText={setEditMemo}
+                placeholder="메모 입력 (선택)"
+                multiline
+                numberOfLines={3}
+              />
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <Button
+                title="저장"
+                variant="primary"
+                size="large"
+                onPress={handleSaveEdit}
+                loading={isSaving}
+              />
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -232,5 +453,72 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  flexButton: {
+    flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  modalBody: {
+    padding: 20,
+  },
+  modalFooter: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  fieldLabel: {
+    marginBottom: 8,
+    marginTop: 16,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 14,
+    color: Colors.textPrimary,
+  },
+  memoInput: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  timingContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  timingChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.background,
+  },
+  timingChipSelected: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
 });
