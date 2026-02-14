@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, ActivityIndicator, Alert, Modal, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, Alert, Modal, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -189,6 +189,13 @@ export default function SupplementDetailScreen() {
       >
         {/* 헤더 정보 */}
         <Card style={styles.headerCard} variant="elevated">
+          {supplement.imageUrl ? (
+            <Image source={{ uri: supplement.imageUrl }} style={styles.supplementImage} resizeMode="cover" />
+          ) : (
+            <View style={styles.supplementImagePlaceholder}>
+              <Ionicons name="leaf" size={40} color={Colors.textSecondary} />
+            </View>
+          )}
           <SupplementTagBadge tag={supplement.tag} size="medium" />
           <Typography variant="h2" style={styles.name}>
             {supplement.name}
@@ -288,49 +295,49 @@ export default function SupplementDetailScreen() {
             )}
           </Card>
         )}
-      </ScrollView>
 
-      {/* 하단 버튼 */}
-      <View style={styles.bottomButton}>
-        {userSupplementId ? (
-          <View style={styles.buttonRow}>
+        {/* 하단 버튼 */}
+        <View style={styles.bottomButton}>
+          {userSupplementId ? (
+            <View style={styles.buttonRow}>
+              <Button
+                title="수정하기"
+                variant="primary"
+                size="large"
+                onPress={handleOpenEditModal}
+                style={styles.flexButton}
+              />
+              <Button
+                title="삭제하기"
+                variant="danger"
+                size="large"
+                onPress={handleDelete}
+                style={styles.flexButton}
+              />
+            </View>
+          ) : (
             <Button
-              title="수정하기"
+              title="내 영양제에 추가하기"
               variant="primary"
               size="large"
-              onPress={handleOpenEditModal}
-              style={styles.flexButton}
+              onPress={() => {
+                router.push({
+                  pathname: `/supplement/add/${supplement.id}`,
+                  params: {
+                    supplementData: JSON.stringify({
+                      id: supplement.id,
+                      name: supplement.name,
+                      tag: supplement.tag,
+                      tagLabel: supplement.tagLabel,
+                      description: supplement.description,
+                    }),
+                  },
+                });
+              }}
             />
-            <Button
-              title="삭제하기"
-              variant="danger"
-              size="large"
-              onPress={handleDelete}
-              style={styles.flexButton}
-            />
-          </View>
-        ) : (
-          <Button
-            title="내 영양제에 추가하기"
-            variant="primary"
-            size="large"
-            onPress={() => {
-              router.push({
-                pathname: `/supplement/add/${supplement.id}`,
-                params: {
-                  supplementData: JSON.stringify({
-                    id: supplement.id,
-                    name: supplement.name,
-                    tag: supplement.tag,
-                    tagLabel: supplement.tagLabel,
-                    description: supplement.description,
-                  }),
-                },
-              });
-            }}
-          />
-        )}
-      </View>
+          )}
+        </View>
+      </ScrollView>
 
       {/* 수정 모달 */}
       <Modal
@@ -488,10 +495,25 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
-    paddingBottom: 100,
+    paddingBottom: 40,
   },
   headerCard: {
     marginBottom: 16,
+  },
+  supplementImage: {
+    width: '100%',
+    height: 180,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  supplementImagePlaceholder: {
+    width: '100%',
+    height: 180,
+    borderRadius: 12,
+    backgroundColor: Colors.backgroundSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   name: {
     marginTop: 12,
@@ -537,14 +559,7 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
   },
   bottomButton: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 20,
-    backgroundColor: Colors.background,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
+    marginTop: 24,
   },
   buttonRow: {
     flexDirection: 'row',
