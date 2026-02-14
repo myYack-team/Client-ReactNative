@@ -6,6 +6,7 @@ import {
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -160,6 +161,13 @@ export default function SupplementSearchScreen() {
     >
       <Card style={styles.supplementCard} variant="elevated">
         <View style={styles.supplementContent}>
+          {item.imageUrl ? (
+            <Image source={{ uri: item.imageUrl }} style={styles.supplementImage} resizeMode="cover" />
+          ) : (
+            <View style={styles.supplementImagePlaceholder}>
+              <Ionicons name="leaf" size={24} color={Colors.textSecondary} />
+            </View>
+          )}
           <View style={styles.supplementInfo}>
             <SupplementTagBadge tag={item.tag} />
             <Typography variant="h4" style={styles.supplementName} numberOfLines={1}>
@@ -351,6 +359,21 @@ const styles = StyleSheet.create({
   supplementContent: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  supplementImage: {
+    width: 80,
+    height: 56,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  supplementImagePlaceholder: {
+    width: 80,
+    height: 56,
+    borderRadius: 8,
+    backgroundColor: Colors.backgroundSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
   supplementInfo: {
     flex: 1,
