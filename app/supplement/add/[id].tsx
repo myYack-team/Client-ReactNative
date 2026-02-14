@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Typography, Button, Card, SupplementTagBadge } from '../../../components/ui';
 import { Colors } from '../../../constants';
 import { supplementService } from '../../../services';
@@ -44,6 +46,16 @@ export default function AddUserSupplementScreen() {
   const [selectedTimings, setSelectedTimings] = useState<MedicationTiming[]>(['MORNING']);
   const [startDate, setStartDate] = useState(getTodayString()); // 로컬 타임존 기준 오늘 날짜
   const [memo, setMemo] = useState('');
+
+  // 알림 시간 상태
+  const [reminderTimes, setReminderTimes] = useState<Record<MedicationTiming, string>>({
+    MORNING: '08:00',
+    AFTERNOON: '12:00',
+    EVENING: '18:00',
+    AS_NEEDED: '',
+  });
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [editingTiming, setEditingTiming] = useState<MedicationTiming | null>(null);
 
   useEffect(() => {
     loadSupplementDetail();
@@ -102,6 +114,24 @@ export default function AddUserSupplementScreen() {
     }
   };
 
+  const handleTimeEdit = (timing: MedicationTiming) => {
+    setEditingTiming(timing);
+    setShowTimePicker(true);
+  };
+
+  const handleTimeChange = (event: any, selectedDate?: Date) => {
+    setShowTimePicker(Platform.OS === 'ios');
+    if (selectedDate && editingTiming) {
+      const hours = selectedDate.getHours().toString().padStart(2, '0');
+      const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
+      setReminderTimes((prev) => ({
+        ...prev,
+        [editingTiming]: `${hours}:${minutes}`,
+      }));
+    }
+    setEditingTiming(null);
+  };
+
   const handleSave = async () => {
     if (!supplement || selectedTimings.length === 0) {
       Alert.alert('알림', '복용 시간을 최소 1개 선택해주세요.');
@@ -110,11 +140,13 @@ export default function AddUserSupplementScreen() {
 
     setIsSaving(true);
     try {
+      const reminderTimesArray = selectedTimings.map((t) => reminderTimes[t]);
       await supplementService.addUserSupplement({
         supplementId: supplement.id,
         dosage,
         frequency,
         timings: selectedTimings,
+        reminderTimes: reminderTimesArray,
         startDate,
         memo: memo.trim() || undefined,
       });
@@ -212,6 +244,28 @@ export default function AddUserSupplementScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+
+            {/* 선택된 시간대별 알림 시간 설정 */}
+            {selectedTimings.length > 0 && (
+              <View style={styles.reminderTimesContainer}>
+                <Typography variant="bodySmall" color={Colors.textSecondary} style={styles.reminderTimesLabel}>
+                  알림 시간 (터치하여 변경)
+                </Typography>
+                {selectedTimings.map((timing) => (
+                  <TouchableOpacity
+                    key={timing}
+                    style={styles.reminderTimeRow}
+                    onPress={() => handleTimeEdit(timing)}
+                  >
+                    <Typography variant="body">{TIMING_LABELS[timing]}</Typography>
+                    <View style={styles.reminderTimeValue}>
+                      <Typography variant="body">{reminderTimes[timing]}</Typography>
+                      <Ionicons name="time-outline" size={18} color={Colors.textSecondary} />
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
 
           {/* 복용 횟수 (선택된 시간대 수에 연동) */}
@@ -251,6 +305,26 @@ export default function AddUserSupplementScreen() {
             style={styles.submitButton}
           />
         </ScrollView>
+
+        {/* 시간 선택 피커 */}
+        {showTimePicker && (
+          <DateTimePicker
+            value={
+              editingTiming
+                ? (() => {
+                    const [h, m] = (reminderTimes[editingTiming] || '08:00').split(':');
+                    const date = new Date();
+                    date.setHours(parseInt(h), parseInt(m));
+                    return date;
+                  })()
+                : new Date()
+            }
+            mode="time"
+            is24Hour={true}
+            display="spinner"
+            onChange={handleTimeChange}
+          />
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -342,6 +416,29 @@ const styles = StyleSheet.create({
   frequencyValue: {
     minWidth: 60,
     textAlign: 'center',
+  },
+  reminderTimesContainer: {
+    marginTop: 16,
+    gap: 8,
+  },
+  reminderTimesLabel: {
+    marginBottom: 4,
+  },
+  reminderTimeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  reminderTimeValue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   submitButton: {
     marginTop: 8,
