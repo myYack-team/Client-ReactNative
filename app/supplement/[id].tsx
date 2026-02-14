@@ -3,6 +3,7 @@ import { View, StyleSheet, ScrollView, ActivityIndicator, Alert, Modal, TextInpu
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Typography, Button, Card, SupplementTagBadge } from '../../components/ui';
 import { Colors } from '../../constants';
 import { supplementService } from '../../services';
@@ -18,6 +19,9 @@ export default function SupplementDetailScreen() {
   const [editFrequency, setEditFrequency] = useState('');
   const [editTimings, setEditTimings] = useState<MedicationTiming[]>([]);
   const [editMemo, setEditMemo] = useState('');
+  const [editReminderTimes, setEditReminderTimes] = useState<Record<string, string>>({});
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [editingTiming, setEditingTiming] = useState<MedicationTiming | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -57,6 +61,24 @@ export default function SupplementDetailScreen() {
     setEditFrequency(String(userSupplement.frequency));
     setEditTimings(userSupplement.timings);
     setEditMemo(userSupplement.memo || '');
+
+    // 기존 리마인더 시간 초기화
+    const defaultTimes: Record<string, string> = {
+      MORNING: '08:00',
+      AFTERNOON: '12:00',
+      EVENING: '18:00',
+      AS_NEEDED: '',
+    };
+    if (userSupplement.reminders && userSupplement.reminders.length > 0) {
+      const times: Record<string, string> = { ...defaultTimes };
+      userSupplement.reminders.forEach((r) => {
+        times[r.timing] = r.time;
+      });
+      setEditReminderTimes(times);
+    } else {
+      setEditReminderTimes(defaultTimes);
+    }
+
     setIsEditModalVisible(true);
   };
 
@@ -69,10 +91,12 @@ export default function SupplementDetailScreen() {
     }
     setIsSaving(true);
     try {
+      const reminderTimesArray = editTimings.map((t) => editReminderTimes[t] || '08:00');
       const updateData: UpdateUserSupplementRequest = {
         dosage: editDosage.trim(),
         frequency: freq,
         timings: editTimings,
+        reminderTimes: reminderTimesArray,
         memo: editMemo.trim() || undefined,
       };
       await supplementService.updateUserSupplement(parseInt(userSupplementId), updateData);
@@ -114,6 +138,24 @@ export default function SupplementDetailScreen() {
         ? prev.filter(t => t !== timing)
         : [...prev, timing]
     );
+  };
+
+  const handleEditTimeEdit = (timing: MedicationTiming) => {
+    setEditingTiming(timing);
+    setShowTimePicker(true);
+  };
+
+  const handleEditTimeChange = (event: any, selectedDate?: Date) => {
+    setShowTimePicker(Platform.OS === 'ios');
+    if (selectedDate && editingTiming) {
+      const hours = selectedDate.getHours().toString().padStart(2, '0');
+      const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
+      setEditReminderTimes((prev) => ({
+        ...prev,
+        [editingTiming]: `${hours}:${minutes}`,
+      }));
+    }
+    setEditingTiming(null);
   };
 
   if (isLoading) {
@@ -354,6 +396,28 @@ export default function SupplementDetailScreen() {
                 ))}
               </View>
 
+              {/* 선택된 시간대별 알림 시간 설정 */}
+              {editTimings.length > 0 && (
+                <View style={styles.reminderTimesContainer}>
+                  <Typography variant="bodySmall" color={Colors.textSecondary} style={styles.reminderTimesLabel}>
+                    알림 시간 (터치하여 변경)
+                  </Typography>
+                  {editTimings.map((timing) => (
+                    <TouchableOpacity
+                      key={timing}
+                      style={styles.reminderTimeRow}
+                      onPress={() => handleEditTimeEdit(timing)}
+                    >
+                      <Typography variant="body">{TIMING_LABELS[timing]}</Typography>
+                      <View style={styles.reminderTimeValue}>
+                        <Typography variant="body">{editReminderTimes[timing] || '08:00'}</Typography>
+                        <Ionicons name="time-outline" size={18} color={Colors.textSecondary} />
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+
               <Typography variant="bodySmall" color={Colors.textSecondary} style={styles.fieldLabel}>
                 메모
               </Typography>
@@ -376,6 +440,26 @@ export default function SupplementDetailScreen() {
                 loading={isSaving}
               />
             </View>
+
+            {/* 시간 선택 피커 */}
+            {showTimePicker && (
+              <DateTimePicker
+                value={
+                  editingTiming
+                    ? (() => {
+                        const [h, m] = (editReminderTimes[editingTiming] || '08:00').split(':');
+                        const date = new Date();
+                        date.setHours(parseInt(h), parseInt(m));
+                        return date;
+                      })()
+                    : new Date()
+                }
+                mode="time"
+                is24Hour={true}
+                display="spinner"
+                onChange={handleEditTimeChange}
+              />
+            )}
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -528,5 +612,28 @@ const styles = StyleSheet.create({
   timingChipSelected: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
+  },
+  reminderTimesContainer: {
+    marginTop: 12,
+    gap: 8,
+  },
+  reminderTimesLabel: {
+    marginBottom: 4,
+  },
+  reminderTimeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.background,
+  },
+  reminderTimeValue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
 });
