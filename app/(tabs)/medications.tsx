@@ -187,7 +187,10 @@ export default function MedicationsScreen() {
       if (item.type === 'medication') {
         router.push(`/medication/${item.id}`);
       } else {
-        router.push(`/supplement/my/${item.id}`);
+        router.push({
+          pathname: `/supplement/${item.supplementId}`,
+          params: { userSupplementId: String(item.id) },
+        });
       }
     }
   };

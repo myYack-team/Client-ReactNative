@@ -736,6 +736,7 @@ export interface MedicationListItemUnified {
 
   // 영양제 전용 필드
   supplementTag?: SupplementTag;
+  supplementId?: number;
 }
 
 // ========== AI 분석 관련 타입 ==========

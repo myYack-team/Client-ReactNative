@@ -74,6 +74,7 @@ export function toUnifiedSupplement(supp: UserSupplement): MedicationListItemUni
       enabled: true,
     })),
     supplementTag: supp.tag,
+    supplementId: supp.supplementId,
   };
 }
 
