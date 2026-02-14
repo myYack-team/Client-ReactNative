@@ -196,9 +196,7 @@ export default function ConsentScreen() {
             onViewDetail={() => handleViewDetail(item.detailUrl)}
           />
         ))}
-      </ScrollView>
 
-      <View style={styles.footer}>
         <Button
           title="동의하고 시작하기"
           onPress={handleSubmit}
@@ -206,7 +204,7 @@ export default function ConsentScreen() {
           loading={isLoading}
           style={styles.submitButton}
         />
-      </View>
+      </ScrollView>
 
       {/* 약관 상세 모달 */}
       {modalType && (
@@ -230,7 +228,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 24,
-    paddingBottom: 120,
+    paddingBottom: 40,
   },
   header: {
     marginBottom: 24,
@@ -321,18 +319,8 @@ const styles = StyleSheet.create({
     marginLeft: 36,
     alignSelf: 'flex-start',
   },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 20,
-    paddingBottom: 34,
-    backgroundColor: Colors.background,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
   submitButton: {
     height: 56,
+    marginTop: 24,
   },
 });
