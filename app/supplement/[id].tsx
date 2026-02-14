@@ -65,8 +65,8 @@ export default function SupplementDetailScreen() {
     // 기존 리마인더 시간 초기화
     const defaultTimes: Record<string, string> = {
       MORNING: '08:00',
-      AFTERNOON: '12:00',
-      EVENING: '18:00',
+      AFTERNOON: '12:30',
+      EVENING: '18:30',
       AS_NEEDED: '',
     };
     if (userSupplement.reminders && userSupplement.reminders.length > 0) {
@@ -91,7 +91,7 @@ export default function SupplementDetailScreen() {
     }
     setIsSaving(true);
     try {
-      const reminderTimesArray = editTimings.map((t) => editReminderTimes[t] || '08:00');
+      const reminderTimesArray = editTimings.map((t) => editReminderTimes[t] || null);
       const updateData: UpdateUserSupplementRequest = {
         dosage: editDosage.trim(),
         frequency: freq,

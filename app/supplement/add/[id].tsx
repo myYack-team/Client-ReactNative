@@ -50,8 +50,8 @@ export default function AddUserSupplementScreen() {
   // 알림 시간 상태
   const [reminderTimes, setReminderTimes] = useState<Record<MedicationTiming, string>>({
     MORNING: '08:00',
-    AFTERNOON: '12:00',
-    EVENING: '18:00',
+    AFTERNOON: '12:30',
+    EVENING: '18:30',
     AS_NEEDED: '',
   });
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -140,7 +140,7 @@ export default function AddUserSupplementScreen() {
 
     setIsSaving(true);
     try {
-      const reminderTimesArray = selectedTimings.map((t) => reminderTimes[t]);
+      const reminderTimesArray = selectedTimings.map((t) => reminderTimes[t] || null);
       await supplementService.addUserSupplement({
         supplementId: supplement.id,
         dosage,
