@@ -361,13 +361,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   supplementImage: {
-    width: 80,
+    width: 56,
     height: 56,
     borderRadius: 8,
     marginRight: 12,
   },
   supplementImagePlaceholder: {
-    width: 80,
+    width: 56,
     height: 56,
     borderRadius: 8,
     backgroundColor: Colors.backgroundSecondary,

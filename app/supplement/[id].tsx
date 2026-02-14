@@ -502,13 +502,13 @@ const styles = StyleSheet.create({
   },
   supplementImage: {
     width: '100%',
-    height: 180,
+    aspectRatio: 1,
     borderRadius: 12,
     marginBottom: 12,
   },
   supplementImagePlaceholder: {
     width: '100%',
-    height: 180,
+    aspectRatio: 1,
     borderRadius: 12,
     backgroundColor: Colors.backgroundSecondary,
     alignItems: 'center',
