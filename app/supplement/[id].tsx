@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Typography, Button, Card, SupplementTagBadge } from '../../components/ui';
 import { Colors } from '../../constants';
 import { supplementService } from '../../services';
-import { SupplementDetail, UserSupplementDetail, MedicationTiming, TIMING_LABELS, UpdateUserSupplementRequest } from '../../types';
+import { SupplementDetail, UserSupplementDetail, MedicationTiming, TIMING_LABELS, TIMING_OPTIONS, UpdateUserSupplementRequest } from '../../types';
 
 export default function SupplementDetailScreen() {
   const { id, userSupplementId } = useLocalSearchParams<{ id: string; userSupplementId?: string }>();
@@ -39,7 +39,10 @@ export default function SupplementDetailScreen() {
   };
 
   const loadUserSupplementDetail = async () => {
-    if (!userSupplementId) return;
+    if (!userSupplementId) {
+      setUserSupplement(null);
+      return;
+    }
     try {
       const data = await supplementService.getUserSupplementDetail(parseInt(userSupplementId));
       setUserSupplement(data);
@@ -59,13 +62,18 @@ export default function SupplementDetailScreen() {
 
   const handleSaveEdit = async () => {
     if (!userSupplementId) return;
+    const freq = parseInt(editFrequency);
+    if (!editDosage.trim() || isNaN(freq) || freq <= 0 || editTimings.length === 0) {
+      Alert.alert('입력 오류', '복용량, 복용 횟수, 복용 시간을 올바르게 입력해주세요.');
+      return;
+    }
     setIsSaving(true);
     try {
       const updateData: UpdateUserSupplementRequest = {
-        dosage: editDosage,
-        frequency: parseInt(editFrequency),
+        dosage: editDosage.trim(),
+        frequency: freq,
         timings: editTimings,
-        memo: editMemo || undefined,
+        memo: editMemo.trim() || undefined,
       };
       await supplementService.updateUserSupplement(parseInt(userSupplementId), updateData);
       await loadUserSupplementDetail();
@@ -327,7 +335,7 @@ export default function SupplementDetailScreen() {
                 복용 시간
               </Typography>
               <View style={styles.timingContainer}>
-                {(['MORNING', 'LUNCH', 'DINNER', 'BEFORE_SLEEP'] as MedicationTiming[]).map((timing) => (
+                {TIMING_OPTIONS.map((timing) => (
                   <TouchableOpacity
                     key={timing}
                     style={[
