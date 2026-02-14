@@ -27,13 +27,6 @@ const TAG_COLORS: Record<SupplementTag, string> = {
   OTHER: '#9E9E9E',
 };
 
-// 밝은 배경색에는 어두운 텍스트, 어두운 배경색에는 밝은 텍스트
-const LIGHT_BACKGROUND_TAGS: SupplementTag[] = [
-  'VITAMIN_D',
-  'FFC107',
-  'CALCIUM',
-] as SupplementTag[];
-
 export function SupplementTagBadge({ tag, size = 'small' }: SupplementTagBadgeProps) {
   const label = SUPPLEMENT_TAG_LABELS[tag];
   const color = TAG_COLORS[tag];

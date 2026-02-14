@@ -280,11 +280,13 @@ export interface MedicationListItem {
 export interface Reminder {
   id: number;
   medicationId?: number;
+  supplementId?: number;
   medicationName?: string;
   time: string;
   timing: MedicationTiming;
   timingLabel?: string;
   enabled: boolean;
+  snoozeUntil?: string;
 }
 
 // 복약 기록
@@ -647,6 +649,7 @@ export interface AddUserSupplementRequest {
   dosage: string;
   frequency: number;
   timings: MedicationTiming[];
+  reminderTimes?: string[];  // "HH:mm" 형식, timings와 1:1 대응
   startDate: string;
   endDate?: string;
   memo?: string;
@@ -657,6 +660,7 @@ export interface UpdateUserSupplementRequest {
   dosage?: string;
   frequency?: number;
   timings?: MedicationTiming[];
+  reminderTimes?: string[];  // "HH:mm" 형식
   endDate?: string;
   memo?: string;
 }
@@ -736,6 +740,7 @@ export interface MedicationListItemUnified {
 
   // 영양제 전용 필드
   supplementTag?: SupplementTag;
+  supplementId?: number;
 }
 
 // ========== AI 분석 관련 타입 ==========

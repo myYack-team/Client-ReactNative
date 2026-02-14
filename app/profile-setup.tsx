@@ -191,9 +191,7 @@ export default function ProfileSetupScreen() {
             ))}
           </View>
         </View>
-      </ScrollView>
 
-      <View style={styles.footer}>
         <Button
           title={isLoading ? '' : '시작하기'}
           onPress={handleSubmit}
@@ -202,7 +200,7 @@ export default function ProfileSetupScreen() {
         >
           {isLoading && <ActivityIndicator color={Colors.white} />}
         </Button>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -217,7 +215,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 24,
-    paddingBottom: 100,
+    paddingBottom: 40,
   },
   header: {
     marginBottom: 32,
@@ -330,18 +328,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.primary,
   },
-  footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 20,
-    paddingBottom: 34,
-    backgroundColor: Colors.background,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
   submitButton: {
+    marginTop: 24,
     height: 56,
   },
   submitButtonDisabled: {
