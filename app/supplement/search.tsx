@@ -108,9 +108,15 @@ export default function SupplementSearchScreen() {
   };
 
   useEffect(() => {
+    setPage(0);
     if (selectedTag !== null) {
-      setPage(0);
       searchSupplements(true);
+    } else {
+      if (searchText.trim()) {
+        searchSupplements(true);
+      } else {
+        loadPopularSupplements();
+      }
     }
   }, [selectedTag]);
 
