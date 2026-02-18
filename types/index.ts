@@ -584,11 +584,11 @@ export interface Supplement {
   imageUrl?: string;
   selectionCount: number;
   createdByName: string;
+  createdById: number;
 }
 
 // 영양제 상세
 export interface SupplementDetail extends Supplement {
-  createdById: number;
   createdAt: string;
 }
 
