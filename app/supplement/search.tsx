@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Typography, Card, SupplementTagBadge, RecentSearchList } from '../../components/ui';
 import { Colors } from '../../constants';
 import { supplementService } from '../../services';
+import { useAuthStore } from '../../stores';
 import {
   Supplement,
   SupplementTag,
@@ -29,6 +30,7 @@ import {
 } from '../../utils';
 
 export default function SupplementSearchScreen() {
+  const user = useAuthStore((state) => state.user);
   const [searchText, setSearchText] = useState('');
   const [selectedTag, setSelectedTag] = useState<SupplementTag | null>(null);
   const [supplements, setSupplements] = useState<Supplement[]>([]);
@@ -154,44 +156,57 @@ export default function SupplementSearchScreen() {
     setRecentSearches([]);
   };
 
-  const renderSupplementItem = ({ item }: { item: Supplement }) => (
-    <TouchableOpacity
-      onPress={() => handleSupplementSelect(item)}
-      activeOpacity={0.8}
-    >
-      <Card style={styles.supplementCard} variant="elevated">
-        <View style={styles.supplementContent}>
-          {item.imageUrl ? (
-            <Image source={{ uri: item.imageUrl }} style={styles.supplementImage} resizeMode="cover" />
-          ) : (
-            <View style={styles.supplementImagePlaceholder}>
-              <Ionicons name="leaf" size={24} color={Colors.textSecondary} />
+  const renderSupplementItem = ({ item }: { item: Supplement }) => {
+    const isCreatedByMe = user && item.createdById === user.id;
+
+    return (
+      <TouchableOpacity
+        onPress={() => handleSupplementSelect(item)}
+        activeOpacity={0.8}
+      >
+        <Card style={styles.supplementCard} variant="elevated">
+          <View style={styles.supplementContent}>
+            <View style={styles.imageContainer}>
+              {item.imageUrl ? (
+                <Image source={{ uri: item.imageUrl }} style={styles.supplementImage} resizeMode="cover" />
+              ) : (
+                <View style={styles.supplementImagePlaceholder}>
+                  <Ionicons name="leaf" size={24} color={Colors.textSecondary} />
+                </View>
+              )}
+              {isCreatedByMe && (
+                <View style={styles.myBadge}>
+                  <Typography variant="caption" color={Colors.white} style={styles.myBadgeText}>
+                    내가 등록 ⭐
+                  </Typography>
+                </View>
+              )}
             </View>
-          )}
-          <View style={styles.supplementInfo}>
-            <SupplementTagBadge tag={item.tag} />
-            <Typography variant="h4" style={styles.supplementName} numberOfLines={1}>
-              {item.name}
-            </Typography>
-            {item.description && (
-              <Typography variant="bodySmall" color={Colors.textSecondary} numberOfLines={2}>
-                {item.description}
+            <View style={styles.supplementInfo}>
+              <SupplementTagBadge tag={item.tag} />
+              <Typography variant="h4" style={styles.supplementName} numberOfLines={1}>
+                {item.name}
               </Typography>
-            )}
-            <View style={styles.metaRow}>
-              <Typography variant="caption" color={Colors.textSecondary}>
-                {item.createdByName}님 등록
-              </Typography>
-              <Typography variant="caption" color={Colors.textSecondary}>
+              {item.description && (
+                <Typography variant="bodySmall" color={Colors.textSecondary} numberOfLines={2}>
+                  {item.description}
+                </Typography>
+              )}
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
+          </View>
+          {item.selectionCount > 0 && (
+            <View style={styles.selectionCountBadge}>
+              <Ionicons name="people-outline" size={12} color={Colors.primary} />
+              <Typography variant="caption" color={Colors.primary}>
                 {item.selectionCount}명 복용 중
               </Typography>
             </View>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={Colors.textSecondary} />
-        </View>
-      </Card>
-    </TouchableOpacity>
-  );
+          )}
+        </Card>
+      </TouchableOpacity>
+    );
+  };
 
   const renderFooter = () => {
     if (!isLoading) return null;
@@ -355,25 +370,57 @@ const styles = StyleSheet.create({
   },
   supplementCard: {
     marginBottom: 12,
+    position: 'relative',
   },
   supplementContent: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'stretch',
   },
-  supplementImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 8,
+  imageContainer: {
+    position: 'relative' as const,
     marginRight: 12,
   },
+  supplementImage: {
+    width: 72,
+    height: '100%',
+    aspectRatio: 1,
+    borderRadius: 8,
+  },
   supplementImagePlaceholder: {
-    width: 56,
-    height: 56,
+    width: 72,
+    height: '100%',
+    aspectRatio: 1,
     borderRadius: 8,
     backgroundColor: Colors.backgroundSecondary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+  },
+  myBadge: {
+    position: 'absolute' as const,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    borderBottomLeftRadius: 8,
+    borderBottomRightRadius: 8,
+    paddingVertical: 2,
+    alignItems: 'center' as const,
+  },
+  myBadgeText: {
+    fontSize: 10,
+    fontWeight: '600' as const,
+  },
+  selectionCountBadge: {
+    position: 'absolute' as const,
+    top: 8,
+    right: 8,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 4,
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
   },
   supplementInfo: {
     flex: 1,
@@ -381,11 +428,6 @@ const styles = StyleSheet.create({
   },
   supplementName: {
     marginTop: 4,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
   },
   footerLoader: {
     paddingVertical: 20,

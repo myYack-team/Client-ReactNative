@@ -584,11 +584,11 @@ export interface Supplement {
   imageUrl?: string;
   selectionCount: number;
   createdByName: string;
+  createdById: number;
 }
 
 // 영양제 상세
 export interface SupplementDetail extends Supplement {
-  createdById: number;
   createdAt: string;
 }
 
@@ -872,6 +872,7 @@ export interface ReportSummary {
   analysisDate: string;
   mechanismGroupCount: number;
   foodInteractionCount: number;
+  isPreview?: boolean;
 }
 
 // 레포트 목록 응답
@@ -1071,6 +1072,7 @@ export interface AnalysisResultExtended extends AnalysisResult {
   supplementInteractions?: SupplementInteraction[];
   lifestyleTips?: LifestyleTip[];
   patternAnalysis?: PatternAnalysis;
+  isPreview?: boolean;
 }
 
 // ========== 건강 메모 관련 타입 ==========
@@ -1134,6 +1136,7 @@ export interface PatternAnalysis {
   dailyConditions?: DailyCondition[];
   events?: TimelineEvent[];
   symptomClusters?: SymptomCluster[];
+  isPreview?: boolean;
 }
 
 // 복약 순응도 분석

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Dimensions, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context'; // for bottom padding
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { WebView } from 'react-native-webview';
 import { Typography, AiConsentModal } from '../../components/ui';
 import { Colors } from '../../constants';
@@ -208,7 +208,9 @@ const SVG_WIDTH = SCREEN_WIDTH; // 좌우 꽉 차게
 const SVG_HEIGHT = SVG_WIDTH * 2;
 
 export default function AnalysisLoadingScreen() {
-  const { startAnalysisInBackground, pendingAnalysis, completedResult, error } = useAnalysisStore();
+  const { mode } = useLocalSearchParams<{ mode?: string }>();
+  const isTestMode = mode === 'test';
+  const { startAnalysisInBackground, startTestAnalysisInBackground, pendingAnalysis, completedResult, error } = useAnalysisStore();
   const isRequestedRef = useRef(false);
   const isNavigatingRef = useRef(false);
   const [progress, setProgress] = useState(0);
@@ -261,8 +263,12 @@ export default function AnalysisLoadingScreen() {
     if (isRequestedRef.current) return;
     isRequestedRef.current = true;
 
-    console.log('[AnalysisLoading] Starting background analysis...');
-    startAnalysisInBackground();
+    console.log(`[AnalysisLoading] Starting ${isTestMode ? 'test' : 'normal'} analysis...`);
+    if (isTestMode) {
+      startTestAnalysisInBackground();
+    } else {
+      startAnalysisInBackground();
+    }
   }, [isCheckingConsent, hasAiConsent]);
 
   // 분석 완료 시 자동으로 탭으로 돌아가기

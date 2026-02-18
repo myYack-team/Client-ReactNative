@@ -84,6 +84,15 @@ export function TrendTab({ patternAnalysis, scrollViewRef }: TrendTabProps) {
 
   return (
     <View style={styles.container}>
+      {/* 시뮬레이션 데이터 기반 분석 배너 */}
+      {patternAnalysis?.isPreview && (
+        <View style={styles.previewBanner}>
+          <Typography variant="bodySmall" color={Colors.brand}>
+            📊 시뮬레이션 데이터 기반 분석입니다
+          </Typography>
+        </View>
+      )}
+
       {/* 컨디션 라인 차트 */}
       {dailyConditions && dailyConditions.length > 0 && (
         <View style={styles.section} onLayout={onGraphSectionLayout}>
@@ -281,6 +290,14 @@ const styles = StyleSheet.create({
   },
   emptySubText: {
     textAlign: 'center',
+  },
+  previewBanner: {
+    backgroundColor: Colors.brandLightest,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginBottom: 16,
+    alignItems: 'center',
   },
   section: {
     marginBottom: 24,

@@ -34,9 +34,18 @@ export function ReportListItem({ report, onPress }: ReportListItemProps) {
             />
           </View>
           <View style={styles.content}>
-            <Typography variant="body" style={styles.title}>
-              {formatDate(report.analysisDate)} 분석
-            </Typography>
+            <View style={styles.titleRow}>
+              <Typography variant="body" style={styles.title}>
+                {formatDate(report.analysisDate)} 분석
+              </Typography>
+              {report.isPreview && (
+                <View style={styles.previewBadge}>
+                  <Typography variant="caption" color="#8B6914" style={styles.previewBadgeText}>
+                    예시
+                  </Typography>
+                </View>
+              )}
+            </View>
             <Typography variant="caption" color={Colors.textSecondary}>
               효과 {report.mechanismGroupCount}개 · 주의 음식 {report.foodInteractionCount}개
             </Typography>
@@ -75,8 +84,25 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 2,
+  },
   title: {
     fontWeight: '500',
-    marginBottom: 2,
+  },
+  previewBadge: {
+    backgroundColor: '#FFF8E1',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: '#F9D849',
+  },
+  previewBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
   },
 });

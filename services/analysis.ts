@@ -21,6 +21,16 @@ export const analysisService = {
     return response.data.result;
   },
 
+  // 테스트 분석 요청 (데이터 부족 시 시뮬레이션 데이터 기반)
+  async requestTestAnalysis(): Promise<AnalysisRequestResponse> {
+    logger.log('[analysisService] Requesting test analysis...');
+    const response = await api.post<ApiResponse<AnalysisRequestResponse>>('/analysis/test-request');
+    if (!response.data.isSuccess || !response.data.result) {
+      throw new Error(response.data.message || '테스트 분석 요청에 실패했습니다.');
+    }
+    return response.data.result;
+  },
+
   // 분석 결과 조회 (폴링용)
   async getAnalysisResult(reportId: number): Promise<AnalysisResult> {
     logger.log('[analysisService] Getting analysis result for reportId:', reportId);

@@ -148,10 +148,10 @@ export default function AnalysisScreen() {
     fetchReports();
   };
 
-  // 임시 메모 저장 후 로딩 화면으로 이동
+  // 임시 메모 저장 후 테스트 분석 시작 (데이터 부족 시 시뮬레이션 데이터 기반)
   const handleSaveTemporaryNote = async (data: any) => {
     await saveTemporaryNote(data);
-    router.push('/analysis/loading');
+    router.push('/analysis/loading?mode=test');
   };
 
   // 분석 중인지 확인 (pendingAnalysis가 loading 또는 polling 상태)

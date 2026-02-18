@@ -49,6 +49,7 @@ interface AnalysisState {
 
   // 인라인 분석 액션 (새로 추가)
   startAnalysisInBackground: () => Promise<void>;
+  startTestAnalysisInBackground: () => Promise<void>;
   clearCompletedResult: () => void;
 
   // 데이터 충분성 확인
@@ -193,6 +194,58 @@ export const useAnalysisStore = create<AnalysisState>((set, get) => ({
       }
 
       const message = error instanceof Error ? error.message : '분석 요청에 실패했습니다.';
+      set({
+        pendingAnalysis: { reportId: 0, status: 'failed', startedAt },
+        error: message,
+      });
+    }
+  },
+
+  // 백그라운드에서 테스트 분석 시작 (데이터 부족 시 시뮬레이션 데이터 기반)
+  startTestAnalysisInBackground: async () => {
+    const { pendingAnalysis } = get();
+
+    // 이미 분석 중이면 무시
+    if (pendingAnalysis && (pendingAnalysis.status === 'loading' || pendingAnalysis.status === 'polling')) {
+      return;
+    }
+
+    const startedAt = Date.now();
+
+    try {
+      // 1. 테스트 분석 요청
+      set({
+        pendingAnalysis: { reportId: 0, status: 'loading', startedAt },
+        completedResult: null,
+        error: null,
+      });
+
+      const response = await analysisService.requestTestAnalysis();
+
+      // 서버가 동기 방식으로 완전한 결과를 반환하므로 바로 완료 처리
+      set({
+        pendingAnalysis: null,
+        completedResult: response as AnalysisResultExtended,
+        reportsExpiry: 0, // 레포트 목록 캐시 무효화
+        error: null,
+      });
+
+    } catch (error: any) {
+      // 429: 월간 쿼터 초과
+      if (error?.response?.status === 429) {
+        Alert.alert(
+          'AI 분석 제한',
+          '이번 달 분석 횟수를 모두 사용했습니다.\n다음 달 1일에 초기화됩니다.',
+          [{ text: '확인' }]
+        );
+        set({
+          pendingAnalysis: null,
+          error: null,
+        });
+        return;
+      }
+
+      const message = error instanceof Error ? error.message : '테스트 분석 요청에 실패했습니다.';
       set({
         pendingAnalysis: { reportId: 0, status: 'failed', startedAt },
         error: message,
