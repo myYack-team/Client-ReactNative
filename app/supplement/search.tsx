@@ -374,20 +374,22 @@ const styles = StyleSheet.create({
   },
   supplementContent: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'stretch',
   },
   imageContainer: {
     position: 'relative' as const,
     marginRight: 12,
   },
   supplementImage: {
-    width: 56,
-    height: 56,
+    width: 72,
+    height: '100%',
+    aspectRatio: 1,
     borderRadius: 8,
   },
   supplementImagePlaceholder: {
-    width: 56,
-    height: 56,
+    width: 72,
+    height: '100%',
+    aspectRatio: 1,
     borderRadius: 8,
     backgroundColor: Colors.backgroundSecondary,
     alignItems: 'center',
