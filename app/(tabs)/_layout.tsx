@@ -52,8 +52,8 @@ export default function TabLayout() {
         tabBarInactiveTintColor: Colors.textSecondary,
         tabBarStyle: {
           height: (fontSize.sm > 14 ? 64 : 56) + insets.bottom,
-          paddingTop: 8,
-          paddingBottom: insets.bottom + 8,
+          paddingTop: 2,
+          paddingBottom: insets.bottom + 14,
           borderTopWidth: 1,
           borderTopColor: Colors.border,
           backgroundColor: Colors.background,
