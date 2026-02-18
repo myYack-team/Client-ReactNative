@@ -40,8 +40,8 @@ export function ReportListItem({ report, onPress }: ReportListItemProps) {
               </Typography>
               {report.isPreview && (
                 <View style={styles.previewBadge}>
-                  <Typography variant="caption" color={Colors.brand} style={styles.previewBadgeText}>
-                    테스트
+                  <Typography variant="caption" color="#8B6914" style={styles.previewBadgeText}>
+                    예시
                   </Typography>
                 </View>
               )}
@@ -94,12 +94,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   previewBadge: {
-    backgroundColor: Colors.brandLightest,
-    borderRadius: 4,
-    paddingHorizontal: 6,
+    backgroundColor: '#FFF8E1',
+    borderRadius: 12,
+    paddingHorizontal: 8,
     paddingVertical: 2,
     borderWidth: 1,
-    borderColor: Colors.brand,
+    borderColor: '#F9D849',
   },
   previewBadgeText: {
     fontSize: 10,
