@@ -38,7 +38,6 @@ export default function AnalysisScreen() {
     insufficientDataModalVisible,
     checkDataSufficiency,
     saveTemporaryNote,
-    startTestAnalysisInBackground,
   } = useAnalysisStore();
 
   // AI 동의 상태
@@ -152,7 +151,7 @@ export default function AnalysisScreen() {
   // 임시 메모 저장 후 테스트 분석 시작 (데이터 부족 시 시뮬레이션 데이터 기반)
   const handleSaveTemporaryNote = async (data: any) => {
     await saveTemporaryNote(data);
-    startTestAnalysisInBackground();
+    router.push('/analysis/loading?mode=test');
   };
 
   // 분석 중인지 확인 (pendingAnalysis가 loading 또는 polling 상태)
