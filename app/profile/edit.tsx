@@ -7,11 +7,36 @@ import { Colors } from '../../constants';
 import { useAuthStore } from '../../stores';
 import { userService } from '../../services';
 
+// 닉네임 유효성 검사: 2~20자, 한글/영문/숫자만 허용 (특수문자, 공백 불가)
+const NICKNAME_REGEX = /^[가-힣a-zA-Z0-9]*$/;
+const NICKNAME_MIN = 2;
+const NICKNAME_MAX = 20;
+
+const validateNickname = (value: string): string | null => {
+  const trimmed = value.trim();
+  if (!trimmed) return '이름을 입력해주세요.';
+  if (trimmed.length < NICKNAME_MIN) return `이름은 ${NICKNAME_MIN}자 이상이어야 합니다.`;
+  if (trimmed.length > NICKNAME_MAX) return `이름은 ${NICKNAME_MAX}자 이하여야 합니다.`;
+  if (!NICKNAME_REGEX.test(trimmed)) return '이름에 특수문자나 공백을 사용할 수 없습니다.';
+  return null;
+};
+
 export default function EditProfileScreen() {
   const { user, fetchUser } = useAuthStore();
   const [name, setName] = useState(user?.name || '');
+  const [nameError, setNameError] = useState<string | null>(null);
   const [phone, setPhone] = useState(user?.phone?.replace(/-/g, '') || '');
   const [isLoading, setIsLoading] = useState(false);
+
+  // 이름 입력 핸들러 (특수문자/공백 필터링)
+  const handleNameChange = (text: string) => {
+    // 공백, 특수문자, 미완성 자모 실시간 제거
+    const filtered = text.replace(/[^가-힣a-zA-Z0-9]/g, '');
+    setName(filtered);
+    if (nameError && filtered.length >= NICKNAME_MIN) {
+      setNameError(validateNickname(filtered));
+    }
+  };
 
   // 전화번호 포맷팅 (숫자만)
   const handlePhoneChange = (text: string) => {
@@ -29,8 +54,10 @@ export default function EditProfileScreen() {
   };
 
   const handleSave = async () => {
-    if (!name.trim()) {
-      Alert.alert('알림', '이름을 입력해주세요.');
+    const nicknameError = validateNickname(name);
+    if (nicknameError) {
+      setNameError(nicknameError);
+      Alert.alert('알림', nicknameError);
       return;
     }
 
@@ -68,9 +95,14 @@ export default function EditProfileScreen() {
       Alert.alert('완료', '프로필이 수정되었습니다.', [
         { text: '확인', onPress: () => router.back() }
       ]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update profile:', error);
-      Alert.alert('오류', '프로필 수정에 실패했습니다. 다시 시도해주세요.');
+      const message = error?.message || '프로필 수정에 실패했습니다.';
+      // 닉네임 관련 서버 에러는 이름 필드에 에러 표시
+      if (message.includes('이름') || message.includes('이미 사용')) {
+        setNameError(message);
+      }
+      Alert.alert('오류', message);
     } finally {
       setIsLoading(false);
     }
@@ -114,13 +146,23 @@ export default function EditProfileScreen() {
         <Card style={styles.inputCard} variant="elevated">
           <Typography variant="body" style={styles.inputLabel}>이름</Typography>
           <TextInput
-            style={styles.textInput}
+            style={[styles.textInput, nameError ? styles.textInputError : null]}
             value={name}
-            onChangeText={setName}
+            onChangeText={handleNameChange}
+            onBlur={() => setNameError(validateNickname(name))}
             placeholder="이름을 입력하세요"
             placeholderTextColor={Colors.textSecondary}
             maxLength={20}
           />
+          {nameError ? (
+            <Typography variant="caption" color={Colors.error} style={styles.inputHint}>
+              {nameError}
+            </Typography>
+          ) : (
+            <Typography variant="caption" color={Colors.textSecondary} style={styles.inputHint}>
+              2~20자, 한글/영문/숫자만 사용 가능
+            </Typography>
+          )}
         </Card>
 
         {/* 전화번호 입력 */}
@@ -225,6 +267,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 16,
     color: Colors.textPrimary,
+  },
+  textInputError: {
+    borderColor: Colors.error,
   },
   readOnlyField: {
     flexDirection: 'row',
