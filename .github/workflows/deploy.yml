@@ -1,0 +1,119 @@
+name: Build and Deploy to Google Play
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      skip_version_bump:
+        description: 'Skip version bump (for retrying failed build)'
+        required: false
+        default: 'false'
+        type: choice
+        options: ['false', 'true']
+
+jobs:
+  build:
+    name: EAS Build (Production AAB)
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Validate LOCAL_TEST flag
+        run: |
+          LOCAL_TEST_VALUE=$(grep -oP 'const LOCAL_TEST\s*=\s*\K(true|false)' constants/index.ts)
+          echo "LOCAL_TEST = $LOCAL_TEST_VALUE"
+          if [ "$LOCAL_TEST_VALUE" = "true" ]; then
+            echo "::error::LOCAL_TEST is true! Production builds require LOCAL_TEST = false."
+            exit 1
+          fi
+
+      - name: Determine version bump type
+        id: version_type
+        if: github.event.inputs.skip_version_bump != 'true'
+        run: |
+          if git log -1 --pretty=%P HEAD | grep -q ' '; then
+            PARENT1=$(git log -1 --pretty=%P HEAD | awk '{print $1}')
+            PARENT2=$(git log -1 --pretty=%P HEAD | awk '{print $2}')
+            PR_COMMITS=$(git log --oneline $PARENT1..$PARENT2 2>/dev/null || echo "")
+          else
+            PR_COMMITS=$(git log --oneline -1 HEAD)
+          fi
+          echo "PR commits:"
+          echo "$PR_COMMITS"
+          if echo "$PR_COMMITS" | grep -qi '\] Feat'; then
+            echo "bump_type=minor" >> $GITHUB_OUTPUT
+            echo "Detected: Feat -> minor bump"
+          else
+            echo "bump_type=patch" >> $GITHUB_OUTPUT
+            echo "Detected: Fix/Refactor/other -> patch bump"
+          fi
+
+      - name: Bump version in app.json
+        id: bump_version
+        if: github.event.inputs.skip_version_bump != 'true'
+        run: |
+          BUMP_TYPE="${{ steps.version_type.outputs.bump_type }}"
+          CURRENT_VERSION=$(jq -r '.expo.version' app.json)
+          CURRENT_VC=$(jq -r '.expo.android.versionCode' app.json)
+          echo "Current: version=$CURRENT_VERSION, versionCode=$CURRENT_VC"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+          if [ "$BUMP_TYPE" = "minor" ]; then
+            MINOR=$((MINOR + 1)); PATCH=0
+          else
+            PATCH=$((PATCH + 1))
+          fi
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          NEW_VC=$((CURRENT_VC + 1))
+          echo "New: version=$NEW_VERSION, versionCode=$NEW_VC"
+          jq --arg v "$NEW_VERSION" --argjson vc "$NEW_VC" \
+            '.expo.version = $v | .expo.android.versionCode = $vc' \
+            app.json > app.json.tmp && mv app.json.tmp app.json
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "new_version_code=$NEW_VC" >> $GITHUB_OUTPUT
+
+      - name: Commit version bump
+        if: github.event.inputs.skip_version_bump != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add app.json
+          git commit -m "[#0] Setting : version ${{ steps.bump_version.outputs.new_version }} (versionCode ${{ steps.bump_version.outputs.new_version_code }}) [skip ci]"
+          git push
+
+      - name: Build Android app (production AAB)
+        timeout-minutes: 60
+        run: eas build --profile production --platform android --non-interactive --wait
+
+      - name: Report result
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "Build successful! Download AAB from https://expo.dev/accounts/myyak_song/projects/myyak/builds"
+          else
+            echo "::error::Build failed. Check https://expo.dev/accounts/myyak_song/projects/myyak/builds"
+            echo "To retry without version bump: workflow_dispatch + skip_version_bump=true"
+          fi
