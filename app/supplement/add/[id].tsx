@@ -17,6 +17,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Typography, Button, Card, SupplementTagBadge } from '../../../components/ui';
 import { Colors } from '../../../constants';
 import { supplementService } from '../../../services';
+import { useSupplementStore } from '../../../stores';
 import {
   SupplementDetail,
   MedicationTiming,
@@ -36,6 +37,7 @@ interface CachedSupplementData {
 
 export default function AddUserSupplementScreen() {
   const { id, supplementData } = useLocalSearchParams<{ id: string; supplementData?: string }>();
+  const { addUserSupplement } = useSupplementStore();
   const [supplement, setSupplement] = useState<SupplementDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -141,7 +143,7 @@ export default function AddUserSupplementScreen() {
     setIsSaving(true);
     try {
       const reminderTimesArray = selectedTimings.map((t) => reminderTimes[t] || null);
-      await supplementService.addUserSupplement({
+      await addUserSupplement({
         supplementId: supplement.id,
         dosage,
         frequency,
