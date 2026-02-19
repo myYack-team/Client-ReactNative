@@ -26,6 +26,7 @@
     "expo-image": "~3.0.11",
     "expo-image-manipulator": "^14.0.8",
     "expo-image-picker": "^17.0.8",
+    "expo-in-app-updates": "^0.9.0",
     "expo-linking": "^8.0.9",
     "expo-navigation-bar": "~5.0.10",
     "expo-notifications": "^0.32.13",

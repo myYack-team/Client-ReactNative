@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator, StyleSheet, AppState, AppStateStatus } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, AppState, AppStateStatus, Platform } from 'react-native';
+import ExpoInAppUpdates from 'expo-in-app-updates';
 import * as Notifications from 'expo-notifications';
 import { useAuthStore, useSettingsStore } from '../stores';
 import { notificationService, NOTIFICATION_ACTIONS } from '../services';
@@ -133,6 +134,20 @@ export default function RootLayout() {
       subscription.remove();
     };
   }, [isAuthenticated]);
+
+  // Google Play In-App Update 체크 (Android 프로덕션만, 1회만 실행)
+  const updateChecked = useRef(false);
+  useEffect(() => {
+    if (!showSplash && !authLoading && !settingsLoading && !updateChecked.current) {
+      updateChecked.current = true;
+      if (Platform.OS === 'android' && !__DEV__) {
+        ExpoInAppUpdates.checkAndStartUpdate()
+          .catch((error) => {
+            console.warn('[InAppUpdate] Update check failed:', error);
+          });
+      }
+    }
+  }, [showSplash, authLoading, settingsLoading]);
 
   // 스플래시 스크린 표시
   if (showSplash) {
