@@ -135,9 +135,11 @@ export default function RootLayout() {
     };
   }, [isAuthenticated]);
 
-  // Google Play In-App Update 체크 (Android 프로덕션만)
+  // Google Play In-App Update 체크 (Android 프로덕션만, 1회만 실행)
+  const updateChecked = useRef(false);
   useEffect(() => {
-    if (!showSplash && !authLoading && !settingsLoading) {
+    if (!showSplash && !authLoading && !settingsLoading && !updateChecked.current) {
+      updateChecked.current = true;
       if (Platform.OS === 'android' && !__DEV__) {
         ExpoInAppUpdates.checkAndStartUpdate()
           .catch((error) => {
