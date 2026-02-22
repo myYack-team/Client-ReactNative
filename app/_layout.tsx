@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet, AppState, AppStateStatus, Platform } from 'react-native';
-import ExpoInAppUpdates from 'expo-in-app-updates';
+import * as ExpoInAppUpdates from 'expo-in-app-updates';
 import * as Notifications from 'expo-notifications';
 import { useAuthStore, useSettingsStore } from '../stores';
 import { notificationService, NOTIFICATION_ACTIONS } from '../services';
@@ -141,10 +141,14 @@ export default function RootLayout() {
     if (!showSplash && !authLoading && !settingsLoading && !updateChecked.current) {
       updateChecked.current = true;
       if (Platform.OS === 'android' && !__DEV__) {
-        ExpoInAppUpdates.checkAndStartUpdate()
-          .catch((error) => {
-            console.warn('[InAppUpdate] Update check failed:', error);
-          });
+        if (typeof ExpoInAppUpdates.checkAndStartUpdate === 'function') {
+          ExpoInAppUpdates.checkAndStartUpdate()
+            .catch((error) => {
+              console.warn('[InAppUpdate] Update check failed:', error);
+            });
+        } else {
+          console.warn('[InAppUpdate] checkAndStartUpdate is not available');
+        }
       }
     }
   }, [showSplash, authLoading, settingsLoading]);
