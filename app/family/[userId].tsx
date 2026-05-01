@@ -278,7 +278,7 @@ export default function FamilyUserDetailScreen() {
         {familyMember && (
           <View style={styles.familyHeader}>
             {familyMember.profileImage ? (
-              <Image source={{ uri: familyMember.profileImage }} style={styles.familyAvatar} />
+              <Image source={{ uri: familyMember.profileImage }} style={styles.familyAvatar} resizeMode="cover" />
             ) : (
               <View style={[styles.familyAvatar, styles.familyAvatarPlaceholder]}>
                 <Image

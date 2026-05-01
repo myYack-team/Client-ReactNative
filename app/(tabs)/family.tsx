@@ -126,7 +126,7 @@ function ReceivedRequestsView({
         <View key={request.requestId} style={styles.requestItem}>
           <View style={styles.requestInfo}>
             {request.profileImage ? (
-              <Image source={{ uri: request.profileImage }} style={styles.requestAvatar} />
+              <Image source={{ uri: request.profileImage }} style={styles.requestAvatar} resizeMode="cover" />
             ) : (
               <View style={[styles.requestAvatar, styles.requestAvatarPlaceholder]}>
                 <Image
@@ -187,7 +187,7 @@ function PendingRequestView({
         <View key={request.requestId} style={styles.pendingRequestItem}>
           <View style={styles.requestInfo}>
             {request.profileImage ? (
-              <Image source={{ uri: request.profileImage }} style={styles.requestAvatar} />
+              <Image source={{ uri: request.profileImage }} style={styles.requestAvatar} resizeMode="cover" />
             ) : (
               <View style={[styles.requestAvatar, styles.requestAvatarPlaceholder]}>
                 <Image

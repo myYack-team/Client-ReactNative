@@ -157,7 +157,7 @@ export default function MedicationRegisterScreen() {
           <Card style={styles.drugCard}>
             <View style={styles.drugHeader}>
               {drug.imageUrl ? (
-                <Image source={{ uri: drug.imageUrl }} style={styles.drugImage} />
+                <Image source={{ uri: drug.imageUrl }} style={styles.drugImage} resizeMode="cover" />
               ) : (
                 <View style={styles.drugImagePlaceholder}>
                   <Ionicons name="medical" size={32} color={Colors.textSecondary} />

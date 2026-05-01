@@ -115,7 +115,7 @@ export default function SupplementRegisterScreen() {
             </Typography>
             {imageUri ? (
               <View style={styles.imagePreviewContainer}>
-                <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+                <Image source={{ uri: imageUri }} style={styles.imagePreview} resizeMode="cover" />
                 <TouchableOpacity
                   style={styles.removeImageButton}
                   onPress={removeImage}
