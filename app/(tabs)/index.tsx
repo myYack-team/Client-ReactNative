@@ -867,13 +867,30 @@ export default function HomeScreen() {
                   {!group.allTaken && group.timeSlots.some(slot => slot.medications.filter(m => !m.taken).length > 0) && (
                     <TouchableOpacity
                       style={styles.takeAllGroupButton}
-                      onPress={() => {
+                      onPress={async () => {
                         // 시간대 전체 미복용 약물 수집
                         const allNotTakenMeds = group.timeSlots.flatMap(slot =>
                           slot.medications.filter(m => !m.taken).map(m => m.id)
                         );
-                        if (allNotTakenMeds.length > 0) {
-                          recordIntake(allNotTakenMeds, group.timing, selectedDate);
+                        if (allNotTakenMeds.length === 0) return;
+                        if (allNotTakenMeds.some((id) => processingMeds.has(id))) return;
+
+                        setProcessingMeds(prev => {
+                          const next = new Set(prev);
+                          allNotTakenMeds.forEach(id => next.add(id));
+                          return next;
+                        });
+                        try {
+                          await recordIntake(allNotTakenMeds, group.timing, selectedDate);
+                        } catch (error) {
+                          console.error('Failed to record intake:', error);
+                          Alert.alert('오류', '복용 기록에 실패했습니다. 다시 시도해주세요.');
+                        } finally {
+                          setProcessingMeds(prev => {
+                            const next = new Set(prev);
+                            allNotTakenMeds.forEach(id => next.delete(id));
+                            return next;
+                          });
                         }
                       }}
                     >
