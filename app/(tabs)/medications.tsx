@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image, Pressable } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -375,7 +375,11 @@ export default function MedicationsScreen() {
           </TouchableOpacity>
         )}
 
-        {allItems.length === 0 ? (
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+          </View>
+        ) : allItems.length === 0 ? (
           <Card style={styles.emptyCard} variant="elevated">
             <Typography variant="body" style={styles.emptyText}>
               등록된 약이 없어요
@@ -484,6 +488,11 @@ const styles = StyleSheet.create({
   checkboxChecked: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
   },
   emptyCard: {
     alignItems: 'center',
