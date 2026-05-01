@@ -375,19 +375,21 @@ export default function MedicationsScreen() {
           </TouchableOpacity>
         )}
 
-        {isLoading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={Colors.primary} />
-          </View>
-        ) : allItems.length === 0 ? (
-          <Card style={styles.emptyCard} variant="elevated">
-            <Typography variant="body" style={styles.emptyText}>
-              등록된 약이 없어요
-            </Typography>
-            <Typography variant="bodySmall" color={Colors.textSecondary} style={styles.emptySubtext}>
-              처방전 사진을 찍어 약을 추가해보세요
-            </Typography>
-          </Card>
+        {allItems.length === 0 ? (
+          isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+            </View>
+          ) : (
+            <Card style={styles.emptyCard} variant="elevated">
+              <Typography variant="body" style={styles.emptyText}>
+                등록된 약이 없어요
+              </Typography>
+              <Typography variant="bodySmall" color={Colors.textSecondary} style={styles.emptySubtext}>
+                처방전 사진을 찍어 약을 추가해보세요
+              </Typography>
+            </Card>
+          )
         ) : (
           allItems.map((item, index) => renderItem(item, index))
         )}
