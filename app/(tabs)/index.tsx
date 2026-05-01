@@ -87,7 +87,45 @@ export default function HomeScreen() {
     month: new Date().getMonth() + 1,
   });
   const [monthlySummary, setMonthlySummary] = useState<DaySummary[]>([]);
-  const [markedDates, setMarkedDates] = useState<MarkedDates>({});
+  const today = getTodayString(); // 로컬 타임존 기준 오늘 날짜
+  // markedDates는 monthlySummary와 selectedDate로부터 파생되므로 useMemo 사용
+  const markedDates = useMemo<MarkedDates>(() => {
+    const marked: MarkedDates = {};
+
+    monthlySummary.forEach((day) => {
+      const isToday = day.date === today;
+      const statusColor = STATUS_COLORS[day.status as DayStatus] || 'transparent';
+
+      marked[day.date] = {
+        customStyles: {
+          container: {
+            backgroundColor: day.status === 'COMPLETE' ? statusColor : 'transparent',
+            borderWidth: day.status !== 'COMPLETE' && day.status !== 'NONE' ? 2 : 0,
+            borderColor: statusColor,
+          },
+          text: {
+            color: isToday
+              ? Colors.primary
+              : day.status === 'COMPLETE'
+              ? Colors.white
+              : Colors.textPrimary,
+            fontWeight: (isToday ? 'bold' : 'normal') as FontWeight,
+          },
+        },
+      };
+    });
+
+    // 선택된 날짜 강조
+    if (marked[selectedDate]) {
+      marked[selectedDate].customStyles.container = {
+        ...marked[selectedDate].customStyles.container,
+        borderWidth: 2,
+        borderColor: Colors.primary,
+      };
+    }
+
+    return marked;
+  }, [monthlySummary, selectedDate, today]);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [weekDates] = useState(generateWeekDates());
   const weekListRef = useRef<FlatList>(null);
@@ -103,7 +141,6 @@ export default function HomeScreen() {
   // 선택된 날짜의 스케줄 데이터
   const [selectedDateSchedules, setSelectedDateSchedules] = useState<TodaySchedule[]>([]);
 
-  const today = getTodayString(); // 로컬 타임존 기준 오늘 날짜
   const isSelectedDatePastOrToday = selectedDate <= today;
 
   // 오늘 날짜로 주간 달력 스크롤
@@ -197,50 +234,6 @@ export default function HomeScreen() {
     }
   };
 
-  const updateMarkedDates = (days: DaySummary[]) => {
-    const marked: MarkedDates = {};
-
-    days.forEach((day) => {
-      const isToday = day.date === today;
-      const isSelected = day.date === selectedDate;
-      const statusColor = STATUS_COLORS[day.status as DayStatus] || 'transparent';
-
-      marked[day.date] = {
-        customStyles: {
-          container: {
-            backgroundColor: day.status === 'COMPLETE' ? statusColor : 'transparent',
-            borderWidth: day.status !== 'COMPLETE' && day.status !== 'NONE' ? 2 : 0,
-            borderColor: statusColor,
-          },
-          text: {
-            color: isToday
-              ? Colors.primary
-              : day.status === 'COMPLETE'
-              ? Colors.white
-              : Colors.textPrimary,
-            fontWeight: (isToday ? 'bold' : 'normal') as FontWeight,
-          },
-        },
-      };
-    });
-
-    // 선택된 날짜 강조
-    if (marked[selectedDate]) {
-      marked[selectedDate].customStyles.container = {
-        ...marked[selectedDate].customStyles.container,
-        borderWidth: 2,
-        borderColor: Colors.primary,
-      };
-    }
-
-    setMarkedDates(marked);
-  };
-
-  useEffect(() => {
-    if (monthlySummary.length > 0) {
-      updateMarkedDates(monthlySummary);
-    }
-  }, [selectedDate, monthlySummary]);
 
   // 주간 달력 초기 스크롤 위치 설정 (오늘 날짜가 중앙에 오도록)
   useEffect(() => {
