@@ -863,8 +863,8 @@ export default function HomeScreen() {
                   </Typography>
                 </View>
                 <View style={styles.timePeriodHeaderActions}>
-                  {/* 모두 복용 버튼 */}
-                  {!group.allTaken && group.timeSlots.some(slot => slot.medications.filter(m => !m.taken).length > 0) && (
+                  {/* 모두 복용 버튼 (미래 날짜에서는 숨김) */}
+                  {isSelectedDatePastOrToday && !group.allTaken && group.timeSlots.some(slot => slot.medications.filter(m => !m.taken).length > 0) && (
                     <TouchableOpacity
                       style={styles.takeAllGroupButton}
                       onPress={async () => {
