@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert, ActivityIndicator, Image as RNImage } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, ActivityIndicator, Image as RNImage, Linking, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router, useNavigation } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -281,9 +281,16 @@ export default function MedicationDetailScreen() {
         {drugInfo && (
           <View style={styles.sourceSection}>
             <Ionicons name="information-circle-outline" size={20} color={Colors.textSecondary} />
-            <Typography variant="caption" color={Colors.textSecondary} style={styles.sourceText}>
-              약물 정보는 식품의약품안전처 공공데이터를 기반으로 제공되며, 참고용으로만 사용해 주세요.
-            </Typography>
+            <View style={{ flex: 1 }}>
+              <Typography variant="caption" color={Colors.textSecondary} style={styles.sourceText}>
+                약물 정보는 식품의약품안전처 공공데이터를 기반으로 제공되며, 참고용으로만 사용해 주세요.
+              </Typography>
+              <TouchableOpacity onPress={() => Linking.openURL('https://nedrug.mfds.go.kr')}>
+                <Typography variant="caption" color={Colors.primary} style={styles.sourceLink}>
+                  출처: 식품의약품안전처 의약품안전나라 (nedrug.mfds.go.kr)
+                </Typography>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
         <Button
@@ -376,6 +383,11 @@ const styles = StyleSheet.create({
   },
   sourceText: {
     flex: 1,
+    lineHeight: 18,
+  },
+  sourceLink: {
+    marginTop: 4,
+    textDecorationLine: 'underline' as const,
     lineHeight: 18,
   },
   drugImageContainer: {

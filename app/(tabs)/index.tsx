@@ -87,7 +87,45 @@ export default function HomeScreen() {
     month: new Date().getMonth() + 1,
   });
   const [monthlySummary, setMonthlySummary] = useState<DaySummary[]>([]);
-  const [markedDates, setMarkedDates] = useState<MarkedDates>({});
+  const today = getTodayString(); // 로컬 타임존 기준 오늘 날짜
+  // markedDates는 monthlySummary와 selectedDate로부터 파생되므로 useMemo 사용
+  const markedDates = useMemo<MarkedDates>(() => {
+    const marked: MarkedDates = {};
+
+    monthlySummary.forEach((day) => {
+      const isToday = day.date === today;
+      const statusColor = STATUS_COLORS[day.status as DayStatus] || 'transparent';
+
+      marked[day.date] = {
+        customStyles: {
+          container: {
+            backgroundColor: day.status === 'COMPLETE' ? statusColor : 'transparent',
+            borderWidth: day.status !== 'COMPLETE' && day.status !== 'NONE' ? 2 : 0,
+            borderColor: statusColor,
+          },
+          text: {
+            color: isToday
+              ? Colors.primary
+              : day.status === 'COMPLETE'
+              ? Colors.white
+              : Colors.textPrimary,
+            fontWeight: (isToday ? 'bold' : 'normal') as FontWeight,
+          },
+        },
+      };
+    });
+
+    // 선택된 날짜 강조
+    if (marked[selectedDate]) {
+      marked[selectedDate].customStyles.container = {
+        ...marked[selectedDate].customStyles.container,
+        borderWidth: 2,
+        borderColor: Colors.primary,
+      };
+    }
+
+    return marked;
+  }, [monthlySummary, selectedDate, today]);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [weekDates] = useState(generateWeekDates());
   const weekListRef = useRef<FlatList>(null);
@@ -103,7 +141,6 @@ export default function HomeScreen() {
   // 선택된 날짜의 스케줄 데이터
   const [selectedDateSchedules, setSelectedDateSchedules] = useState<TodaySchedule[]>([]);
 
-  const today = getTodayString(); // 로컬 타임존 기준 오늘 날짜
   const isSelectedDatePastOrToday = selectedDate <= today;
 
   // 오늘 날짜로 주간 달력 스크롤
@@ -197,50 +234,6 @@ export default function HomeScreen() {
     }
   };
 
-  const updateMarkedDates = (days: DaySummary[]) => {
-    const marked: MarkedDates = {};
-
-    days.forEach((day) => {
-      const isToday = day.date === today;
-      const isSelected = day.date === selectedDate;
-      const statusColor = STATUS_COLORS[day.status as DayStatus] || 'transparent';
-
-      marked[day.date] = {
-        customStyles: {
-          container: {
-            backgroundColor: day.status === 'COMPLETE' ? statusColor : 'transparent',
-            borderWidth: day.status !== 'COMPLETE' && day.status !== 'NONE' ? 2 : 0,
-            borderColor: statusColor,
-          },
-          text: {
-            color: isToday
-              ? Colors.primary
-              : day.status === 'COMPLETE'
-              ? Colors.white
-              : Colors.textPrimary,
-            fontWeight: (isToday ? 'bold' : 'normal') as FontWeight,
-          },
-        },
-      };
-    });
-
-    // 선택된 날짜 강조
-    if (marked[selectedDate]) {
-      marked[selectedDate].customStyles.container = {
-        ...marked[selectedDate].customStyles.container,
-        borderWidth: 2,
-        borderColor: Colors.primary,
-      };
-    }
-
-    setMarkedDates(marked);
-  };
-
-  useEffect(() => {
-    if (monthlySummary.length > 0) {
-      updateMarkedDates(monthlySummary);
-    }
-  }, [selectedDate, monthlySummary]);
 
   // 주간 달력 초기 스크롤 위치 설정 (오늘 날짜가 중앙에 오도록)
   useEffect(() => {
@@ -477,15 +470,26 @@ export default function HomeScreen() {
     const notTakenMeds = schedule.medications.filter((m) => !m.taken);
     if (notTakenMeds.length === 0) return;
 
+    const ids = notTakenMeds.map((m) => m.id);
+    if (ids.some((id) => processingMeds.has(id))) return;
+
+    setProcessingMeds(prev => {
+      const next = new Set(prev);
+      ids.forEach(id => next.add(id));
+      return next;
+    });
+
     try {
-      await recordIntake(
-        notTakenMeds.map((m) => m.id),
-        schedule.timing,
-        selectedDate
-      );
+      await recordIntake(ids, schedule.timing, selectedDate);
     } catch (error) {
       console.error('Failed to record intake:', error);
       Alert.alert('오류', '복용 기록에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setProcessingMeds(prev => {
+        const next = new Set(prev);
+        ids.forEach(id => next.delete(id));
+        return next;
+      });
     }
   };
 
@@ -494,15 +498,26 @@ export default function HomeScreen() {
     const notTakenMeds = timeSlot.medications.filter((m) => !m.taken);
     if (notTakenMeds.length === 0) return;
 
+    const ids = notTakenMeds.map((m) => m.id);
+    if (ids.some((id) => processingMeds.has(id))) return;
+
+    setProcessingMeds(prev => {
+      const next = new Set(prev);
+      ids.forEach(id => next.add(id));
+      return next;
+    });
+
     try {
-      await recordIntake(
-        notTakenMeds.map((m) => m.id),
-        timing,
-        selectedDate
-      );
+      await recordIntake(ids, timing, selectedDate);
     } catch (error) {
       console.error('Failed to record intake:', error);
       Alert.alert('오류', '복용 기록에 실패했습니다. 다시 시도해주세요.');
+    } finally {
+      setProcessingMeds(prev => {
+        const next = new Set(prev);
+        ids.forEach(id => next.delete(id));
+        return next;
+      });
     }
   };
 
@@ -848,17 +863,34 @@ export default function HomeScreen() {
                   </Typography>
                 </View>
                 <View style={styles.timePeriodHeaderActions}>
-                  {/* 모두 복용 버튼 */}
-                  {!group.allTaken && group.timeSlots.some(slot => slot.medications.filter(m => !m.taken).length > 0) && (
+                  {/* 모두 복용 버튼 (미래 날짜에서는 숨김) */}
+                  {isSelectedDatePastOrToday && !group.allTaken && group.timeSlots.some(slot => slot.medications.filter(m => !m.taken).length > 0) && (
                     <TouchableOpacity
                       style={styles.takeAllGroupButton}
-                      onPress={() => {
+                      onPress={async () => {
                         // 시간대 전체 미복용 약물 수집
                         const allNotTakenMeds = group.timeSlots.flatMap(slot =>
                           slot.medications.filter(m => !m.taken).map(m => m.id)
                         );
-                        if (allNotTakenMeds.length > 0) {
-                          recordIntake(allNotTakenMeds, group.timing, selectedDate);
+                        if (allNotTakenMeds.length === 0) return;
+                        if (allNotTakenMeds.some((id) => processingMeds.has(id))) return;
+
+                        setProcessingMeds(prev => {
+                          const next = new Set(prev);
+                          allNotTakenMeds.forEach(id => next.add(id));
+                          return next;
+                        });
+                        try {
+                          await recordIntake(allNotTakenMeds, group.timing, selectedDate);
+                        } catch (error) {
+                          console.error('Failed to record intake:', error);
+                          Alert.alert('오류', '복용 기록에 실패했습니다. 다시 시도해주세요.');
+                        } finally {
+                          setProcessingMeds(prev => {
+                            const next = new Set(prev);
+                            allNotTakenMeds.forEach(id => next.delete(id));
+                            return next;
+                          });
                         }
                       }}
                     >

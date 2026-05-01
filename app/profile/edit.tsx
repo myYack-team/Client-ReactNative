@@ -125,7 +125,7 @@ export default function EditProfileScreen() {
         <Card style={styles.imageCard} variant="elevated">
           <View style={styles.imageContainer}>
             {user?.profileImage ? (
-              <Image source={{ uri: user.profileImage }} style={styles.profileImage} />
+              <Image source={{ uri: user.profileImage }} style={styles.profileImage} resizeMode="cover" />
             ) : (
               <View style={[styles.profileImage, styles.profileImagePlaceholder]}>
                 <Image

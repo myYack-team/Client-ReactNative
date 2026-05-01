@@ -1,5 +1,5 @@
 import React, { useCallback, useState, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image, Pressable } from 'react-native';
+import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
@@ -169,6 +169,8 @@ export default function MedicationsScreen() {
       exitSelectMode();
     } catch (err) {
       console.error('Failed to delete items:', err);
+      setToastMessage('삭제에 실패했어요. 다시 시도해주세요.');
+      setShowToast(true);
     }
   };
 
@@ -374,14 +376,20 @@ export default function MedicationsScreen() {
         )}
 
         {allItems.length === 0 ? (
-          <Card style={styles.emptyCard} variant="elevated">
-            <Typography variant="body" style={styles.emptyText}>
-              등록된 약이 없어요
-            </Typography>
-            <Typography variant="bodySmall" color={Colors.textSecondary} style={styles.emptySubtext}>
-              처방전 사진을 찍어 약을 추가해보세요
-            </Typography>
-          </Card>
+          isLoading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+            </View>
+          ) : (
+            <Card style={styles.emptyCard} variant="elevated">
+              <Typography variant="body" style={styles.emptyText}>
+                등록된 약이 없어요
+              </Typography>
+              <Typography variant="bodySmall" color={Colors.textSecondary} style={styles.emptySubtext}>
+                처방전 사진을 찍어 약을 추가해보세요
+              </Typography>
+            </Card>
+          )
         ) : (
           allItems.map((item, index) => renderItem(item, index))
         )}
@@ -482,6 +490,11 @@ const styles = StyleSheet.create({
   checkboxChecked: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
   },
   emptyCard: {
     alignItems: 'center',

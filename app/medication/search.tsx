@@ -48,15 +48,6 @@ export default function MedicationSearchScreen() {
     setRecentSearches(history);
   };
 
-  // 컴포넌트 언마운트 시 진행 중인 요청 취소
-  useEffect(() => {
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, []);
-
   const searchDrugs = async (query: string, pageNum: number = 0, append: boolean = false) => {
     if (!query.trim()) {
       setDrugs([]);
@@ -120,6 +111,16 @@ export default function MedicationSearchScreen() {
     }, 300),
     []
   );
+
+  // 컴포넌트 언마운트 시 진행 중인 요청 및 debounce 취소
+  useEffect(() => {
+    return () => {
+      debouncedSearch.cancel();
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [debouncedSearch]);
 
   const handleSearchChange = (text: string) => {
     setSearchQuery(text);
