@@ -16,6 +16,7 @@ export default function CameraScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [isLandscape, setIsLandscape] = useState(false);
   const cameraRef = useRef<CameraView>(null);
+  const capturingRef = useRef(false);
   const { isLoading } = useMedicationStore();
   const insets = useSafeAreaInsets();
   const [cameraLayout, setCameraLayout] = useState<{ width: number; height: number } | null>(null);
@@ -114,7 +115,9 @@ export default function CameraScreen() {
 
     if (!cameraRef.current) return;
 
-    if (isCapturing) return;
+    // 동기 ref 가드: setState 비동기성으로 인한 race 방지
+    if (capturingRef.current) return;
+    capturingRef.current = true;
     setIsCapturing(true);
 
     try {
@@ -188,6 +191,7 @@ export default function CameraScreen() {
     } catch (error) {
       Alert.alert('오류', '사진 촬영에 실패했어요. 다시 시도해주세요.');
     } finally {
+      capturingRef.current = false;
       setIsCapturing(false);
     }
   };
