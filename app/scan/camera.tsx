@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Typography, AiConsentModal } from '../../components/ui';
 import { Colors } from '../../constants';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { useMedicationStore } from '../../stores';
 import { userService } from '../../services';
 
@@ -15,8 +16,11 @@ export default function CameraScreen() {
   const [permission, requestPermission] = useCameraPermissions();
   const [isLandscape, setIsLandscape] = useState(false);
   const cameraRef = useRef<CameraView>(null);
+  const capturingRef = useRef(false);
   const { isLoading } = useMedicationStore();
   const insets = useSafeAreaInsets();
+  const [cameraLayout, setCameraLayout] = useState<{ width: number; height: number } | null>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
 
   // AI 동의 상태
   const [hasAiConsent, setHasAiConsent] = useState(false);
@@ -111,23 +115,84 @@ export default function CameraScreen() {
 
     if (!cameraRef.current) return;
 
+    // 동기 ref 가드: setState 비동기성으로 인한 race 방지
+    if (capturingRef.current) return;
+    capturingRef.current = true;
+    setIsCapturing(true);
+
     try {
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 1, // 원본 품질 유지 (무손실)
+        quality: 0.8,
       });
 
       if (photo?.uri) {
+        let finalUri = photo.uri;
+
+        // 가이드 프레임 영역으로 크롭 (사진 크기 정보가 있는 경우)
+        if (photo.width && photo.height) {
+          try {
+            const screenW = cameraLayout?.width ?? SCREEN_WIDTH;
+            const screenH = cameraLayout?.height ?? SCREEN_HEIGHT;
+            // Android: EXIF 회전이 있을 경우 photo.width/height는 센서 기준(가로)일 수 있음
+            let pw = photo.width;
+            let ph = photo.height;
+            const isPortraitView = screenH >= screenW;
+            const isPortraitPhoto = ph >= pw;
+            if (isPortraitView !== isPortraitPhoto) {
+              // EXIF에 회전이 있어 width/height가 센서 기준일 가능성
+              [pw, ph] = [ph, pw];
+            }
+            const photoAspect = pw / ph;
+            const screenAspect = screenW / screenH;
+            let visibleW: number, visibleH: number, offsetX: number, offsetY: number;
+            if (photoAspect > screenAspect) {
+              visibleH = ph;
+              visibleW = ph * screenAspect;
+              offsetX = (pw - visibleW) / 2;
+              offsetY = 0;
+            } else {
+              visibleW = pw;
+              visibleH = pw / screenAspect;
+              offsetX = 0;
+              offsetY = (ph - visibleH) / 2;
+            }
+            const scaleX = visibleW / screenW;
+            const scaleY = visibleH / screenH;
+            const rawX = offsetX + ((screenW - GUIDE_WIDTH) / 2) * scaleX;
+            const rawY = offsetY + ((screenH - GUIDE_HEIGHT) / 2) * scaleY;
+            const rawW = GUIDE_WIDTH * scaleX;
+            const rawH = GUIDE_HEIGHT * scaleY;
+            const originX = Math.max(0, Math.round(rawX));
+            const originY = Math.max(0, Math.round(rawY));
+            const cropW = Math.min(pw - originX, Math.round(rawW));
+            const cropH = Math.min(ph - originY, Math.round(rawH));
+
+            const cropped = await manipulateAsync(
+              photo.uri,
+              [{ crop: { originX, originY, width: cropW, height: cropH } }],
+              { compress: 0.8, format: SaveFormat.JPEG }
+            );
+            finalUri = cropped.uri;
+          } catch (cropError) {
+            console.error('Failed to crop photo to guide frame:', cropError);
+            // 크롭 실패 시 원본 URI 사용
+          }
+        }
+
         // 세로 모드로 전환 후 미리보기 화면으로 이동
         await ScreenOrientation.lockAsync(
           ScreenOrientation.OrientationLock.PORTRAIT_UP
         );
         router.push({
           pathname: '/scan/preview',
-          params: { uri: photo.uri },
+          params: { uri: finalUri },
         });
       }
     } catch (error) {
       Alert.alert('오류', '사진 촬영에 실패했어요. 다시 시도해주세요.');
+    } finally {
+      capturingRef.current = false;
+      setIsCapturing(false);
     }
   };
 
@@ -159,6 +224,10 @@ export default function CameraScreen() {
         ref={cameraRef}
         style={styles.camera}
         facing={facing}
+        onLayout={(e) => {
+          const { width, height } = e.nativeEvent.layout;
+          setCameraLayout({ width, height });
+        }}
       >
         {/* 가이드 프레임 오버레이 */}
         <View style={styles.overlay}>
@@ -206,7 +275,7 @@ export default function CameraScreen() {
           <TouchableOpacity
             style={styles.captureButton}
             onPress={handleCapture}
-            disabled={isLoading}
+            disabled={isLoading || isCapturing}
           >
             <View style={styles.captureInner} />
           </TouchableOpacity>
