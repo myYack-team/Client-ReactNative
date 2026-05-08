@@ -126,19 +126,28 @@ export default function CameraScreen() {
           try {
             const screenW = cameraLayout?.width ?? SCREEN_WIDTH;
             const screenH = cameraLayout?.height ?? SCREEN_HEIGHT;
-            const photoAspect = photo.width / photo.height;
+            // Android: EXIF 회전이 있을 경우 photo.width/height는 센서 기준(가로)일 수 있음
+            let pw = photo.width;
+            let ph = photo.height;
+            const isPortraitView = screenH >= screenW;
+            const isPortraitPhoto = ph >= pw;
+            if (isPortraitView !== isPortraitPhoto) {
+              // EXIF에 회전이 있어 width/height가 센서 기준일 가능성
+              [pw, ph] = [ph, pw];
+            }
+            const photoAspect = pw / ph;
             const screenAspect = screenW / screenH;
             let visibleW: number, visibleH: number, offsetX: number, offsetY: number;
             if (photoAspect > screenAspect) {
-              visibleH = photo.height;
-              visibleW = photo.height * screenAspect;
-              offsetX = (photo.width - visibleW) / 2;
+              visibleH = ph;
+              visibleW = ph * screenAspect;
+              offsetX = (pw - visibleW) / 2;
               offsetY = 0;
             } else {
-              visibleW = photo.width;
-              visibleH = photo.width / screenAspect;
+              visibleW = pw;
+              visibleH = pw / screenAspect;
               offsetX = 0;
-              offsetY = (photo.height - visibleH) / 2;
+              offsetY = (ph - visibleH) / 2;
             }
             const scaleX = visibleW / screenW;
             const scaleY = visibleH / screenH;
@@ -148,8 +157,8 @@ export default function CameraScreen() {
             const rawH = GUIDE_HEIGHT * scaleY;
             const originX = Math.max(0, Math.round(rawX));
             const originY = Math.max(0, Math.round(rawY));
-            const cropW = Math.min(photo.width - originX, Math.round(rawW));
-            const cropH = Math.min(photo.height - originY, Math.round(rawH));
+            const cropW = Math.min(pw - originX, Math.round(rawW));
+            const cropH = Math.min(ph - originY, Math.round(rawH));
 
             const cropped = await manipulateAsync(
               photo.uri,
