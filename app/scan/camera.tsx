@@ -18,6 +18,7 @@ export default function CameraScreen() {
   const cameraRef = useRef<CameraView>(null);
   const { isLoading } = useMedicationStore();
   const insets = useSafeAreaInsets();
+  const [cameraLayout, setCameraLayout] = useState<{ width: number; height: number } | null>(null);
 
   // AI 동의 상태
   const [hasAiConsent, setHasAiConsent] = useState(false);
@@ -123,8 +124,10 @@ export default function CameraScreen() {
         // 가이드 프레임 영역으로 크롭 (사진 크기 정보가 있는 경우)
         if (photo.width && photo.height) {
           try {
+            const screenW = cameraLayout?.width ?? SCREEN_WIDTH;
+            const screenH = cameraLayout?.height ?? SCREEN_HEIGHT;
             const photoAspect = photo.width / photo.height;
-            const screenAspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+            const screenAspect = screenW / screenH;
             let visibleW: number, visibleH: number, offsetX: number, offsetY: number;
             if (photoAspect > screenAspect) {
               visibleH = photo.height;
@@ -137,8 +140,8 @@ export default function CameraScreen() {
               offsetX = 0;
               offsetY = (photo.height - visibleH) / 2;
             }
-            const scaleX = visibleW / SCREEN_WIDTH;
-            const scaleY = visibleH / SCREEN_HEIGHT;
+            const scaleX = visibleW / screenW;
+            const scaleY = visibleH / screenH;
             const rawX = offsetX + ((SCREEN_WIDTH - GUIDE_WIDTH) / 2) * scaleX;
             const rawY = offsetY + ((SCREEN_HEIGHT - GUIDE_HEIGHT) / 2) * scaleY;
             const rawW = GUIDE_WIDTH * scaleX;
@@ -202,6 +205,10 @@ export default function CameraScreen() {
         ref={cameraRef}
         style={styles.camera}
         facing={facing}
+        onLayout={(e) => {
+          const { width, height } = e.nativeEvent.layout;
+          setCameraLayout({ width, height });
+        }}
       >
         {/* 가이드 프레임 오버레이 */}
         <View style={styles.overlay}>
