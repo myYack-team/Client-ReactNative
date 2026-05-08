@@ -108,12 +108,19 @@ jobs:
         timeout-minutes: 60
         run: eas build --profile production --platform android --non-interactive --wait
 
+      # 빌드된 최신 AAB를 Google Play 내부 테스트 트랙으로 자동 제출
+      # EAS 서버에 등록된 서비스 계정 키 사용 (eas credentials로 사전 설정됨)
+      - name: Submit to Google Play (internal track)
+        run: eas submit --platform android --latest --non-interactive --no-wait
+
       - name: Report result
         if: always()
         run: |
           if [ "${{ job.status }}" = "success" ]; then
-            echo "Build successful! Download AAB from https://expo.dev/accounts/myyak_song/projects/myyak/builds"
+            echo "Build & submit queued successfully!"
+            echo "AAB: https://expo.dev/accounts/myyak_song/projects/myyak/builds"
+            echo "Play Console: https://play.google.com/console/u/0/developers/9162313759564141893/app/4974389946023920833/tracks/internal-testing"
           else
-            echo "::error::Build failed. Check https://expo.dev/accounts/myyak_song/projects/myyak/builds"
+            echo "::error::Build or submit failed. Check https://expo.dev/accounts/myyak_song/projects/myyak/builds"
             echo "To retry without version bump: workflow_dispatch + skip_version_bump=true"
           fi
