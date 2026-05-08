@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Typography, AiConsentModal } from '../../components/ui';
 import { Colors } from '../../constants';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { useMedicationStore } from '../../stores';
 import { userService } from '../../services';
 
@@ -117,13 +118,55 @@ export default function CameraScreen() {
       });
 
       if (photo?.uri) {
+        let finalUri = photo.uri;
+
+        // 가이드 프레임 영역으로 크롭 (사진 크기 정보가 있는 경우)
+        if (photo.width && photo.height) {
+          try {
+            const photoAspect = photo.width / photo.height;
+            const screenAspect = SCREEN_WIDTH / SCREEN_HEIGHT;
+            let visibleW: number, visibleH: number, offsetX: number, offsetY: number;
+            if (photoAspect > screenAspect) {
+              visibleH = photo.height;
+              visibleW = photo.height * screenAspect;
+              offsetX = (photo.width - visibleW) / 2;
+              offsetY = 0;
+            } else {
+              visibleW = photo.width;
+              visibleH = photo.width / screenAspect;
+              offsetX = 0;
+              offsetY = (photo.height - visibleH) / 2;
+            }
+            const scaleX = visibleW / SCREEN_WIDTH;
+            const scaleY = visibleH / SCREEN_HEIGHT;
+            const rawX = offsetX + ((SCREEN_WIDTH - GUIDE_WIDTH) / 2) * scaleX;
+            const rawY = offsetY + ((SCREEN_HEIGHT - GUIDE_HEIGHT) / 2) * scaleY;
+            const rawW = GUIDE_WIDTH * scaleX;
+            const rawH = GUIDE_HEIGHT * scaleY;
+            const originX = Math.max(0, Math.round(rawX));
+            const originY = Math.max(0, Math.round(rawY));
+            const cropW = Math.min(photo.width - originX, Math.round(rawW));
+            const cropH = Math.min(photo.height - originY, Math.round(rawH));
+
+            const cropped = await manipulateAsync(
+              photo.uri,
+              [{ crop: { originX, originY, width: cropW, height: cropH } }],
+              { compress: 1, format: SaveFormat.JPEG }
+            );
+            finalUri = cropped.uri;
+          } catch (cropError) {
+            console.error('Failed to crop photo to guide frame:', cropError);
+            // 크롭 실패 시 원본 URI 사용
+          }
+        }
+
         // 세로 모드로 전환 후 미리보기 화면으로 이동
         await ScreenOrientation.lockAsync(
           ScreenOrientation.OrientationLock.PORTRAIT_UP
         );
         router.push({
           pathname: '/scan/preview',
-          params: { uri: photo.uri },
+          params: { uri: finalUri },
         });
       }
     } catch (error) {
