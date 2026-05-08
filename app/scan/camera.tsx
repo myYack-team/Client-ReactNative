@@ -155,8 +155,8 @@ export default function CameraScreen() {
             }
             const scaleX = visibleW / screenW;
             const scaleY = visibleH / screenH;
-            const rawX = offsetX + ((SCREEN_WIDTH - GUIDE_WIDTH) / 2) * scaleX;
-            const rawY = offsetY + ((SCREEN_HEIGHT - GUIDE_HEIGHT) / 2) * scaleY;
+            const rawX = offsetX + ((screenW - GUIDE_WIDTH) / 2) * scaleX;
+            const rawY = offsetY + ((screenH - GUIDE_HEIGHT) / 2) * scaleY;
             const rawW = GUIDE_WIDTH * scaleX;
             const rawH = GUIDE_HEIGHT * scaleY;
             const originX = Math.max(0, Math.round(rawX));
