@@ -115,7 +115,7 @@ export default function CameraScreen() {
 
     try {
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 1, // 원본 품질 유지 (무손실)
+        quality: 0.8,
       });
 
       if (photo?.uri) {
@@ -163,7 +163,7 @@ export default function CameraScreen() {
             const cropped = await manipulateAsync(
               photo.uri,
               [{ crop: { originX, originY, width: cropW, height: cropH } }],
-              { compress: 1, format: SaveFormat.JPEG }
+              { compress: 0.8, format: SaveFormat.JPEG }
             );
             finalUri = cropped.uri;
           } catch (cropError) {
