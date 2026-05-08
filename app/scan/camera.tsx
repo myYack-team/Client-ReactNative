@@ -19,6 +19,7 @@ export default function CameraScreen() {
   const { isLoading } = useMedicationStore();
   const insets = useSafeAreaInsets();
   const [cameraLayout, setCameraLayout] = useState<{ width: number; height: number } | null>(null);
+  const [isCapturing, setIsCapturing] = useState(false);
 
   // AI 동의 상태
   const [hasAiConsent, setHasAiConsent] = useState(false);
@@ -113,6 +114,9 @@ export default function CameraScreen() {
 
     if (!cameraRef.current) return;
 
+    if (isCapturing) return;
+    setIsCapturing(true);
+
     try {
       const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
@@ -183,6 +187,8 @@ export default function CameraScreen() {
       }
     } catch (error) {
       Alert.alert('오류', '사진 촬영에 실패했어요. 다시 시도해주세요.');
+    } finally {
+      setIsCapturing(false);
     }
   };
 
@@ -265,7 +271,7 @@ export default function CameraScreen() {
           <TouchableOpacity
             style={styles.captureButton}
             onPress={handleCapture}
-            disabled={isLoading}
+            disabled={isLoading || isCapturing}
           >
             <View style={styles.captureInner} />
           </TouchableOpacity>
