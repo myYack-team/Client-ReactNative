@@ -47,3 +47,6 @@ GoogleService-Info.plist
 
 # Google Play service account key (injected by CI)
 google-play-service-account.json
+
+# 시크릿 문서 (실제 자격증명 값 포함)
+.github/GITHUB_SECRETS.md
