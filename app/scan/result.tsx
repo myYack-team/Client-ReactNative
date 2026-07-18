@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { Picker } from '@react-native-picker/picker';
 import DraggableFlatList, {
   ScaleDecorator,
@@ -482,6 +483,7 @@ export default function ResultScreen() {
   if (!currentScanResult || medications.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
         <View style={styles.emptyContent}>
           <Typography variant="body">인식된 약이 없어요</Typography>
           <Button
@@ -498,6 +500,7 @@ export default function ResultScreen() {
   return (
     <GestureHandlerRootView style={styles.flex1}>
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <StatusBar style="light" />
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {currentScanResult.confidence === 'medium' && (
           <Card style={styles.warningCard}>
