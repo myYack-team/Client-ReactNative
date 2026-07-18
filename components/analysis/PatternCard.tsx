@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Typography } from '../ui';
-import { Colors } from '../../constants';
+import { Colors, Radius } from '../../constants';
 import { Pattern, PatternType } from '../../types';
 
 interface PatternCardProps {
@@ -36,19 +36,14 @@ export function PatternCard({ pattern }: PatternCardProps) {
     <View style={[styles.card, { borderLeftColor: typeStyle.borderColor }]}>
       {/* 헤더 */}
       <View style={styles.header}>
-        <View style={styles.iconContainer}>
-          <Typography variant="h3">{pattern.patternIcon || '📊'}</Typography>
-        </View>
-        <View style={styles.headerText}>
-          <View style={[styles.typeBadge, { backgroundColor: typeStyle.bgColor }]}>
-            <Typography variant="caption" style={{ color: typeStyle.textColor }}>
-              {typeStyle.label}
-            </Typography>
-          </View>
-          <Typography variant="h4" style={styles.title}>
-            {pattern.title}
+        <View style={[styles.typeBadge, { backgroundColor: typeStyle.bgColor }]}>
+          <Typography variant="caption" style={[styles.typeBadgeText, { color: typeStyle.textColor }]}>
+            {typeStyle.label}
           </Typography>
         </View>
+        <Typography variant="h4" style={styles.title}>
+          {pattern.title}
+        </Typography>
       </View>
 
       {/* 설명 */}
@@ -59,8 +54,11 @@ export function PatternCard({ pattern }: PatternCardProps) {
       {/* 제안 (있을 경우) */}
       {pattern.suggestion && (
         <View style={styles.suggestionContainer}>
-          <Typography variant="caption" color={Colors.brand}>
-            💡 {pattern.suggestion}
+          <Typography variant="caption" color={Colors.textTertiary} style={styles.suggestionLabel}>
+            제안
+          </Typography>
+          <Typography variant="caption" color={Colors.brand} style={styles.suggestionText}>
+            {pattern.suggestion}
           </Typography>
         </View>
       )}
@@ -70,36 +68,25 @@ export function PatternCard({ pattern }: PatternCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.white,
-    borderRadius: 12,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
     padding: 16,
     borderWidth: 1,
     borderColor: Colors.border,
-    borderLeftWidth: 4,
+    borderLeftWidth: 3,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 12,
-  },
-  iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.backgroundSecondary,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerText: {
-    flex: 1,
-    gap: 4,
+    gap: 6,
+    marginBottom: 10,
   },
   typeBadge: {
     alignSelf: 'flex-start',
     paddingHorizontal: 8,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: Radius.xs,
+  },
+  typeBadgeText: {
+    fontWeight: '600',
   },
   title: {
     lineHeight: 22,
@@ -112,5 +99,12 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: Colors.divider,
+  },
+  suggestionLabel: {
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  suggestionText: {
+    lineHeight: 18,
   },
 });

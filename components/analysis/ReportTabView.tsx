@@ -86,8 +86,8 @@ export function ReportTabView({
             {/* 기전 그룹 */}
             {mechanismGroups && mechanismGroups.length > 0 && (
               <View style={styles.section}>
-                <Typography variant="h3" style={styles.sectionTitle}>
-                  💊 약물 작용 기전
+                <Typography variant="h4" style={styles.sectionTitle}>
+                  약물 작용 기전
                 </Typography>
                 <View style={styles.cardList}>
                   {mechanismGroups.map((group, index) => (
@@ -100,8 +100,8 @@ export function ReportTabView({
             {/* 주의 음식 요약 (HIGH만) */}
             {foodInteractions && foodInteractions.filter(f => f.interactionLevel === 'HIGH').length > 0 && (
               <View style={styles.section}>
-                <Typography variant="h3" style={styles.sectionTitle}>
-                  ⚠️ 주의할 음식
+                <Typography variant="h4" style={styles.sectionTitle}>
+                  주의할 음식
                 </Typography>
                 <View style={styles.cardList}>
                   {foodInteractions.filter(f => f.interactionLevel === 'HIGH').slice(0, 2).map((interaction, index) => (
@@ -129,8 +129,8 @@ export function ReportTabView({
             {/* 주의 음식 */}
             {foodInteractions && foodInteractions.length > 0 && (
               <View style={styles.section}>
-                <Typography variant="h3" style={styles.sectionTitle}>
-                  ⚠️ 주의할 음식
+                <Typography variant="h4" style={styles.sectionTitle}>
+                  주의할 음식
                 </Typography>
                 <View style={styles.cardList}>
                   {foodInteractions.map((interaction, index) => (
@@ -143,8 +143,8 @@ export function ReportTabView({
             {/* 도움 되는 음식 */}
             {foodSuggestions && foodSuggestions.length > 0 && (
               <View style={styles.section}>
-                <Typography variant="h3" style={styles.sectionTitle}>
-                  🥗 도움이 되는 음식
+                <Typography variant="h4" style={styles.sectionTitle}>
+                  도움이 되는 음식
                 </Typography>
                 <View style={styles.cardList}>
                   {foodSuggestions.map((suggestion, index) => (
@@ -172,8 +172,8 @@ export function ReportTabView({
             {/* 생활 팁 */}
             {lifestyleTips && lifestyleTips.length > 0 ? (
               <View style={styles.section}>
-                <Typography variant="h3" style={styles.sectionTitle}>
-                  💡 생활 습관 팁
+                <Typography variant="h4" style={styles.sectionTitle}>
+                  생활 습관 팁
                 </Typography>
                 <Typography variant="caption" color={Colors.textSecondary} style={styles.sectionSubtitle}>
                   근거가 있는 정보만 제공합니다
@@ -257,10 +257,11 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.surface,
     borderBottomWidth: 1,
     borderBottomColor: Colors.divider,
     marginHorizontal: -20,
+    marginTop: -20,
     paddingHorizontal: 8,
   },
   tab: {

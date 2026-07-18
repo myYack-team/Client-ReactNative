@@ -8,7 +8,7 @@ import {
   UIManager,
 } from 'react-native';
 import { Card, Typography } from '../ui';
-import { Colors, Shadows } from '../../constants';
+import { Colors, Radius } from '../../constants';
 import { MechanismGroup } from '../../types';
 
 // Android에서 LayoutAnimation 활성화
@@ -33,32 +33,20 @@ export function MechanismCard({ mechanism: group, onPress }: MechanismCardProps)
   return (
     <TouchableOpacity activeOpacity={0.9} onPress={handleToggle}>
       <Card style={styles.card} variant="elevated">
-        {/* 카테고리 아이콘 영역 */}
-        <View style={styles.iconContainer}>
-          <View style={styles.iconBackground}>
-            <Typography variant="h2">{group.categoryIcon}</Typography>
+        {/* 헤더 */}
+        <View style={styles.header}>
+          <View style={styles.iconTile}>
+            <Typography variant="h4">{group.categoryIcon}</Typography>
           </View>
-          {/* 약물 개수 뱃지 */}
-          <View style={styles.countBadge}>
-            <Typography variant="caption" color={Colors.white} style={styles.countText}>
-              {group.medicationCount}개 약물
-            </Typography>
-          </View>
-        </View>
-
-        {/* 카테고리 태그 */}
-        <View style={styles.tagContainer}>
-          <View style={styles.tag}>
-            <Typography variant="caption" color={Colors.brand}>
+          <View style={styles.headerText}>
+            <Typography variant="h4" style={styles.title}>
               {group.categoryName}
             </Typography>
+            <Typography variant="caption" color={Colors.textSecondary}>
+              복용 중인 약물 {group.medicationCount}개
+            </Typography>
           </View>
         </View>
-
-        {/* 타이틀 */}
-        <Typography variant="h4" style={styles.title}>
-          {group.categoryName}
-        </Typography>
 
         {/* 설명 (2줄 제한) */}
         <Typography
@@ -112,49 +100,26 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     overflow: 'hidden',
   },
-  iconContainer: {
-    height: 80,
-    backgroundColor: Colors.brandLightest,
-    marginHorizontal: -16,
-    marginTop: -16,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     marginBottom: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
   },
-  iconBackground: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.white,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...Shadows.small,
-  },
-  countBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: Colors.brand,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  countText: {
-    fontWeight: '600',
-  },
-  tagContainer: {
-    marginBottom: 8,
-  },
-  tag: {
-    alignSelf: 'flex-start',
+  iconTile: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.md,
     backgroundColor: Colors.brandLightest,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerText: {
+    flex: 1,
+    gap: 2,
   },
   title: {
-    marginBottom: 8,
+    lineHeight: 22,
   },
   description: {
     marginBottom: 12,

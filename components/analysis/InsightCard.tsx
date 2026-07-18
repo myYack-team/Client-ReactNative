@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Typography } from '../ui';
-import { Colors } from '../../constants';
+import { Colors, Radius } from '../../constants';
 import { Insight } from '../../types';
 
 interface InsightCardProps {
@@ -49,7 +49,7 @@ export function InsightCard({ insight }: InsightCardProps) {
         {insight.actionItem && (
           <View style={styles.actionContainer}>
             <Typography variant="caption" color={Colors.brand}>
-              👉 {insight.actionItem}
+              {insight.actionItem}
             </Typography>
           </View>
         )}
@@ -60,8 +60,8 @@ export function InsightCard({ insight }: InsightCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: Colors.white,
-    borderRadius: 12,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
     padding: 16,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -69,9 +69,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: Radius.md,
     backgroundColor: Colors.brandLightest,
     justifyContent: 'center',
     alignItems: 'center',
@@ -94,8 +94,10 @@ const styles = StyleSheet.create({
   },
   actionContainer: {
     marginTop: 8,
-    backgroundColor: Colors.brandLightest,
+    backgroundColor: Colors.backgroundSecondary,
     padding: 10,
-    borderRadius: 8,
+    borderRadius: Radius.md,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.brand,
   },
 });

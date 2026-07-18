@@ -152,8 +152,11 @@ export default function ReportDetailScreen() {
 
         {/* 면책 조항 */}
         <View style={styles.disclaimer}>
+          <Typography variant="caption" color={Colors.textTertiary} style={styles.disclaimerLabel}>
+            안내
+          </Typography>
           <Typography variant="caption" color={Colors.textTertiary} style={styles.disclaimerText}>
-            ⚠️ AI 분석 결과는 참고용이며, 의료적 판단이나 처방을 대체하지 않습니다.
+            AI 분석 결과는 참고용이며, 의료적 판단이나 처방을 대체하지 않습니다.
             복용에 관한 결정은 반드시 의사나 약사와 상담하세요.
           </Typography>
         </View>
@@ -217,8 +220,14 @@ const styles = StyleSheet.create({
   disclaimer: {
     marginTop: 16,
     padding: 16,
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: Colors.surface,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  disclaimerLabel: {
+    fontWeight: '700',
+    marginBottom: 4,
   },
   disclaimerText: {
     textAlign: 'left',
