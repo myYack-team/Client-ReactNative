@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderColor: Colors.border,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
     marginBottom: 16,
   },
   allAgreeRowChecked: {
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
   },
   checkboxLarge: {
     width: 28,
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
   },
   checkboxChecked: {
     borderColor: Colors.primary,

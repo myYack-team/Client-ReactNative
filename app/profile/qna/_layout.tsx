@@ -6,7 +6,7 @@ export default function QnALayout() {
     <Stack
       screenOptions={{
         headerStyle: {
-          backgroundColor: Colors.background,
+          backgroundColor: Colors.surface,
         },
         headerTintColor: Colors.primary,
         headerTitleStyle: {

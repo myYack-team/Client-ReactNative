@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderColor: Colors.border,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
   },
   radioOptionSelected: {
     borderColor: Colors.primary,
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 2,
     borderColor: Colors.border,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
   },
   checkboxOptionSelected: {
     borderColor: Colors.primary,

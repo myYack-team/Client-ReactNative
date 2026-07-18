@@ -884,7 +884,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     paddingVertical: 4,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
   },
   timeSlotRowActive: {
     backgroundColor: Colors.backgroundSecondary,
@@ -950,7 +950,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
   },
   submitButton: {
     marginTop: 8,
@@ -973,7 +973,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
   },
   checkboxChecked: {
     backgroundColor: Colors.primary,
@@ -1011,7 +1011,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
     borderRadius: 16,
     padding: 24,
     width: '100%',

@@ -6,7 +6,7 @@ export default function HealthNoteLayout() {
     <Stack
       screenOptions={{
         headerStyle: {
-          backgroundColor: Colors.background,
+          backgroundColor: Colors.surface,
         },
         headerTintColor: Colors.brand,
         headerTitleStyle: {

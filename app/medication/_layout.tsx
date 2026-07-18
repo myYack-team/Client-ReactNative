@@ -7,7 +7,7 @@ export default function MedicationLayout() {
       screenOptions={{
         headerShown: true,
         headerStyle: {
-          backgroundColor: Colors.background,
+          backgroundColor: Colors.surface,
         },
         headerTintColor: Colors.textPrimary,
         headerTitleStyle: {
