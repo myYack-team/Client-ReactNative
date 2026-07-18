@@ -145,18 +145,6 @@ export default function HomeScreen() {
 
   const isSelectedDatePastOrToday = selectedDate <= today;
 
-  // 오늘 날짜로 주간 달력 스크롤
-  const scrollToToday = useCallback(() => {
-    const todayIndex = weekDates.findIndex((d) => d === today);
-    if (todayIndex !== -1 && weekListRef.current) {
-      weekListRef.current.scrollToIndex({
-        index: todayIndex,
-        animated: true,
-        viewPosition: 0.5,
-      });
-    }
-  }, [weekDates, today]);
-
   // 선택된 날짜의 스케줄 가져오기 (todayData dependency 제거하여 연쇄 재실행 방지)
   const loadScheduleForDate = useCallback(async (date: string) => {
     if (date === today) {
@@ -630,13 +618,25 @@ export default function HomeScreen() {
             <Typography variant="h3" color={Colors.white}>{monthDisplay}</Typography>
             <Ionicons name="chevron-down" size={18} color="rgba(255, 255, 255, 0.8)" />
           </TouchableOpacity>
-          {summary && (
-            <View style={styles.completionBadge}>
-              <Typography variant="bodySmall" color={Colors.white} style={{ fontWeight: '600' }}>
-                {summary.takenCount}/{summary.totalMedications} 복용완료
-              </Typography>
-            </View>
-          )}
+          <View style={styles.headerRight}>
+            {!isSelectedDateToday && (
+              <TouchableOpacity
+                style={styles.todayButton}
+                onPress={() => handleWeekDayPress(today)}
+              >
+                <Typography variant="caption" color={Colors.white} style={{ fontWeight: '600' }}>
+                  오늘
+                </Typography>
+              </TouchableOpacity>
+            )}
+            {summary && (
+              <View style={styles.completionBadge}>
+                <Typography variant="bodySmall" color={Colors.white} style={{ fontWeight: '600' }}>
+                  {summary.takenCount}/{summary.totalMedications} 복용완료
+                </Typography>
+              </View>
+            )}
+          </View>
         </View>
 
         {/* 주간 달력 스트립 */}
@@ -1061,6 +1061,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  todayButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
   },
   completionBadge: {
     backgroundColor: 'rgba(255, 255, 255, 0.16)',
