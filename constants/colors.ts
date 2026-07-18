@@ -17,6 +17,7 @@ export const Colors = {
   warningLight: '#FF9800',
   error: '#D32F2F',
   success: '#2E7D32',
+  info: '#1565C0',
   // 페이지 배경은 연한 그레이, 카드/헤더 등 서피스는 흰색으로 분리해 대비 확보
   background: '#F4F5F7',
   backgroundSecondary: '#EDEFF2',
