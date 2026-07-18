@@ -11,7 +11,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import { Card, Typography, AiConsentModal } from '../../components/ui';
+import { Card, Typography, AiConsentModal, TabHeader } from '../../components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import {
   AnalysisButton,
@@ -172,7 +172,8 @@ export default function AnalysisScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={[]}>
+      <TabHeader title="AI 약물 분석" subtitle="복용 중인 약물을 AI가 분석해드려요" />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 + insets.bottom }]}
@@ -184,27 +185,6 @@ export default function AnalysisScreen() {
           />
         }
       >
-        {/* 헤더 */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <View style={styles.headerTitleRow}>
-              <Image
-                source={require('../../assets/icons_iamge_processed/04_AI.png')}
-                style={styles.headerIcon}
-                accessibilityLabel="AI icon"
-                resizeMode="contain"
-              />
-              <Typography variant="h2">AI 약물 분석</Typography>
-            </View>
-            <Typography variant="body" color={Colors.textSecondary}>
-              복용 중인 약물을 AI가 분석해드려요
-            </Typography>
-          </View>
-          <TouchableOpacity style={styles.settingsButton} onPress={() => router.push('/settings')}>
-            <Ionicons name="settings-outline" size={24} color={Colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
-
         {/* AI 분석 소개 카드 */}
         <Card style={styles.introCard} variant="elevated">
           <View style={styles.introContent}>
@@ -345,28 +325,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
     paddingBottom: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 24,
-  },
-  headerLeft: {
-    flex: 1,
-  },
-  settingsButton: {
-    padding: 4,
-  },
-  headerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  headerIcon: {
-    width: 28,
-    height: 28,
   },
   introCard: {
     marginBottom: 20,
