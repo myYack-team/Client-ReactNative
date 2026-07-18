@@ -7,9 +7,9 @@ export default function AnalysisLayout() {
       screenOptions={{
         headerShown: true,
         headerStyle: {
-          backgroundColor: Colors.surface,
+          backgroundColor: Colors.brand,
         },
-        headerTintColor: Colors.textPrimary,
+        headerTintColor: Colors.white,
         headerTitleStyle: {
           fontWeight: '600',
         },

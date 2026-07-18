@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { Typography, Button } from '../../components/ui';
 import { ReportTabView } from '../../components/analysis';
 import { Colors } from '../../constants';
@@ -51,8 +52,8 @@ export default function ReportDetailScreen() {
         navigation.setOptions({
           headerTitle: () => (
             <View style={styles.headerTitleContainer}>
-              <Typography variant="bodySmall" style={styles.headerTitleDate}>{dateStr}</Typography>
-              <Typography variant="caption" color={Colors.textSecondary} numberOfLines={1}>{summaryStr}</Typography>
+              <Typography variant="bodySmall" color={Colors.white} style={styles.headerTitleDate}>{dateStr}</Typography>
+              <Typography variant="caption" color="rgba(255, 255, 255, 0.75)" numberOfLines={1}>{summaryStr}</Typography>
             </View>
           ),
         });
@@ -95,6 +96,7 @@ export default function ReportDetailScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
+        <StatusBar style="light" />
         <View style={styles.loadingContainer}>
           <Typography variant="body" color={Colors.textSecondary}>
             불러오는 중...
@@ -108,6 +110,7 @@ export default function ReportDetailScreen() {
   if (error) {
     return (
       <SafeAreaView style={styles.container} edges={['bottom']}>
+        <StatusBar style="light" />
         <View style={styles.errorContainer}>
           <Typography variant="h1" style={styles.errorEmoji}>😢</Typography>
           <Typography variant="h3" style={styles.errorTitle}>
@@ -128,6 +131,7 @@ export default function ReportDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <StatusBar style="light" />
       <ScrollView
         ref={scrollViewRef}
         style={styles.scrollView}

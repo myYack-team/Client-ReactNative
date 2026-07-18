@@ -1048,7 +1048,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.brand,
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
-    paddingBottom: 12,
+    paddingBottom: 4,
   },
   header: {
     flexDirection: 'row',
@@ -1086,7 +1086,8 @@ const styles = StyleSheet.create({
   weekDayItem: {
     width: DAY_ITEM_WIDTH,
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingTop: 6,
+    paddingBottom: 8,
     borderRadius: 10,
   },
   weekDayItemSelected: {
