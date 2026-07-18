@@ -856,7 +856,7 @@ export default function FamilyScreen() {
   };
 
   const handleSettingsPress = () => {
-    router.push('/family/settings');
+    router.push('/settings');
   };
 
   // 상태별 렌더링
@@ -883,11 +883,9 @@ export default function FamilyScreen() {
             가족의 복약 현황을 함께 관리해요
           </Typography>
         </View>
-        {hasLinkedFamilies && (
-          <TouchableOpacity style={styles.settingsButton} onPress={handleSettingsPress}>
-            <Ionicons name="settings-outline" size={24} color={Colors.textSecondary} />
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity style={styles.settingsButton} onPress={handleSettingsPress}>
+          <Ionicons name="settings-outline" size={24} color={Colors.textSecondary} />
+        </TouchableOpacity>
       </View>
       <ScrollView
         style={styles.scrollView}

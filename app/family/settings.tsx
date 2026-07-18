@@ -10,6 +10,7 @@ export default function FamilySettingsScreen() {
   const {
     linkStatus,
     notificationSettings,
+    fetchLinkStatus,
     fetchNotificationSettings,
     updateNotificationSettings,
     unlinkFamily,
@@ -20,6 +21,8 @@ export default function FamilySettingsScreen() {
   const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
+    // 설정 메뉴에서 바로 진입하는 경우를 위해 연동 상태도 함께 로드
+    fetchLinkStatus();
     fetchNotificationSettings();
   }, []);
 

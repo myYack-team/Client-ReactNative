@@ -109,6 +109,11 @@ export default function SettingsScreen() {
             icon="notifications-outline"
             label="알림 설정"
             onPress={() => router.push('/profile/reminders')}
+          />
+          <MenuItem
+            icon="people-outline"
+            label="가족연동 설정"
+            onPress={() => router.push('/family/settings')}
             showDivider={false}
           />
         </MenuSection>
