@@ -2,6 +2,8 @@ import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Modal, FlatList, Dimensions, Image, Alert, TextStyle } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
+import { setStatusBarStyle } from 'expo-status-bar';
+import { Ionicons } from '@expo/vector-icons';
 import { CalendarList, LocaleConfig } from 'react-native-calendars';
 import { Button, Card, Typography, MedicationActionButtons, SnoozeModal, DrugTypeBadge, SupplementTagBadge } from '../../components/ui';
 import { Colors } from '../../constants';
@@ -297,6 +299,14 @@ export default function HomeScreen() {
   };
 
 
+  // 홈 헤더가 어두운 테마색이므로 화면 포커스 동안 상태바를 밝게 전환
+  useFocusEffect(
+    useCallback(() => {
+      setStatusBarStyle('light');
+      return () => setStatusBarStyle('dark');
+    }, [])
+  );
+
   // 날짜 상태 가져오기
   const getDayStatus = (dateString: string): DayStatus => {
     const daySummary = monthlySummary.find((d) => d.date === dateString);
@@ -314,7 +324,7 @@ export default function HomeScreen() {
     return DAY_OF_WEEK_COLORS.WEEKDAY;
   };
 
-  // 주간 달력 아이템 렌더링
+  // 주간 달력 아이템 렌더링 (어두운 테마색 헤더 블록 위에 표시)
   const renderWeekDayItem = ({ item: dateString }: { item: string }) => {
     const dateObj = new Date(dateString);
     const dayIndex = dateObj.getDay();
@@ -324,7 +334,8 @@ export default function HomeScreen() {
     const isSelected = dateString === selectedDate;
     const status = getDayStatus(dateString);
     const statusColor = STATUS_COLORS[status] || 'transparent';
-    const dayOfWeekColor = getDayOfWeekColor(dayIndex);
+    const weekDayLabelColor =
+      dayIndex === 0 ? '#FFB4AB' : dayIndex === 6 ? '#A9C9FF' : 'rgba(255, 255, 255, 0.75)';
 
     return (
       <TouchableOpacity
@@ -336,36 +347,24 @@ export default function HomeScreen() {
       >
         <Typography
           variant="caption"
-          color={isToday ? Colors.primary : dayOfWeekColor}
+          color={isToday ? Colors.white : weekDayLabelColor}
           style={isToday ? { fontWeight: 'bold' } : undefined}
         >
           {dayOfWeek}
         </Typography>
+        <Typography
+          variant="body"
+          color={Colors.white}
+          style={[styles.weekDayNum, (isToday || isSelected) && { fontWeight: 'bold' }]}
+        >
+          {dayNum}
+        </Typography>
         <View
           style={[
-            styles.weekDayNumber,
-            // 항상 borderWidth를 유지하여 Android compositing 버그 방지
-            {
-              backgroundColor: isSelected ? Colors.secondary : Colors.background,
-              borderWidth: 2,
-              borderColor: isSelected
-                ? Colors.secondary
-                : status === 'COMPLETE'
-                  ? STATUS_COLORS.COMPLETE
-                  : status !== 'NONE'
-                    ? statusColor
-                    : 'transparent',
-            },
+            styles.weekDayStatusDot,
+            { backgroundColor: status !== 'NONE' ? statusColor : 'transparent' },
           ]}
-        >
-          <Typography
-            variant="body"
-            color={isSelected ? Colors.white : isToday ? Colors.primary : dayOfWeekColor}
-            style={(isToday || isSelected) ? { fontWeight: 'bold' } : undefined}
-          >
-            {dayNum}
-          </Typography>
-        </View>
+        />
       </TouchableOpacity>
     );
   };
@@ -591,6 +590,7 @@ export default function HomeScreen() {
   };
 
   const dateDisplay = getDateDisplay();
+  const monthDisplay = `${selectedDate.slice(0, 4)}년 ${parseInt(selectedDate.slice(5, 7), 10)}월`;
 
   // 선택된 날짜가 오늘인지 확인
   const isSelectedDateToday = selectedDate === today;
@@ -619,44 +619,24 @@ export default function HomeScreen() {
   const selectedDaySummary = monthlySummary.find((d) => d.date === selectedDate);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, contentStyle, { paddingBottom: 40 + insets.bottom }]}
-        refreshControl={
-          <RefreshControl
-            refreshing={isLoading}
-            onRefresh={() => {
-              fetchTodaySchedule();
-              loadMonthlySummary(currentMonth.year, currentMonth.month);
-            }}
-            colors={[Colors.primary]}
-          />
-        }
-      >
-        {/* 헤더 - 날짜, 복용 현황, 달력 아이콘 */}
+    <SafeAreaView style={styles.container} edges={[]}>
+      {/* 상단 테마색 헤더 블록 (월 선택 + 주간 달력) */}
+      <View style={[styles.headerBlock, { paddingTop: insets.top + 8 }]}>
         <View style={styles.header}>
-          <Typography variant="h3">{dateDisplay}</Typography>
-          <View style={styles.headerRight}>
-            {summary && (
-              <View style={styles.completionBadge}>
-                <Typography variant="bodySmall" color={Colors.primary} style={{ fontWeight: '600' }}>
-                  {summary.takenCount}/{summary.totalMedications} 복용완료
-                </Typography>
-              </View>
-            )}
-            <TouchableOpacity
-              style={styles.calendarIconButton}
-              onPress={() => setShowCalendarModal(true)}
-            >
-              <Image
-                source={require('../../assets/icons_iamge_processed/Calender.png')}
-                style={styles.calendarIcon}
-                accessibilityLabel="Calendar icon"
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={styles.monthSelector}
+            onPress={() => setShowCalendarModal(true)}
+          >
+            <Typography variant="h3" color={Colors.white}>{monthDisplay}</Typography>
+            <Ionicons name="chevron-down" size={18} color="rgba(255, 255, 255, 0.8)" />
+          </TouchableOpacity>
+          {summary && (
+            <View style={styles.completionBadge}>
+              <Typography variant="bodySmall" color={Colors.white} style={{ fontWeight: '600' }}>
+                {summary.takenCount}/{summary.totalMedications} 복용완료
+              </Typography>
+            </View>
+          )}
         </View>
 
         {/* 주간 달력 스트립 */}
@@ -676,7 +656,29 @@ export default function HomeScreen() {
             })}
             onScrollToIndexFailed={() => {}}
           />
-          <View style={styles.weekStripDivider} />
+        </View>
+      </View>
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollContent, contentStyle, { paddingBottom: 40 + insets.bottom }]}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={() => {
+              fetchTodaySchedule();
+              loadMonthlySummary(currentMonth.year, currentMonth.month);
+            }}
+            colors={[Colors.primary]}
+          />
+        }
+      >
+        {/* 선택된 날짜 */}
+        <View style={styles.selectedDateRow}>
+          <Typography variant="h4">
+            {dateDisplay}
+            {isSelectedDateToday ? ' · 오늘' : ''}
+          </Typography>
         </View>
 
         {/* 달력 모달 */}
@@ -1039,60 +1041,56 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 16,
     paddingBottom: 40,
+  },
+  headerBlock: {
+    backgroundColor: Colors.brand,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    paddingBottom: 12,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
   },
-  headerRight: {
+  monthSelector: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 4,
   },
   completionBadge: {
-    backgroundColor: Colors.primaryLightest,
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 16,
-  },
-  calendarIconButton: {
-    padding: 4,
-  },
-  calendarIcon: {
-    width: 24,
-    height: 24,
+    borderRadius: 8,
   },
   weekStrip: {
-    marginBottom: 16,
-    paddingVertical: 4,
-  },
-  weekStripDivider: {
-    height: 1,
-    backgroundColor: Colors.divider,
-    marginTop: 8,
+    paddingHorizontal: 20,
   },
   weekDayItem: {
     width: DAY_ITEM_WIDTH,
     alignItems: 'center',
-    paddingVertical: 4,
+    paddingVertical: 8,
+    borderRadius: 10,
   },
   weekDayItemSelected: {
-    // 선택된 날짜 스타일 (필요시)
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
   },
-  weekDayNumber: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 4,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: 'transparent',
+  weekDayNum: {
+    marginTop: 2,
+  },
+  weekDayStatusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginTop: 5,
+  },
+  selectedDateRow: {
+    marginBottom: 12,
   },
   modalOverlay: {
     flex: 1,
