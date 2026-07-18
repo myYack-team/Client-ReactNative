@@ -7,7 +7,7 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
-import { Colors, Shadows } from '../../constants';
+import { Colors, Radius } from '../../constants';
 import { useSettingsStore } from '../../stores';
 import { FontSizes } from '../../constants/fonts';
 
@@ -40,12 +40,6 @@ export function Button({
       ...styles.button,
     };
 
-    // outline/danger 변형은 그림자 없음 (Android elevation이 흰 박스로 보이는 현상 방지)
-    const needsShadow = variant !== 'outline' && variant !== 'danger';
-    if (needsShadow) {
-      Object.assign(base, Shadows.medium);
-    }
-
     switch (size) {
       case 'small':
         base.paddingVertical = 10;
@@ -72,13 +66,13 @@ export function Button({
         base.backgroundColor = Colors.secondary;
         break;
       case 'outline':
-        base.backgroundColor = 'transparent';
-        base.borderWidth = 2;
+        base.backgroundColor = Colors.surface;
+        base.borderWidth = 1.5;
         base.borderColor = Colors.primary;
         break;
       case 'danger':
-        base.backgroundColor = 'transparent';
-        base.borderWidth = 2;
+        base.backgroundColor = Colors.surface;
+        base.borderWidth = 1.5;
         base.borderColor = Colors.error;
         break;
       case 'kakao':
@@ -149,7 +143,7 @@ export function Button({
 
 const styles = StyleSheet.create({
   button: {
-    borderRadius: 12,
+    borderRadius: Radius.md,
     alignItems: 'center',
     justifyContent: 'center',
   },

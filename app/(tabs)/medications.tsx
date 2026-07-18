@@ -3,7 +3,7 @@ import { View, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Image, 
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
-import { Card, Typography, DeleteConfirmModal, Toast, SupplementTagBadge } from '../../components/ui';
+import { Card, Typography, DeleteConfirmModal, Toast, SupplementTagBadge, TabHeader } from '../../components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '../../constants';
 import { useResponsive } from '../../hooks';
@@ -309,7 +309,27 @@ export default function MedicationsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={[]}>
+      <TabHeader
+        title="약 목록"
+        subtitle={`등록된 약 ${allItems.length}개`}
+        leftContent={
+          isSelectMode ? (
+            <TouchableOpacity onPress={exitSelectMode}>
+              <Typography variant="body" color={Colors.white}>취소</Typography>
+            </TouchableOpacity>
+          ) : undefined
+        }
+        rightContent={
+          isSelectMode ? (
+            <TouchableOpacity onPress={() => setShowDeleteModal(true)}>
+              <Typography variant="body" color="#FFB4AB" style={styles.deleteButton}>
+                삭제
+              </Typography>
+            </TouchableOpacity>
+          ) : undefined
+        }
+      />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, contentStyle, { paddingBottom: 100 + insets.bottom }]}
@@ -321,43 +341,6 @@ export default function MedicationsScreen() {
           />
         }
       >
-        {/* 헤더 */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            {isSelectMode ? (
-              <TouchableOpacity onPress={exitSelectMode}>
-                <Typography variant="body" color={Colors.primary}>취소</Typography>
-              </TouchableOpacity>
-            ) : (
-              <>
-                <View style={styles.headerTitleRow}>
-                  <Image
-                    source={require('../../assets/icons_iamge_processed/02_Pill.png')}
-                    style={styles.headerIcon}
-                    accessibilityLabel="Pill icon"
-                    resizeMode="contain"
-                  />
-                  <Typography variant="h2">약 목록</Typography>
-                </View>
-                <Typography variant="body" color={Colors.textSecondary}>
-                  등록된 약 {allItems.length}개
-                </Typography>
-              </>
-            )}
-          </View>
-          {isSelectMode ? (
-            <TouchableOpacity onPress={() => setShowDeleteModal(true)}>
-              <Typography variant="body" color={Colors.error} style={styles.deleteButton}>
-                삭제
-              </Typography>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity style={styles.settingsButton} onPress={() => router.push('/settings')}>
-              <Ionicons name="settings-outline" size={24} color={Colors.textSecondary} />
-            </TouchableOpacity>
-          )}
-        </View>
-
         {/* 전체 선택 체크박스 (선택 모드일 때만) */}
         {isSelectMode && allItems.length > 0 && (
           <TouchableOpacity style={styles.selectAllContainer} onPress={toggleSelectAll}>
@@ -438,33 +421,12 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 16,
     paddingBottom: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  headerLeft: {
-    flex: 1,
-  },
-  headerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerIcon: {
-    width: 28,
-    height: 28,
   },
   deleteButton: {
     fontWeight: '600',
     fontSize: 16,
-  },
-  settingsButton: {
-    padding: 4,
   },
   selectAllContainer: {
     flexDirection: 'row',

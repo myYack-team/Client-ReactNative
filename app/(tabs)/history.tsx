@@ -15,7 +15,7 @@ import {
 import { Image } from 'expo-image';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useFocusEffect } from 'expo-router';
-import { Card, Typography, DeleteConfirmModal, Toast } from '../../components/ui';
+import { Card, Typography, DeleteConfirmModal, Toast, TabHeader } from '../../components/ui';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, API_BASE_URL } from '../../constants';
 import { useResponsive } from '../../hooks';
@@ -382,7 +382,27 @@ export default function PrescriptionScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={[]}>
+      <TabHeader
+        title="처방 기록"
+        subtitle="스캔한 처방전을 모아볼 수 있어요"
+        leftContent={
+          isSelectMode ? (
+            <TouchableOpacity onPress={exitSelectMode}>
+              <Typography variant="body" color={Colors.white}>취소</Typography>
+            </TouchableOpacity>
+          ) : undefined
+        }
+        rightContent={
+          isSelectMode ? (
+            <TouchableOpacity onPress={() => setShowDeleteModal(true)}>
+              <Typography variant="body" color="#FFB4AB" style={styles.deleteButton}>
+                삭제
+              </Typography>
+            </TouchableOpacity>
+          ) : undefined
+        }
+      />
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, contentStyle, { paddingBottom: 40 + insets.bottom }]}
@@ -394,43 +414,6 @@ export default function PrescriptionScreen() {
           />
         }
       >
-        {/* 헤더 */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            {isSelectMode ? (
-              <TouchableOpacity onPress={exitSelectMode}>
-                <Typography variant="body" color={Colors.primary}>취소</Typography>
-              </TouchableOpacity>
-            ) : (
-              <>
-                <View style={styles.headerTitleRow}>
-                  <RNImage
-                    source={require('../../assets/icons_iamge_processed/03_Clipboard.png')}
-                    style={styles.headerIcon}
-                    accessibilityLabel="Clipboard icon"
-                    resizeMode="contain"
-                  />
-                  <Typography variant="h2">처방 기록</Typography>
-                </View>
-                <Typography variant="body" color={Colors.textSecondary}>
-                  스캔한 처방전을 모아볼 수 있어요
-                </Typography>
-              </>
-            )}
-          </View>
-          {isSelectMode ? (
-            <TouchableOpacity onPress={() => setShowDeleteModal(true)}>
-              <Typography variant="body" color={Colors.error} style={styles.deleteButton}>
-                삭제
-              </Typography>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity style={styles.settingsButton} onPress={() => router.push('/settings')}>
-              <Ionicons name="settings-outline" size={24} color={Colors.textSecondary} />
-            </TouchableOpacity>
-          )}
-        </View>
-
         {/* 전체 선택 체크박스 (선택 모드일 때만) */}
         {isSelectMode && prescriptions.length > 0 && (
           <TouchableOpacity style={styles.selectAllContainer} onPress={toggleSelectAll}>
@@ -729,30 +712,9 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 24,
-  },
-  headerLeft: {
-    flex: 1,
-  },
-  headerTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerIcon: {
-    width: 28,
-    height: 28,
-  },
   deleteButton: {
     fontWeight: '600',
     fontSize: 16,
-  },
-  settingsButton: {
-    padding: 4,
   },
   selectAllContainer: {
     flexDirection: 'row',

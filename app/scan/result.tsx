@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { Picker } from '@react-native-picker/picker';
 import DraggableFlatList, {
   ScaleDecorator,
@@ -482,6 +483,7 @@ export default function ResultScreen() {
   if (!currentScanResult || medications.length === 0) {
     return (
       <SafeAreaView style={styles.container}>
+        <StatusBar style="light" />
         <View style={styles.emptyContent}>
           <Typography variant="body">인식된 약이 없어요</Typography>
           <Button
@@ -498,6 +500,7 @@ export default function ResultScreen() {
   return (
     <GestureHandlerRootView style={styles.flex1}>
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <StatusBar style="light" />
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {currentScanResult.confidence === 'medium' && (
           <Card style={styles.warningCard}>
@@ -884,7 +887,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     paddingVertical: 4,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
   },
   timeSlotRowActive: {
     backgroundColor: Colors.backgroundSecondary,
@@ -950,7 +953,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
   },
   submitButton: {
     marginTop: 8,
@@ -973,7 +976,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
   },
   checkboxChecked: {
     backgroundColor: Colors.primary,
@@ -1011,7 +1014,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.surface,
     borderRadius: 16,
     padding: 24,
     width: '100%',

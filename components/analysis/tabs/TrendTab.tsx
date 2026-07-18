@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, ScrollView, LayoutChangeEvent, Dimensions } from 'react-native';
 import { Typography } from '../../ui';
-import { Colors } from '../../../constants';
+import { Colors, Radius } from '../../../constants';
 import { PatternAnalysis, SYMPTOM_SEVERITY_COLORS, SymptomSeverity } from '../../../types';
 import { ConditionLineChart } from '../ConditionLineChart';
 import { PatternCard } from '../PatternCard';
@@ -167,9 +167,15 @@ export function TrendTab({ patternAnalysis, scrollViewRef }: TrendTabProps) {
           </Typography>
           <View style={styles.aiAnalysisList}>
             {clustersWithSuggestions.map((cluster, index) => (
-              <View key={`ai-cluster-${index}`} style={styles.aiAnalysisCard}>
+              <View
+                key={`ai-cluster-${index}`}
+                style={[
+                  styles.aiAnalysisCard,
+                  { borderLeftColor: (SYMPTOM_SEVERITY_COLORS[cluster.severity as SymptomSeverity] ?? SYMPTOM_SEVERITY_COLORS.LOW).text },
+                ]}
+              >
                 <View style={styles.aiAnalysisHeader}>
-                  <Typography variant="bodySmall" color={Colors.secondaryLight} style={styles.aiClusterName}>
+                  <Typography variant="bodySmall" color={Colors.textPrimary} style={styles.aiClusterName}>
                     {cluster.clusterName}
                   </Typography>
                   <View style={[
@@ -185,7 +191,7 @@ export function TrendTab({ patternAnalysis, scrollViewRef }: TrendTabProps) {
                     </Typography>
                   </View>
                 </View>
-                <Typography variant="bodySmall" color={Colors.text} style={styles.aiSuggestionText}>
+                <Typography variant="bodySmall" color={Colors.textSecondary} style={styles.aiSuggestionText}>
                   {cluster.suggestion}
                 </Typography>
               </View>
@@ -292,10 +298,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   previewBanner: {
-    backgroundColor: Colors.brandLightest,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: Radius.md,
     marginBottom: 16,
     alignItems: 'center',
   },
@@ -306,8 +314,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   adherenceCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 12,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
     padding: 16,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -339,6 +347,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   eventList: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: 'hidden',
   },
   eventItem: {
     flexDirection: 'row',
@@ -381,11 +394,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   aiAnalysisCard: {
-    backgroundColor: '#E3F2FD',
-    borderRadius: 12,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
     padding: 14,
     borderWidth: 1,
-    borderColor: Colors.secondaryLight,
+    borderColor: Colors.border,
+    borderLeftWidth: 3,
   },
   aiAnalysisHeader: {
     flexDirection: 'row',
@@ -398,7 +412,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   severityBadge: {
-    borderRadius: 8,
+    borderRadius: Radius.xs,
     paddingHorizontal: 8,
     paddingVertical: 2,
     marginLeft: 8,

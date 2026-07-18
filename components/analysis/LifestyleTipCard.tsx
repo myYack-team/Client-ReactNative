@@ -8,7 +8,7 @@ import {
   UIManager,
 } from 'react-native';
 import { Card, Typography } from '../ui';
-import { Colors, Shadows } from '../../constants';
+import { Colors, Radius } from '../../constants';
 import { LifestyleTip } from '../../types';
 
 // Android에서 LayoutAnimation 활성화
@@ -33,11 +33,14 @@ export function LifestyleTipCard({ tip, onPress }: LifestyleTipCardProps) {
   return (
     <TouchableOpacity activeOpacity={0.9} onPress={handleToggle}>
       <Card style={styles.card} variant="elevated">
-        {/* 아이콘 영역 */}
-        <View style={styles.iconContainer}>
-          <View style={styles.iconBackground}>
-            <Typography variant="h2">{tip.categoryIcon}</Typography>
+        {/* 헤더 */}
+        <View style={styles.header}>
+          <View style={styles.iconTile}>
+            <Typography variant="h4">{tip.categoryIcon}</Typography>
           </View>
+          <Typography variant="h4" style={styles.title}>
+            {tip.title}
+          </Typography>
           {/* 카테고리 뱃지 */}
           <View style={styles.badge}>
             <Typography variant="caption" color={Colors.info} style={styles.badgeText}>
@@ -45,11 +48,6 @@ export function LifestyleTipCard({ tip, onPress }: LifestyleTipCardProps) {
             </Typography>
           </View>
         </View>
-
-        {/* 팁 제목 */}
-        <Typography variant="h4" style={styles.title}>
-          {tip.title}
-        </Typography>
 
         {/* 팁 내용 */}
         <View style={styles.tipContainer}>
@@ -65,7 +63,7 @@ export function LifestyleTipCard({ tip, onPress }: LifestyleTipCardProps) {
         {/* 출처 (필수) */}
         <View style={styles.sourceContainer}>
           <Typography variant="caption" color={Colors.textTertiary}>
-            📚 출처: {tip.source}
+            출처 · {tip.source}
           </Typography>
         </View>
 
@@ -121,46 +119,37 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     overflow: 'hidden',
   },
-  iconContainer: {
-    height: 80,
-    backgroundColor: '#E3F2FD', // 연한 파란 배경
-    marginHorizontal: -16,
-    marginTop: -16,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     marginBottom: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
   },
-  iconBackground: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.white,
+  iconTile: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.backgroundSecondary,
     justifyContent: 'center',
     alignItems: 'center',
-    ...Shadows.small,
   },
   badge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
     backgroundColor: '#E3F2FD',
-    borderWidth: 1,
-    borderColor: Colors.info,
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 3,
+    borderRadius: Radius.xs,
   },
   badgeText: {
     fontWeight: '600',
   },
   title: {
-    marginBottom: 8,
+    flex: 1,
+    lineHeight: 22,
   },
   tipContainer: {
     backgroundColor: Colors.backgroundSecondary,
     padding: 12,
-    borderRadius: 8,
+    borderRadius: Radius.md,
     borderLeftWidth: 3,
     borderLeftColor: Colors.info,
     marginBottom: 8,

@@ -7,9 +7,9 @@ export default function ScanLayout() {
       screenOptions={{
         headerShown: true,
         headerStyle: {
-          backgroundColor: Colors.background,
+          backgroundColor: Colors.brand,
         },
-        headerTintColor: Colors.textPrimary,
+        headerTintColor: Colors.white,
         headerTitleStyle: {
           fontWeight: '600',
         },

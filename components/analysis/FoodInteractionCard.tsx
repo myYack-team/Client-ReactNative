@@ -8,7 +8,7 @@ import {
   UIManager,
 } from 'react-native';
 import { Card, Typography } from '../ui';
-import { Colors, Shadows } from '../../constants';
+import { Colors, Radius } from '../../constants';
 import { FoodInteraction, INTERACTION_LEVEL_LABELS, INTERACTION_LEVEL_COLORS } from '../../types';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -33,28 +33,26 @@ export function FoodInteractionCard({ interaction, onPress }: FoodInteractionCar
   return (
     <TouchableOpacity activeOpacity={0.9} onPress={handleToggle}>
       <Card style={styles.card} variant="elevated">
-        {/* 음식 아이콘 영역 */}
-        <View style={[styles.iconContainer, { backgroundColor: levelStyle.bg }]}>
-          <View style={styles.iconBackground}>
-            <Typography variant="h2">{interaction.foodIcon}</Typography>
+        {/* 헤더 */}
+        <View style={styles.header}>
+          <View style={[styles.iconTile, { backgroundColor: levelStyle.bg }]}>
+            <Typography variant="h4">{interaction.foodIcon}</Typography>
+          </View>
+          <View style={styles.headerText}>
+            <Typography variant="h4" style={styles.title}>
+              {interaction.foodName}
+            </Typography>
+            <Typography variant="caption" color={Colors.textSecondary}>
+              복용 중인 약물 {interaction.affectedMedicationCount}개와 상호작용
+            </Typography>
           </View>
           {/* 위험도 뱃지 */}
-          <View style={[styles.levelBadge, { backgroundColor: levelStyle.text }]}>
-            <Typography variant="caption" color={Colors.white} style={styles.levelText}>
+          <View style={[styles.levelBadge, { backgroundColor: levelStyle.bg }]}>
+            <Typography variant="caption" style={[styles.levelText, { color: levelStyle.text }]}>
               {INTERACTION_LEVEL_LABELS[interaction.interactionLevel]}
             </Typography>
           </View>
         </View>
-
-        {/* 음식명 */}
-        <Typography variant="h4" style={styles.title}>
-          {interaction.foodIcon} {interaction.foodName}
-        </Typography>
-
-        {/* 영향받는 약물 수 */}
-        <Typography variant="bodySmall" color={Colors.textSecondary}>
-          복용 중인 약물 {interaction.affectedMedicationCount}개와 상호작용
-        </Typography>
 
         {/* 요약 이유 */}
         <View style={[styles.reasonContainer, { borderLeftColor: levelStyle.text }]}>
@@ -95,43 +93,38 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     overflow: 'hidden',
   },
-  iconContainer: {
-    height: 80,
-    marginHorizontal: -16,
-    marginTop: -16,
-    marginBottom: 12,
-    justifyContent: 'center',
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-    position: 'relative',
+    gap: 12,
   },
-  iconBackground: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.white,
+  iconTile: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.md,
     justifyContent: 'center',
     alignItems: 'center',
-    ...Shadows.small,
+  },
+  headerText: {
+    flex: 1,
+    gap: 2,
   },
   levelBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: Radius.xs,
   },
   levelText: {
     fontWeight: '600',
   },
   title: {
-    marginBottom: 4,
+    lineHeight: 22,
   },
   reasonContainer: {
     marginTop: 12,
     padding: 12,
     backgroundColor: Colors.backgroundSecondary,
-    borderRadius: 8,
+    borderRadius: Radius.md,
     borderLeftWidth: 3,
   },
   detailList: {

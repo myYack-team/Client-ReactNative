@@ -8,7 +8,7 @@ import {
   UIManager,
 } from 'react-native';
 import { Card, Typography } from '../ui';
-import { Colors, Shadows } from '../../constants';
+import { Colors, Radius } from '../../constants';
 import { FoodSuggestion } from '../../types';
 
 // Android에서 LayoutAnimation 활성화
@@ -33,11 +33,14 @@ export function FoodSuggestionCard({ suggestion, onPress }: FoodSuggestionCardPr
   return (
     <TouchableOpacity activeOpacity={0.9} onPress={handleToggle}>
       <Card style={styles.card} variant="elevated">
-        {/* 아이콘 영역 */}
-        <View style={styles.iconContainer}>
-          <View style={styles.iconBackground}>
-            <Typography variant="h2">{suggestion.foodIcon}</Typography>
+        {/* 헤더 */}
+        <View style={styles.header}>
+          <View style={styles.iconTile}>
+            <Typography variant="h4">{suggestion.foodIcon}</Typography>
           </View>
+          <Typography variant="h4" style={styles.title}>
+            {suggestion.foodName}
+          </Typography>
           {/* 좋은 궁합 뱃지 */}
           <View style={styles.badge}>
             <Typography variant="caption" color={Colors.success} style={styles.badgeText}>
@@ -45,11 +48,6 @@ export function FoodSuggestionCard({ suggestion, onPress }: FoodSuggestionCardPr
             </Typography>
           </View>
         </View>
-
-        {/* 음식명 */}
-        <Typography variant="h4" style={styles.title}>
-          {suggestion.foodName}
-        </Typography>
 
         {/* 추천 이유 */}
         <View style={styles.reasonContainer}>
@@ -65,8 +63,11 @@ export function FoodSuggestionCard({ suggestion, onPress }: FoodSuggestionCardPr
         {/* 팁 (있을 경우) */}
         {suggestion.tip && (
           <View style={styles.tipContainer}>
-            <Typography variant="caption" color={Colors.success}>
-              💡 {suggestion.tip}
+            <Typography variant="caption" color={Colors.textTertiary} style={styles.tipLabel}>
+              TIP
+            </Typography>
+            <Typography variant="caption" color={Colors.textSecondary} style={styles.tipText}>
+              {suggestion.tip}
             </Typography>
           </View>
         )}
@@ -106,46 +107,37 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     overflow: 'hidden',
   },
-  iconContainer: {
-    height: 80,
-    backgroundColor: '#E8F5E9', // 연한 초록 배경
-    marginHorizontal: -16,
-    marginTop: -16,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     marginBottom: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
   },
-  iconBackground: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.white,
+  iconTile: {
+    width: 40,
+    height: 40,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primaryLightest,
     justifyContent: 'center',
     alignItems: 'center',
-    ...Shadows.small,
   },
   badge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: '#E8F5E9',
-    borderWidth: 1,
-    borderColor: Colors.success,
+    backgroundColor: Colors.primaryLightest,
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: 3,
+    borderRadius: Radius.xs,
   },
   badgeText: {
     fontWeight: '600',
   },
   title: {
-    marginBottom: 8,
+    flex: 1,
+    lineHeight: 22,
   },
   reasonContainer: {
     backgroundColor: Colors.backgroundSecondary,
     padding: 12,
-    borderRadius: 8,
+    borderRadius: Radius.md,
     borderLeftWidth: 3,
     borderLeftColor: Colors.success,
     marginBottom: 12,
@@ -154,10 +146,19 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   tipContainer: {
-    backgroundColor: '#E8F5E9',
     padding: 10,
-    borderRadius: 8,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.divider,
     marginBottom: 8,
+  },
+  tipLabel: {
+    fontWeight: '700',
+    marginBottom: 2,
+    letterSpacing: 0.5,
+  },
+  tipText: {
+    lineHeight: 18,
   },
   medicationList: {
     marginTop: 16,

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Linking, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import Constants from 'expo-constants';
 import { Card, Typography, TermsModal } from '../../components/ui';
 import type { TermsType } from '../../components/ui';
 import { Colors } from '../../constants';
@@ -40,18 +41,16 @@ export default function AboutScreen() {
         {/* 앱 로고 및 버전 정보 */}
         <Card style={styles.logoCard} variant="elevated">
           <View style={styles.logoContainer}>
-            <View style={styles.logoPlaceholder}>
-              <Image
-                source={require('../../assets/icons_iamge_processed/02_Pill.png')}
-                style={styles.logoIcon}
-                accessibilityLabel="App logo"
-                resizeMode="contain"
-              />
-            </View>
+            <Image
+              source={require('../../assets/logo.png')}
+              style={styles.logoImage}
+              accessibilityLabel="마이약 앱 아이콘"
+              resizeMode="cover"
+            />
             <Typography variant="h2" style={styles.appName}>마이약</Typography>
             <Typography variant="body" color={Colors.textSecondary}>MyYak</Typography>
             <Typography variant="caption" color={Colors.textSecondary} style={styles.version}>
-              버전 1.0.0
+              버전 {Constants.expoConfig?.version ?? '-'}
             </Typography>
           </View>
         </Card>
@@ -103,18 +102,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 24,
   },
-  logoPlaceholder: {
+  logoImage: {
     width: 80,
     height: 80,
-    borderRadius: 20,
-    backgroundColor: Colors.primaryLightest,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 18,
     marginBottom: 16,
-  },
-  logoIcon: {
-    width: 48,
-    height: 48,
   },
   appName: {
     marginBottom: 4,

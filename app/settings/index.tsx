@@ -2,45 +2,50 @@ import React from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Image } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { Card, Typography, Button } from '../../components/ui';
+import { Ionicons } from '@expo/vector-icons';
+import { Typography } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useResponsive } from '../../hooks';
 import { useAuthStore } from '../../stores';
 
 interface MenuItemProps {
-  icon: any;
+  icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
-  useIonicons?: boolean;
+  showDivider?: boolean;
+  labelColor?: string;
 }
 
-function MenuItem({ icon, label, onPress, useIonicons = false }: MenuItemProps) {
+function MenuItem({ icon, label, onPress, showDivider = true, labelColor }: MenuItemProps) {
   return (
-    <TouchableOpacity style={styles.menuItem} onPress={onPress}>
-      <View style={styles.menuItemLeft}>
-        {useIonicons ? (
-          <Typography variant="body" style={styles.menuIcon}>{icon}</Typography>
-        ) : (
-          <Image source={icon} style={styles.menuIconImage} accessibilityLabel={`${label} icon`} resizeMode="contain" />
-        )}
-        <Typography variant="body">{label}</Typography>
-      </View>
-      <Typography variant="body" color={Colors.textSecondary}>{'>'}</Typography>
-    </TouchableOpacity>
+    <>
+      <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.6}>
+        <View style={styles.menuItemLeft}>
+          <Ionicons name={icon} size={20} color={Colors.textSecondary} />
+          <Typography variant="body" color={labelColor ?? Colors.textPrimary}>{label}</Typography>
+        </View>
+        <Ionicons name="chevron-forward" size={18} color={Colors.textLight} />
+      </TouchableOpacity>
+      {showDivider && <View style={styles.rowDivider} />}
+    </>
   );
 }
 
 interface MenuSectionProps {
-  title: string;
+  title?: string;
   children: React.ReactNode;
 }
 
 function MenuSection({ title, children }: MenuSectionProps) {
   return (
-    <Card style={styles.menuSection} variant="elevated">
-      <Typography variant="h3" style={styles.sectionTitle}>{title}</Typography>
+    <View style={styles.menuSection}>
+      {title && (
+        <Typography variant="caption" color={Colors.textTertiary} style={styles.sectionTitle}>
+          {title}
+        </Typography>
+      )}
       {children}
-    </Card>
+    </View>
   );
 }
 
@@ -73,102 +78,101 @@ export default function SettingsScreen() {
         style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, contentStyle, { paddingBottom: 40 + insets.bottom }]}
       >
-        {/* 프로필 카드 */}
-        <Card style={styles.profileCard} variant="elevated">
-          <View style={styles.profileContent}>
-            {user?.profileImage ? (
-              <Image source={{ uri: user.profileImage }} style={styles.profileImage} />
-            ) : (
-              <View style={[styles.profileImage, styles.profileImagePlaceholder]}>
-                <Image
-                  source={require('../../assets/icons_iamge_processed/05_User.png')}
-                  style={styles.profilePlaceholderIcon}
-                  accessibilityLabel="Profile placeholder"
-                  resizeMode="contain"
-                />
-              </View>
-            )}
-            <View style={styles.profileInfo}>
-              <Typography variant="h2">{user?.name || '사용자'}</Typography>
-              <View style={styles.kakaoTag}>
-                <Typography variant="caption" color={Colors.textSecondary}>
-                  카카오 로그인
-                </Typography>
-              </View>
+        {/* 프로필 섹션 */}
+        <View style={styles.profileSection}>
+          {user?.profileImage ? (
+            <Image source={{ uri: user.profileImage }} style={styles.profileImage} />
+          ) : (
+            <View style={[styles.profileImage, styles.profileImagePlaceholder]}>
+              <Ionicons name="person" size={28} color={Colors.textLight} />
+            </View>
+          )}
+          <View style={styles.profileInfo}>
+            <Typography variant="h3">{user?.name || '사용자'}</Typography>
+            <View style={styles.loginBadge}>
+              <View style={styles.kakaoDot} />
+              <Typography variant="caption" color={Colors.textSecondary}>
+                카카오 계정 연결됨
+              </Typography>
             </View>
           </View>
-        </Card>
+        </View>
 
         {/* 복약 관리 */}
         <MenuSection title="복약 관리">
           <MenuItem
-            icon={require('../../assets/icons_iamge_processed/03_Clipboard.png')}
+            icon="list-outline"
             label="내 복약 목록"
             onPress={() => router.push('/(tabs)/medications')}
           />
           <MenuItem
-            icon="🔔"
+            icon="notifications-outline"
             label="알림 설정"
             onPress={() => router.push('/profile/reminders')}
-            useIonicons={true}
+          />
+          <MenuItem
+            icon="people-outline"
+            label="가족연동 설정"
+            onPress={() => router.push('/family/settings')}
+            showDivider={false}
           />
         </MenuSection>
 
         {/* 계정 */}
         <MenuSection title="계정">
           <MenuItem
-            icon={require('../../assets/icons_iamge_processed/05_User.png')}
+            icon="person-outline"
             label="프로필 수정"
             onPress={() => router.push('/profile/edit')}
           />
           <MenuItem
-            icon="🔒"
+            icon="lock-closed-outline"
             label="개인정보 보호"
             onPress={() => router.push('/profile/privacy')}
-            useIonicons={true}
+            showDivider={false}
           />
         </MenuSection>
 
         {/* 앱 설정 */}
         <MenuSection title="앱 설정">
           <MenuItem
-            icon="🔤"
+            icon="text-outline"
             label="글자 크기"
             onPress={() => router.push('/profile/font-size')}
-            useIonicons={true}
           />
           <MenuItem
-            icon="🤖"
+            icon="sparkles-outline"
             label="AI 데이터 분석 동의"
             onPress={() => router.push('/profile/ai-consent')}
-            useIonicons={true}
           />
           <MenuItem
-            icon="ℹ️"
+            icon="information-circle-outline"
             label="앱 정보"
             onPress={() => router.push('/profile/about')}
-            useIonicons={true}
+            showDivider={false}
           />
         </MenuSection>
 
         {/* 고객 지원 */}
         <MenuSection title="고객 지원">
           <MenuItem
-            icon="💬"
+            icon="chatbubble-ellipses-outline"
             label="문의하기"
             onPress={() => router.push('/profile/qna')}
-            useIonicons={true}
+            showDivider={false}
           />
         </MenuSection>
 
-        {/* 로그아웃 버튼 */}
-        <Button
-          title="로그아웃"
-          variant="outline"
-          size="large"
-          onPress={handleLogout}
-          style={styles.logoutButton}
-        />
+        {/* 로그아웃 */}
+        <MenuSection>
+          <MenuItem
+            icon="log-out-outline"
+            label="로그아웃"
+            labelColor={Colors.textSecondary}
+            onPress={handleLogout}
+            showDivider={false}
+          />
+        </MenuSection>
       </ScrollView>
     </SafeAreaView>
   );
@@ -183,75 +187,71 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
     paddingBottom: 40,
   },
-  profileCard: {
-    marginBottom: 16,
-  },
-  profileContent: {
+  profileSection: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
+    backgroundColor: Colors.surface,
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.divider,
   },
   profileImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
   },
   profileImagePlaceholder: {
     backgroundColor: Colors.backgroundSecondary,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: Colors.border,
-  },
-  profilePlaceholderIcon: {
-    width: 48,
-    height: 48,
   },
   profileInfo: {
     flex: 1,
+    gap: 4,
   },
-  kakaoTag: {
+  loginBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
-    backgroundColor: '#FEE500',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    gap: 6,
+  },
+  kakaoDot: {
+    width: 8,
+    height: 8,
     borderRadius: 4,
-    alignSelf: 'flex-start',
+    backgroundColor: Colors.kakao,
   },
   menuSection: {
-    marginBottom: 16,
+    backgroundColor: Colors.surface,
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: Colors.divider,
   },
   sectionTitle: {
-    marginBottom: 12,
-    color: Colors.textSecondary,
-    fontSize: 14,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 4,
+    fontWeight: '600',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
   },
   menuItemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  menuIcon: {
-    fontSize: 20,
-  },
-  menuIconImage: {
-    width: 20,
-    height: 20,
-  },
-  logoutButton: {
-    marginTop: 8,
+  rowDivider: {
+    height: 1,
+    backgroundColor: Colors.divider,
+    marginLeft: 52,
   },
 });

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, StyleSheet, Dimensions, TouchableOpacity, Text } from 'react-native';
 import { LineChart } from 'react-native-gifted-charts';
 import { Typography } from '../ui';
-import { Colors } from '../../constants';
+import { Colors, Radius } from '../../constants';
 import { DailyCondition, TimelineEvent } from '../../types';
 
 interface ConditionLineChartProps {
@@ -293,8 +293,8 @@ export function ConditionLineChart({ dailyConditions, events = [], selectedIndex
 const styles = StyleSheet.create({
   wrapper: {},
   container: {
-    backgroundColor: Colors.white,
-    borderRadius: 12,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
     padding: 16,
     paddingTop: 40,
     paddingRight: 8,
@@ -308,10 +308,12 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   overlayLabel: {
-    backgroundColor: 'rgba(240, 240, 240, 0.95)',
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 4,
+    borderRadius: Radius.xs,
     minWidth: 60,
     maxWidth: LABEL_WIDTH,
     shadowColor: '#000',
@@ -321,13 +323,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   overlayLabelEvent: {
-    backgroundColor: 'rgba(255, 243, 224, 0.98)',
-    borderWidth: 1,
     borderColor: Colors.warning,
   },
   overlayLabelMemo: {
-    backgroundColor: 'rgba(232, 245, 233, 0.98)',
-    borderWidth: 1,
     borderColor: Colors.brand,
   },
   overlayLabelContent: {
@@ -377,15 +375,15 @@ const styles = StyleSheet.create({
   selectedInfoCard: {
     marginTop: 12,
     padding: 12,
-    backgroundColor: Colors.brandLightest,
-    borderRadius: 8,
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: Colors.brand,
+    borderColor: Colors.border,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.brand,
   },
   selectedInfoCardWithEvent: {
-    backgroundColor: '#FFF8E1',
-    borderColor: Colors.warning,
-    borderWidth: 1.5,
+    borderLeftColor: Colors.warning,
   },
   selectedInfoHeader: {
     flexDirection: 'row',
@@ -396,8 +394,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingVertical: 8,
     paddingHorizontal: 10,
-    backgroundColor: Colors.white,
-    borderRadius: 6,
+    backgroundColor: Colors.backgroundSecondary,
+    borderRadius: Radius.sm,
     borderLeftWidth: 3,
     borderLeftColor: Colors.warning,
   },
