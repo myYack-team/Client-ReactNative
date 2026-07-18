@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import { Text, TextStyle, StyleSheet } from 'react-native';
+import { Text, TextStyle, StyleProp, StyleSheet } from 'react-native';
 import { Colors } from '../../constants';
 import { FontSizes, LineHeights } from '../../constants/fonts';
 import { useSettingsStore } from '../../stores';
@@ -10,7 +10,7 @@ interface TypographyProps {
   children: ReactNode;
   variant?: TypographyVariant;
   color?: string;
-  style?: TextStyle;
+  style?: StyleProp<TextStyle>;
   numberOfLines?: number;
 }
 
