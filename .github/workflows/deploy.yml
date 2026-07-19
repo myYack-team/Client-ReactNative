@@ -108,10 +108,20 @@ jobs:
         timeout-minutes: 60
         run: eas build --profile production --platform android --non-interactive --wait
 
-      # 빌드된 최신 AAB를 Google Play 내부 테스트 트랙으로 자동 제출
+      # 빌드된 최신 AAB를 Google Play 프로덕션 트랙으로 자동 제출
       # EAS 서버에 등록된 서비스 계정 키 사용 (eas credentials로 사전 설정됨)
-      - name: Submit to Google Play (internal track)
-        run: eas submit --platform android --latest --non-interactive --no-wait
+      # 릴리즈 노트 등록을 위해 제출 완료까지 대기(--wait)
+      - name: Submit to Google Play (production track)
+        run: eas submit --platform android --latest --non-interactive --wait
+
+      # eas submit은 릴리즈 노트를 지원하지 않으므로, 제출 완료 후 Play API로 직접 등록
+      # release-notes/<locale>.txt 파일을 읽어 방금 제출한 versionCode 릴리즈에 patch
+      # 노트가 없거나 실패해도 배포 자체는 실패시키지 않음(continue-on-error)
+      - name: Attach release notes to Google Play
+        continue-on-error: true
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: node scripts/attach-release-notes.mjs
 
       - name: Report result
         if: always()
