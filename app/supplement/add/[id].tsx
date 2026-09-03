@@ -14,8 +14,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Typography, Button, Card, SupplementTagBadge } from '../../../components/ui';
+import { Typography, Button, Card, SupplementTagBadge, NotificationPermissionNotice } from '../../../components/ui';
 import { Colors } from '../../../constants';
+import { useNotificationPermission } from '../../../hooks';
 import { supplementService } from '../../../services';
 import { useSupplementStore } from '../../../stores';
 import {
@@ -38,6 +39,8 @@ interface CachedSupplementData {
 export default function AddUserSupplementScreen() {
   const { id, supplementData } = useLocalSearchParams<{ id: string; supplementData?: string }>();
   const { addUserSupplement } = useSupplementStore();
+  // 알림 권한 안내용 (미허용이어도 추가는 막지 않음)
+  const notificationPermission = useNotificationPermission();
   const [supplement, setSupplement] = useState<SupplementDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -268,6 +271,15 @@ export default function AddUserSupplementScreen() {
                 ))}
               </View>
             )}
+
+            {/* 알림 권한 미허용 안내 (비차단 - 무시하고 추가해도 정상 등록됨) */}
+            <NotificationPermissionNotice
+              status={notificationPermission.status}
+              isRequesting={notificationPermission.isRequesting}
+              onRequest={notificationPermission.request}
+              onOpenSettings={notificationPermission.openSettings}
+              style={styles.permissionNotice}
+            />
           </View>
 
           {/* 복용 횟수 (선택된 시간대 수에 연동) */}
@@ -441,6 +453,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  permissionNotice: {
+    marginTop: 12,
   },
   submitButton: {
     marginTop: 8,

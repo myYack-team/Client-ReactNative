@@ -15,8 +15,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { Typography, Card, Button, ExpandableText, DrugTypeBadge } from '../../components/ui';
+import { Typography, Card, Button, ExpandableText, DrugTypeBadge, NotificationPermissionNotice } from '../../components/ui';
 import { Colors, DEFAULT_TIMES } from '../../constants';
+import { useNotificationPermission } from '../../hooks';
 import { drugService } from '../../services/drug';
 import { medicationService } from '../../services';
 import { DrugInfo } from '../../types';
@@ -26,6 +27,8 @@ import { formatDateToLocal } from '../../utils/dateUtils';
 export default function MedicationRegisterScreen() {
   const { itemSeq } = useLocalSearchParams<{ itemSeq: string }>();
   const { addMedication: addMedicationToStore } = useMedicationStore();
+  // 알림 권한 안내용 (미허용이어도 등록은 막지 않음)
+  const notificationPermission = useNotificationPermission();
 
   const [drug, setDrug] = useState<DrugInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -290,6 +293,15 @@ export default function MedicationRegisterScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+
+            {/* 알림 권한 미허용 안내 (비차단 - 무시하고 등록해도 정상 등록됨) */}
+            <NotificationPermissionNotice
+              status={notificationPermission.status}
+              isRequesting={notificationPermission.isRequesting}
+              onRequest={notificationPermission.request}
+              onOpenSettings={notificationPermission.openSettings}
+              style={styles.permissionNotice}
+            />
           </View>
 
           {/* 메모 */}
@@ -459,6 +471,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     backgroundColor: Colors.backgroundSecondary,
+  },
+  permissionNotice: {
+    marginTop: 12,
   },
   memoInput: {
     backgroundColor: Colors.backgroundSecondary,
