@@ -13,3 +13,4 @@ export type { TermsType } from './TermsModal';
 export { AiConsentModal } from './AiConsentModal';
 export { ExpandableText } from './ExpandableText';
 export { TabHeader } from './TabHeader';
+export { NotificationPermissionNotice } from './NotificationPermissionNotice';
