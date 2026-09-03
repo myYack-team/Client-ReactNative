@@ -5,9 +5,9 @@ import { router, useFocusEffect } from 'expo-router';
 import { setStatusBarStyle } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { CalendarList, LocaleConfig } from 'react-native-calendars';
-import { Button, Card, Typography, MedicationActionButtons, SnoozeModal, DrugTypeBadge, SupplementTagBadge } from '../../components/ui';
+import { Button, Card, Typography, MedicationActionButtons, SnoozeModal, DrugTypeBadge, SupplementTagBadge, NotificationPermissionNotice } from '../../components/ui';
 import { Colors } from '../../constants';
-import { useResponsive } from '../../hooks';
+import { useResponsive, useNotificationPermission } from '../../hooks';
 import { useMedicationStore } from '../../stores';
 import { intakeService, reminderService } from '../../services';
 import { MedicationTiming, TodaySchedule, DaySummary, DayStatus, ScheduleMedication, IntakesResponse, TimePeriodGroup, TimeSlot } from '../../types';
@@ -142,6 +142,17 @@ export default function HomeScreen() {
 
   // 선택된 날짜의 스케줄 데이터
   const [selectedDateSchedules, setSelectedDateSchedules] = useState<TodaySchedule[]>([]);
+
+  // 알림 권한 배너: 활성 리마인더가 있는데 기기 알림 권한이 꺼져 있으면 표시 (닫으면 세션 동안 숨김)
+  const notificationPermission = useNotificationPermission();
+  const [permissionBannerDismissed, setPermissionBannerDismissed] = useState(false);
+  // 오늘 일정은 활성화된 리마인더로부터 생성되므로, 일정에 약이 있으면 활성 리마인더가 있는 것 (추가 API 호출 없음)
+  const hasActiveReminder = useMemo(
+    () => (todayData?.schedules ?? []).some((schedule) => schedule.medications.length > 0),
+    [todayData]
+  );
+  const showPermissionBanner =
+    hasActiveReminder && notificationPermission.needsAttention && !permissionBannerDismissed;
 
   const isSelectedDatePastOrToday = selectedDate <= today;
 
@@ -673,6 +684,20 @@ export default function HomeScreen() {
           />
         }
       >
+        {/* 알림 권한 미허용 배너 */}
+        {showPermissionBanner && (
+          <NotificationPermissionNotice
+            status={notificationPermission.status}
+            isRequesting={notificationPermission.isRequesting}
+            onRequest={notificationPermission.request}
+            onOpenSettings={notificationPermission.openSettings}
+            onDismiss={() => setPermissionBannerDismissed(true)}
+            title="알림 권한이 꺼져 있어 복약 알림을 받을 수 없어요"
+            description="알림을 켜면 설정한 시간에 복약 알림을 보내드려요"
+            style={styles.permissionBanner}
+          />
+        )}
+
         {/* 선택된 날짜 */}
         <View style={styles.selectedDateRow}>
           <Typography variant="h4">
@@ -1104,6 +1129,9 @@ const styles = StyleSheet.create({
   },
   selectedDateRow: {
     marginBottom: 12,
+  },
+  permissionBanner: {
+    marginBottom: 16,
   },
   modalOverlay: {
     flex: 1,
