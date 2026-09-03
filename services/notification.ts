@@ -216,6 +216,21 @@ export const notificationService = {
   },
 
   /**
+   * 서버에 등록된 FCM 토큰 해제 (로그아웃 시)
+   * 세션 삭제 전에 호출해야 하며, 실패해도 로그아웃은 계속 진행 (best-effort)
+   */
+  unregisterTokenFromServer: async (): Promise<void> => {
+    try {
+      await api.delete('/fcm/token');
+      logger.log('[Notification] 서버 FCM 토큰 해제 완료');
+    } catch (error) {
+      logger.error('[Notification] 서버 토큰 해제 실패:', error);
+    } finally {
+      lastInitializedPermissionStatus = null;
+    }
+  },
+
+  /**
    * 알림 카테고리 설정 (복용/건너뛰기 액션 버튼)
    * Development Build에서만 활성화됨
    */

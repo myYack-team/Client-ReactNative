@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import axios from 'axios';
 import { User } from '../types';
-import { authService, userService } from '../services';
+import { authService, userService, notificationService } from '../services';
 import { clearSession, setSessionInvalidatedCallback } from '../services/api';
 import { logger } from '../utils/logger';
 import { useMedicationStore } from './medicationStore';
@@ -191,6 +191,8 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: async () => {
     try {
+      // 세션 삭제 전에 서버 FCM 토큰 해제 (인증 필요, 실패해도 로그아웃은 계속 진행)
+      await notificationService.unregisterTokenFromServer();
       await authService.logout();
     } catch {
       // 서버 로그아웃 실패해도 로컬은 정리
