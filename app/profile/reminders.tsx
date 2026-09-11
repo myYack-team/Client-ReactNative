@@ -1,15 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, Switch, Alert } from 'react-native';
+import { View, StyleSheet, Switch, Alert, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { Card, Typography } from '../../components/ui';
 import { Colors } from '../../constants';
+import { useNotificationPermission } from '../../hooks';
 import { userService } from '../../services/user';
 
 export default function RemindersScreen() {
   const [notificationEnabled, setNotificationEnabled] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  // 기기(OS) 알림 권한 상태 - 서버 토글과 별개로, 기기 권한이 꺼져 있으면 알림을 받을 수 없음
+  const notificationPermission = useNotificationPermission();
 
   useFocusEffect(
     useCallback(() => {
@@ -80,6 +84,26 @@ export default function RemindersScreen() {
               thumbColor={notificationEnabled ? Colors.primary : Colors.textSecondary}
             />
           </View>
+
+          {/* 기기 알림 권한이 꺼져 있으면 서버 설정과 무관하게 알림을 받을 수 없으므로 안내 */}
+          {notificationPermission.needsAttention && (
+            <TouchableOpacity
+              style={styles.permissionRow}
+              onPress={
+                notificationPermission.canAskAgain
+                  ? notificationPermission.request
+                  : notificationPermission.openSettings
+              }
+              disabled={notificationPermission.isRequesting}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="notifications-off-outline" size={16} color={Colors.warning} />
+              <Typography variant="caption" color={Colors.warning} style={styles.permissionText}>
+                기기 알림 권한 꺼짐 · {notificationPermission.canAskAgain ? '허용하기' : '설정에서 켜기'}
+              </Typography>
+              <Ionicons name="chevron-forward" size={14} color={Colors.warning} />
+            </TouchableOpacity>
+          )}
         </Card>
 
         <View style={styles.infoBox}>
@@ -128,6 +152,19 @@ const styles = StyleSheet.create({
   },
   settingDescription: {
     marginLeft: 28,
+  },
+  permissionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: Colors.divider,
+  },
+  permissionText: {
+    flex: 1,
+    fontWeight: '600',
   },
   infoBox: {
     flexDirection: 'row',

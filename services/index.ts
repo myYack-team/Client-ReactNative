@@ -5,6 +5,11 @@ export { intakeService as realIntakeService } from './intake';
 export { userService as realUserService } from './user';
 export { reminderService as realReminderService } from './reminder';
 export { notificationService, NOTIFICATION_ACTIONS, NOTIFICATION_CATEGORY } from './notification';
+export type {
+  NotificationPermissionStatus,
+  PushRegistrationFailureReason,
+  PushRegistrationResult,
+} from './notification';
 export { prescriptionService } from './prescription';
 export { supplementService } from './supplement';
 export { drugService } from './drug';

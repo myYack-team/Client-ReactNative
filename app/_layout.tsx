@@ -8,6 +8,7 @@ import { useAuthStore, useSettingsStore } from '../stores';
 import { notificationService, NOTIFICATION_ACTIONS } from '../services';
 import { refreshTokenSingleFlight } from '../services/api';
 import { Colors } from '../constants';
+import { logger } from '../utils/logger';
 import SplashScreen from '../components/SplashScreen';
 
 export default function RootLayout() {
@@ -104,18 +105,20 @@ export default function RootLayout() {
     }
   }, [initialNotificationResponse, authLoading, settingsLoading, showSplash]);
 
-  // 인증 상태일 때 FCM 토큰 등록
+  // 인증 상태일 때 FCM 토큰 등록 (이미 허용된 권한이 있는 경우에만 등록, 시스템 권한 팝업은 띄우지 않음)
   // - 로그인 상태 변경 시 (로그인 직후)
   // - 앱 재시작 시 (이미 로그인된 상태로 시작)
   // - 초기화 완료 후 (authLoading이 false가 된 후)
+  // 권한 요청은 리마인더 설정 화면 등 맥락이 있는 곳에서 useNotificationPermission 훅으로 수행
   useEffect(() => {
     if (isAuthenticated && !authLoading) {
       notificationService.initialize();
     }
   }, [isAuthenticated, authLoading]);
 
-  // 앱이 백그라운드에서 포그라운드로 복귀할 때 토큰 사전 갱신
-  // 24시간 이상 백그라운드 유지 후 복귀 시 만료된 토큰으로 인한 실패 방지
+  // 앱이 백그라운드에서 포그라운드로 복귀할 때
+  // 1) 토큰 사전 갱신: 24시간 이상 백그라운드 유지 후 복귀 시 만료된 토큰으로 인한 실패 방지
+  // 2) 알림 권한 재확인: 설정 앱에서 권한을 새로 허용하고 돌아온 경우 FCM 토큰 재등록
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
       if (
@@ -125,6 +128,15 @@ export default function RootLayout() {
       ) {
         refreshTokenSingleFlight().catch(() => {
           // 갱신 실패 시 무시 — 이후 API 호출에서 인터셉터가 재시도
+        });
+
+        // 마지막 initialize() 시점의 권한 상태와 비교해 새로 허용된 경우에만 재등록 (중복 호출 방지)
+        notificationService.getPermissionStatus().then((status) => {
+          const previous = notificationService.getLastInitializedPermissionStatus();
+          if (status === 'granted' && previous !== 'granted') {
+            logger.log(`[Notification] 앱 복귀 후 권한 변경 감지 (${previous ?? 'unknown'} → granted) - FCM 토큰 재등록`);
+            notificationService.initialize();
+          }
         });
       }
       appState.current = nextAppState;

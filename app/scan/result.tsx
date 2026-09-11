@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -19,8 +19,9 @@ import DraggableFlatList, {
   RenderItemParams,
 } from 'react-native-draggable-flatlist';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { Button, Card, Typography } from '../../components/ui';
+import { Button, Card, Typography, NotificationPermissionNotice } from '../../components/ui';
 import { Colors, DEFAULT_TIMES } from '../../constants';
+import { useNotificationPermission } from '../../hooks';
 import { useMedicationStore } from '../../stores';
 import { ScannedMedication, DuplicateMedication, TimingWithTime, PrescriptionRegisterRequest, RegisterMedicationInfo, MedicationTiming } from '../../types';
 import { medicationService, prescriptionService } from '../../services';
@@ -195,6 +196,13 @@ export default function ResultScreen() {
     invalidateScheduleCache,
     invalidateMonthlySummaryCache,
   } = useMedicationStore();
+
+  // 알림 권한 안내용 (미허용이어도 등록은 막지 않음)
+  const notificationPermission = useNotificationPermission();
+
+  // 등록 요청 중 잠금 (ref: 같은 틱의 연속 탭을 동기적으로 차단 / state: 버튼 로딩 표시)
+  const isSubmittingRef = useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 초기 medications에 times 배열 추가 및 null 값 기본값 설정
   const [medications, setMedications] = useState<MedicationWithTimes[]>(() => {
@@ -396,6 +404,10 @@ export default function ResultScreen() {
 
   // 실제 약물 등록 함수 (통합 API 사용)
   const registerMedications = async (medsToRegister: MedicationWithTimes[]) => {
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+
     try {
       if (!currentImageUri) {
         throw new Error('처방전 이미지가 없습니다.');
@@ -470,6 +482,9 @@ export default function ResultScreen() {
           },
         ]
       );
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -697,12 +712,21 @@ export default function ResultScreen() {
           정보가 맞지 않으면 터치해서 수정해주세요
         </Typography>
 
+        {/* 알림 권한 미허용 안내 (비차단 - 무시하고 등록해도 정상 등록됨) */}
+        <NotificationPermissionNotice
+          status={notificationPermission.status}
+          isRequesting={notificationPermission.isRequesting}
+          onRequest={notificationPermission.request}
+          onOpenSettings={notificationPermission.openSettings}
+          style={styles.permissionNotice}
+        />
+
         <Button
           title="확인하고 등록"
           variant="primary"
           size="large"
           onPress={handleSubmit}
-          loading={isLoading}
+          loading={isSubmitting || isLoading}
           style={styles.submitButton}
         />
       </ScrollView>
@@ -957,6 +981,9 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     marginTop: 8,
+  },
+  permissionNotice: {
+    marginBottom: 12,
   },
   // 체크박스 관련 스타일
   cardTopRow: {

@@ -5,9 +5,9 @@ import { router, useFocusEffect } from 'expo-router';
 import { setStatusBarStyle } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { CalendarList, LocaleConfig } from 'react-native-calendars';
-import { Button, Card, Typography, MedicationActionButtons, SnoozeModal, DrugTypeBadge, SupplementTagBadge } from '../../components/ui';
+import { Button, Card, Typography, MedicationActionButtons, SnoozeModal, DrugTypeBadge, SupplementTagBadge, NotificationPermissionNotice } from '../../components/ui';
 import { Colors } from '../../constants';
-import { useResponsive } from '../../hooks';
+import { useResponsive, useNotificationPermission } from '../../hooks';
 import { useMedicationStore } from '../../stores';
 import { intakeService, reminderService } from '../../services';
 import { MedicationTiming, TodaySchedule, DaySummary, DayStatus, ScheduleMedication, IntakesResponse, TimePeriodGroup, TimeSlot } from '../../types';
@@ -138,10 +138,36 @@ export default function HomeScreen() {
   const [selectedTiming, setSelectedTiming] = useState<MedicationTiming | null>(null);
 
   // 중복 클릭 방지용 처리 중인 약물 ID 추적
+  // ref: 같은 틱에 onPress가 연달아 들어와도 동기적으로 차단 / state: 버튼 비활성화 렌더링용
+  const processingMedsRef = useRef<Set<number>>(new Set());
   const [processingMeds, setProcessingMeds] = useState<Set<number>>(new Set());
+
+  // 처리 시작 시도 — 하나라도 이미 처리 중이면 false를 반환하고 요청을 보내지 않음
+  const beginProcessing = (ids: number[]) => {
+    if (ids.some((id) => processingMedsRef.current.has(id))) return false;
+    ids.forEach((id) => processingMedsRef.current.add(id));
+    setProcessingMeds(new Set(processingMedsRef.current));
+    return true;
+  };
+
+  const endProcessing = (ids: number[]) => {
+    ids.forEach((id) => processingMedsRef.current.delete(id));
+    setProcessingMeds(new Set(processingMedsRef.current));
+  };
 
   // 선택된 날짜의 스케줄 데이터
   const [selectedDateSchedules, setSelectedDateSchedules] = useState<TodaySchedule[]>([]);
+
+  // 알림 권한 배너: 활성 리마인더가 있는데 기기 알림 권한이 꺼져 있으면 표시 (닫으면 세션 동안 숨김)
+  const notificationPermission = useNotificationPermission();
+  const [permissionBannerDismissed, setPermissionBannerDismissed] = useState(false);
+  // 오늘 일정은 활성화된 리마인더로부터 생성되므로, 일정에 약이 있으면 활성 리마인더가 있는 것 (추가 API 호출 없음)
+  const hasActiveReminder = useMemo(
+    () => (todayData?.schedules ?? []).some((schedule) => schedule.medications.length > 0),
+    [todayData]
+  );
+  const showPermissionBanner =
+    hasActiveReminder && notificationPermission.needsAttention && !permissionBannerDismissed;
 
   const isSelectedDatePastOrToday = selectedDate <= today;
 
@@ -458,13 +484,7 @@ export default function HomeScreen() {
     if (notTakenMeds.length === 0) return;
 
     const ids = notTakenMeds.map((m) => m.id);
-    if (ids.some((id) => processingMeds.has(id))) return;
-
-    setProcessingMeds(prev => {
-      const next = new Set(prev);
-      ids.forEach(id => next.add(id));
-      return next;
-    });
+    if (!beginProcessing(ids)) return;
 
     try {
       await recordIntake(ids, schedule.timing, selectedDate);
@@ -472,11 +492,7 @@ export default function HomeScreen() {
       console.error('Failed to record intake:', error);
       Alert.alert('오류', '복용 기록에 실패했습니다. 다시 시도해주세요.');
     } finally {
-      setProcessingMeds(prev => {
-        const next = new Set(prev);
-        ids.forEach(id => next.delete(id));
-        return next;
-      });
+      endProcessing(ids);
     }
   };
 
@@ -486,13 +502,7 @@ export default function HomeScreen() {
     if (notTakenMeds.length === 0) return;
 
     const ids = notTakenMeds.map((m) => m.id);
-    if (ids.some((id) => processingMeds.has(id))) return;
-
-    setProcessingMeds(prev => {
-      const next = new Set(prev);
-      ids.forEach(id => next.add(id));
-      return next;
-    });
+    if (!beginProcessing(ids)) return;
 
     try {
       await recordIntake(ids, timing, selectedDate);
@@ -500,30 +510,21 @@ export default function HomeScreen() {
       console.error('Failed to record intake:', error);
       Alert.alert('오류', '복용 기록에 실패했습니다. 다시 시도해주세요.');
     } finally {
-      setProcessingMeds(prev => {
-        const next = new Set(prev);
-        ids.forEach(id => next.delete(id));
-        return next;
-      });
+      endProcessing(ids);
     }
   };
 
   // 개별 약물 복용 처리
   const handleTakeMedication = async (med: ScheduleMedication, timing: MedicationTiming) => {
-    if (med.taken || processingMeds.has(med.id)) return;
+    if (med.taken || !beginProcessing([med.id])) return;
 
-    setProcessingMeds(prev => new Set(prev).add(med.id));
     try {
       await recordIntake([med.id], timing, selectedDate);
     } catch (error) {
       console.error('Failed to record intake:', error);
       Alert.alert('오류', '복용 기록에 실패했습니다. 다시 시도해주세요.');
     } finally {
-      setProcessingMeds(prev => {
-        const next = new Set(prev);
-        next.delete(med.id);
-        return next;
-      });
+      endProcessing([med.id]);
     }
   };
 
@@ -551,9 +552,8 @@ export default function HomeScreen() {
 
   // 누락 처리
   const handleMissMedication = async (med: ScheduleMedication, timing: MedicationTiming) => {
-    if (med.taken || processingMeds.has(med.id)) return;
+    if (med.taken || !beginProcessing([med.id])) return;
 
-    setProcessingMeds(prev => new Set(prev).add(med.id));
     try {
       await intakeService.recordMissed(med.id, timing);
       fetchTodaySchedule();
@@ -561,11 +561,7 @@ export default function HomeScreen() {
       console.error('Failed to record missed:', error);
       Alert.alert('오류', '누락 기록에 실패했습니다. 다시 시도해주세요.');
     } finally {
-      setProcessingMeds(prev => {
-        const next = new Set(prev);
-        next.delete(med.id);
-        return next;
-      });
+      endProcessing([med.id]);
     }
   };
 
@@ -673,6 +669,20 @@ export default function HomeScreen() {
           />
         }
       >
+        {/* 알림 권한 미허용 배너 */}
+        {showPermissionBanner && (
+          <NotificationPermissionNotice
+            status={notificationPermission.status}
+            isRequesting={notificationPermission.isRequesting}
+            onRequest={notificationPermission.request}
+            onOpenSettings={notificationPermission.openSettings}
+            onDismiss={() => setPermissionBannerDismissed(true)}
+            title="알림 권한이 꺼져 있어 복약 알림을 받을 수 없어요"
+            description="알림을 켜면 설정한 시간에 복약 알림을 보내드려요"
+            style={styles.permissionBanner}
+          />
+        )}
+
         {/* 선택된 날짜 */}
         <View style={styles.selectedDateRow}>
           <Typography variant="h4">
@@ -875,24 +885,15 @@ export default function HomeScreen() {
                           slot.medications.filter(m => !m.taken).map(m => m.id)
                         );
                         if (allNotTakenMeds.length === 0) return;
-                        if (allNotTakenMeds.some((id) => processingMeds.has(id))) return;
+                        if (!beginProcessing(allNotTakenMeds)) return;
 
-                        setProcessingMeds(prev => {
-                          const next = new Set(prev);
-                          allNotTakenMeds.forEach(id => next.add(id));
-                          return next;
-                        });
                         try {
                           await recordIntake(allNotTakenMeds, group.timing, selectedDate);
                         } catch (error) {
                           console.error('Failed to record intake:', error);
                           Alert.alert('오류', '복용 기록에 실패했습니다. 다시 시도해주세요.');
                         } finally {
-                          setProcessingMeds(prev => {
-                            const next = new Set(prev);
-                            allNotTakenMeds.forEach(id => next.delete(id));
-                            return next;
-                          });
+                          endProcessing(allNotTakenMeds);
                         }
                       }}
                     >
@@ -1104,6 +1105,9 @@ const styles = StyleSheet.create({
   },
   selectedDateRow: {
     marginBottom: 12,
+  },
+  permissionBanner: {
+    marginBottom: 16,
   },
   modalOverlay: {
     flex: 1,
