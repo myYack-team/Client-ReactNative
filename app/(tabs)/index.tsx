@@ -138,7 +138,22 @@ export default function HomeScreen() {
   const [selectedTiming, setSelectedTiming] = useState<MedicationTiming | null>(null);
 
   // 중복 클릭 방지용 처리 중인 약물 ID 추적
+  // ref: 같은 틱에 onPress가 연달아 들어와도 동기적으로 차단 / state: 버튼 비활성화 렌더링용
+  const processingMedsRef = useRef<Set<number>>(new Set());
   const [processingMeds, setProcessingMeds] = useState<Set<number>>(new Set());
+
+  // 처리 시작 시도 — 하나라도 이미 처리 중이면 false를 반환하고 요청을 보내지 않음
+  const beginProcessing = (ids: number[]) => {
+    if (ids.some((id) => processingMedsRef.current.has(id))) return false;
+    ids.forEach((id) => processingMedsRef.current.add(id));
+    setProcessingMeds(new Set(processingMedsRef.current));
+    return true;
+  };
+
+  const endProcessing = (ids: number[]) => {
+    ids.forEach((id) => processingMedsRef.current.delete(id));
+    setProcessingMeds(new Set(processingMedsRef.current));
+  };
 
   // 선택된 날짜의 스케줄 데이터
   const [selectedDateSchedules, setSelectedDateSchedules] = useState<TodaySchedule[]>([]);
@@ -469,13 +484,7 @@ export default function HomeScreen() {
     if (notTakenMeds.length === 0) return;
 
     const ids = notTakenMeds.map((m) => m.id);
-    if (ids.some((id) => processingMeds.has(id))) return;
-
-    setProcessingMeds(prev => {
-      const next = new Set(prev);
-      ids.forEach(id => next.add(id));
-      return next;
-    });
+    if (!beginProcessing(ids)) return;
 
     try {
       await recordIntake(ids, schedule.timing, selectedDate);
@@ -483,11 +492,7 @@ export default function HomeScreen() {
       console.error('Failed to record intake:', error);
       Alert.alert('오류', '복용 기록에 실패했습니다. 다시 시도해주세요.');
     } finally {
-      setProcessingMeds(prev => {
-        const next = new Set(prev);
-        ids.forEach(id => next.delete(id));
-        return next;
-      });
+      endProcessing(ids);
     }
   };
 
@@ -497,13 +502,7 @@ export default function HomeScreen() {
     if (notTakenMeds.length === 0) return;
 
     const ids = notTakenMeds.map((m) => m.id);
-    if (ids.some((id) => processingMeds.has(id))) return;
-
-    setProcessingMeds(prev => {
-      const next = new Set(prev);
-      ids.forEach(id => next.add(id));
-      return next;
-    });
+    if (!beginProcessing(ids)) return;
 
     try {
       await recordIntake(ids, timing, selectedDate);
@@ -511,30 +510,21 @@ export default function HomeScreen() {
       console.error('Failed to record intake:', error);
       Alert.alert('오류', '복용 기록에 실패했습니다. 다시 시도해주세요.');
     } finally {
-      setProcessingMeds(prev => {
-        const next = new Set(prev);
-        ids.forEach(id => next.delete(id));
-        return next;
-      });
+      endProcessing(ids);
     }
   };
 
   // 개별 약물 복용 처리
   const handleTakeMedication = async (med: ScheduleMedication, timing: MedicationTiming) => {
-    if (med.taken || processingMeds.has(med.id)) return;
+    if (med.taken || !beginProcessing([med.id])) return;
 
-    setProcessingMeds(prev => new Set(prev).add(med.id));
     try {
       await recordIntake([med.id], timing, selectedDate);
     } catch (error) {
       console.error('Failed to record intake:', error);
       Alert.alert('오류', '복용 기록에 실패했습니다. 다시 시도해주세요.');
     } finally {
-      setProcessingMeds(prev => {
-        const next = new Set(prev);
-        next.delete(med.id);
-        return next;
-      });
+      endProcessing([med.id]);
     }
   };
 
@@ -562,9 +552,8 @@ export default function HomeScreen() {
 
   // 누락 처리
   const handleMissMedication = async (med: ScheduleMedication, timing: MedicationTiming) => {
-    if (med.taken || processingMeds.has(med.id)) return;
+    if (med.taken || !beginProcessing([med.id])) return;
 
-    setProcessingMeds(prev => new Set(prev).add(med.id));
     try {
       await intakeService.recordMissed(med.id, timing);
       fetchTodaySchedule();
@@ -572,11 +561,7 @@ export default function HomeScreen() {
       console.error('Failed to record missed:', error);
       Alert.alert('오류', '누락 기록에 실패했습니다. 다시 시도해주세요.');
     } finally {
-      setProcessingMeds(prev => {
-        const next = new Set(prev);
-        next.delete(med.id);
-        return next;
-      });
+      endProcessing([med.id]);
     }
   };
 
@@ -900,24 +885,15 @@ export default function HomeScreen() {
                           slot.medications.filter(m => !m.taken).map(m => m.id)
                         );
                         if (allNotTakenMeds.length === 0) return;
-                        if (allNotTakenMeds.some((id) => processingMeds.has(id))) return;
+                        if (!beginProcessing(allNotTakenMeds)) return;
 
-                        setProcessingMeds(prev => {
-                          const next = new Set(prev);
-                          allNotTakenMeds.forEach(id => next.add(id));
-                          return next;
-                        });
                         try {
                           await recordIntake(allNotTakenMeds, group.timing, selectedDate);
                         } catch (error) {
                           console.error('Failed to record intake:', error);
                           Alert.alert('오류', '복용 기록에 실패했습니다. 다시 시도해주세요.');
                         } finally {
-                          setProcessingMeds(prev => {
-                            const next = new Set(prev);
-                            allNotTakenMeds.forEach(id => next.delete(id));
-                            return next;
-                          });
+                          endProcessing(allNotTakenMeds);
                         }
                       }}
                     >
