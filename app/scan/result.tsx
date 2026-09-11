@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -200,6 +200,10 @@ export default function ResultScreen() {
   // 알림 권한 안내용 (미허용이어도 등록은 막지 않음)
   const notificationPermission = useNotificationPermission();
 
+  // 등록 요청 중 잠금 (ref: 같은 틱의 연속 탭을 동기적으로 차단 / state: 버튼 로딩 표시)
+  const isSubmittingRef = useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // 초기 medications에 times 배열 추가 및 null 값 기본값 설정
   const [medications, setMedications] = useState<MedicationWithTimes[]>(() => {
     if (!currentScanResult?.medications) return [];
@@ -400,6 +404,10 @@ export default function ResultScreen() {
 
   // 실제 약물 등록 함수 (통합 API 사용)
   const registerMedications = async (medsToRegister: MedicationWithTimes[]) => {
+    if (isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+
     try {
       if (!currentImageUri) {
         throw new Error('처방전 이미지가 없습니다.');
@@ -474,6 +482,9 @@ export default function ResultScreen() {
           },
         ]
       );
+    } finally {
+      isSubmittingRef.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -715,7 +726,7 @@ export default function ResultScreen() {
           variant="primary"
           size="large"
           onPress={handleSubmit}
-          loading={isLoading}
+          loading={isSubmitting || isLoading}
           style={styles.submitButton}
         />
       </ScrollView>
