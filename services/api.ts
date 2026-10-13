@@ -18,7 +18,23 @@ let refreshPromise: Promise<{ accessToken: string; refreshToken: string }> | nul
 let sessionGeneration = 0;
 let sessionWriteQueue: Promise<void> = Promise.resolve();
 
-class SessionChangedError extends Error {}
+export class SessionChangedError extends Error {
+  readonly sessionChanged = true;
+
+  constructor() {
+    super('Session operation cancelled.');
+    this.name = 'SessionChangedError';
+  }
+}
+
+export function isSessionChangedError(error: unknown): error is SessionChangedError {
+  return error instanceof SessionChangedError;
+}
+
+type SessionRequestConfig = InternalAxiosRequestConfig & {
+  _retry?: boolean;
+  _sessionGeneration?: number;
+};
 
 function writeSession<T>(operation: () => Promise<T>): Promise<T> {
   const result = sessionWriteQueue.then(operation);
@@ -111,7 +127,11 @@ export async function refreshTokenSingleFlight(): Promise<{ accessToken: string;
  * 세션 정리 (토큰 삭제)
  * @param notify - true면 onSessionInvalidated 콜백 호출 (기본값: true)
  */
-export async function clearSession({ notify = true } = {}): Promise<void> {
+export async function clearSession({ notify = true, expectedGeneration }: {
+  notify?: boolean;
+  expectedGeneration?: number;
+} = {}): Promise<void> {
+  if (expectedGeneration !== undefined && expectedGeneration !== sessionGeneration) return;
   logger.log('[API] Clearing session');
   const generation = ++sessionGeneration;
   refreshPromise = null;
@@ -133,17 +153,21 @@ export async function clearSession({ notify = true } = {}): Promise<void> {
 // Request 인터셉터: JWT 토큰 추가
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
+    const request = config as SessionRequestConfig;
+    request._sessionGeneration ??= sessionGeneration;
+    if (request._sessionGeneration !== sessionGeneration) throw new SessionChangedError();
     logger.log('[API Request]', config.method?.toUpperCase(), config.url, config.params);
 
     // JWT 토큰 추가
     const token = await SecureStore.getItemAsync('accessToken');
+    if (request._sessionGeneration !== sessionGeneration) throw new SessionChangedError();
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
   (error) => {
-    if (!error.config?.suppressErrorLogging) {
+    if (!isSessionChangedError(error) && !error.config?.suppressErrorLogging) {
       logger.error('[API Request Error]', error);
     }
     return Promise.reject(error);
@@ -161,7 +185,10 @@ api.interceptors.response.use(
     return response;
   },
   async (error: AxiosError<ApiResponse<unknown>>) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+    if (isSessionChangedError(error)) return Promise.reject(error);
+    const originalRequest = error.config as SessionRequestConfig;
+    const requestGeneration = originalRequest._sessionGeneration ?? sessionGeneration;
+    if (requestGeneration !== sessionGeneration) return Promise.reject(new SessionChangedError());
 
     // 401 또는 에러코드 없는 403(서버가 인증 실패를 403으로 반환하는 경우 방어) 시 토큰 갱신 시도
     const status = error.response?.status;
@@ -173,6 +200,7 @@ api.interceptors.response.use(
 
       try {
         const { accessToken } = await refreshTokenSingleFlight();
+        if (requestGeneration !== sessionGeneration) throw new SessionChangedError();
 
         if (originalRequest.headers) {
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
@@ -180,8 +208,8 @@ api.interceptors.response.use(
 
         return api(originalRequest);
       } catch (refreshError) {
-        if (refreshError instanceof SessionChangedError) {
-          return Promise.reject(error);
+        if (isSessionChangedError(refreshError) || requestGeneration !== sessionGeneration) {
+          return Promise.reject(new SessionChangedError());
         }
         // 취소된 선택적 요청은 이전 세션의 실패를 새 세션에 반영하지 않습니다.
         if (originalRequest.suppressErrorLogging && originalRequest.signal?.aborted) {
@@ -194,11 +222,11 @@ api.interceptors.response.use(
         if (axios.isAxiosError(refreshError)) {
           const status = refreshError.response?.status;
           if (status === 401 || status === 403) {
-            await clearSession();
+            await clearSession({ expectedGeneration: requestGeneration });
           }
         } else {
           // Non-Axios 에러 (예: 'No refresh token') → 세션 정리
-          await clearSession();
+          await clearSession({ expectedGeneration: requestGeneration });
         }
       }
     }

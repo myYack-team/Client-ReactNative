@@ -3,12 +3,24 @@ import * as SecureStore from 'expo-secure-store';
 import axios from 'axios';
 import { User } from '../types';
 import { authService, userService } from '../services';
-import { clearSession, setSessionInvalidatedCallback, setSessionTokens } from '../services/api';
+import {
+  clearSession,
+  setSessionInvalidatedCallback,
+  setSessionTokens,
+  isSessionChangedError,
+  SessionChangedError,
+} from '../services/api';
 import { logger } from '../utils/logger';
 import { useMedicationStore } from './medicationStore';
 import { useSupplementStore } from './supplementStore';
 import { useAnalysisStore } from './analysisStore';
 import { useFamilyStore } from './familyStore';
+
+let authOperation = 0;
+
+function checkAuthOperation(operation: number): void {
+  if (operation !== authOperation) throw new SessionChangedError();
+}
 
 /**
  * 인증 관련 에러인지 판별
@@ -60,11 +72,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   needsOnboarding: false,
 
   initialize: async () => {
+    const operation = ++authOperation;
     try {
       set({ isLoading: true, error: null });
 
       const accessToken = await SecureStore.getItemAsync('accessToken');
       const refreshToken = await SecureStore.getItemAsync('refreshToken');
+      checkAuthOperation(operation);
 
       if (!accessToken || !refreshToken) {
         set({ isLoading: false, isAuthenticated: false });
@@ -72,14 +86,15 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
 
       const user = await userService.getMe();
+      checkAuthOperation(operation);
       set({ user, isAuthenticated: true, isLoading: false });
     } catch (error) {
+      if (operation !== authOperation || isSessionChangedError(error)) return;
       logger.error('[Auth] Initialize failed:', error);
 
       if (isAuthError(error)) {
         logger.log('[Auth] Auth error - clearing tokens');
         await clearSession();
-        set({ isLoading: false, isAuthenticated: false, user: null });
       } else {
         // Network error: tokens exist but server unreachable
         // Keep authenticated state so user can retry when online
@@ -90,24 +105,31 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   fetchUser: async () => {
+    const operation = authOperation;
     try {
       const user = await userService.getMe();
+      checkAuthOperation(operation);
       set({ user });
     } catch (error) {
+      if (operation !== authOperation || isSessionChangedError(error)) return;
       logger.error('[Auth] Fetch user failed:', error);
     }
   },
 
   loginWithKakao: async (kakaoAccessToken: string) => {
+    const operation = ++authOperation;
     try {
       set({ isLoading: true, error: null });
 
       const { accessToken, refreshToken, user } = await authService.loginWithKakao(kakaoAccessToken);
+      checkAuthOperation(operation);
 
       await setSessionTokens({ accessToken, refreshToken });
+      checkAuthOperation(operation);
 
       set({ user, isAuthenticated: true, isLoading: false });
     } catch (error) {
+      if (operation !== authOperation || isSessionChangedError(error)) return;
       logger.error('[Auth] Login failed:', error);
       set({
         isLoading: false,
@@ -118,20 +140,25 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   // 서버 기반 OAuth 콜백 처리 (서버에서 딥링크로 토큰 전달받음)
   handleOAuthCallback: async (accessToken: string, refreshToken: string, isNewUser: boolean) => {
+    const operation = ++authOperation;
     try {
       set({ isLoading: true, error: null });
 
       // 토큰 저장
       await setSessionTokens({ accessToken, refreshToken });
+      checkAuthOperation(operation);
 
       // 사용자 정보 조회
       const user = await userService.getMe();
+      checkAuthOperation(operation);
 
       logger.log('[Auth] OAuth callback success:', { userId: user.id, isNewUser });
       set({ user, isAuthenticated: true, isLoading: false, needsOnboarding: isNewUser });
     } catch (error) {
+      if (operation !== authOperation || isSessionChangedError(error)) throw new SessionChangedError();
       logger.error('[Auth] OAuth callback failed:', error);
       await clearSession({ notify: false });
+      checkAuthOperation(operation);
       set({
         isLoading: false,
         error: '로그인 처리 중 오류가 발생했습니다.',
@@ -141,14 +168,18 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   exchangeCodeAndLogin: async (code: string) => {
+    const operation = ++authOperation;
     try {
       set({ isLoading: true, error: null });
 
       const result = await authService.exchangeCode(code);
+      checkAuthOperation(operation);
 
       await setSessionTokens(result);
+      checkAuthOperation(operation);
 
       const user = await userService.getMe();
+      checkAuthOperation(operation);
 
       logger.log('[Auth] Code exchange success:', {
         userId: user.id,
@@ -171,8 +202,10 @@ export const useAuthStore = create<AuthState>((set) => ({
         privacyAgreed: result.privacyAgreed,
       };
     } catch (error) {
+      if (operation !== authOperation || isSessionChangedError(error)) throw new SessionChangedError();
       logger.error('[Auth] Code exchange failed:', error);
       await clearSession({ notify: false });
+      checkAuthOperation(operation);
       set({
         isLoading: false,
         isAuthenticated: false,
@@ -187,12 +220,15 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
+    const operation = ++authOperation;
     try {
       await authService.logout();
     } catch {
       // 서버 로그아웃 실패해도 로컬은 정리
     } finally {
+      if (operation !== authOperation) return;
       await clearSession({ notify: false });
+      if (operation !== authOperation) return;
       // 모든 스토어 초기화 (다른 사용자 데이터 표시 방지)
       useMedicationStore.getState().reset();
       useSupplementStore.getState().reset();
@@ -207,6 +243,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
 // 세션 무효화 시 Zustand 인증 상태도 함께 초기화
 setSessionInvalidatedCallback(() => {
+  authOperation += 1;
   // 모든 스토어 초기화 (다른 사용자 데이터 표시 방지)
   useMedicationStore.getState().reset();
   useSupplementStore.getState().reset();

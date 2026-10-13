@@ -578,6 +578,178 @@ test('새 로그인 뒤 오래된 갱신 종료가 새 세션의 single-flight �
   assert.equal(state.storage.get('refreshToken'), 'test-rotated-refresh');
 });
 
+test('갱신 인증 실패 전달과 인터셉터 정리 사이에 새 로그인해도 최신 토큰을 삭제하지 않는다', async () => {
+  const response = deferred();
+  const state = apiHarness({ refreshRequest: () => response.promise });
+  const pending = state.callbacks.response.failure({
+    config: { headers: {} }, response: { status: 401 }, message: 'expired',
+  });
+  pending.catch(() => {});
+  await flush();
+  response.reject({ isAxiosError: true, response: { status: 401 } });
+  await Promise.resolve();
+  await Promise.resolve();
+  await state.exported.setSessionTokens({ accessToken: 'test-new-access', refreshToken: 'test-new-refresh' });
+  await assert.rejects(() => pending);
+  assert.equal(state.storage.get('accessToken'), 'test-new-access');
+  assert.equal(state.storage.get('refreshToken'), 'test-new-refresh');
+});
+
+test('이전 세대 요청은 새 계정 토큰을 붙여 재전송하지 않는다', async () => {
+  const state = apiHarness();
+  const request = await state.callbacks.request.success({ headers: {} });
+  await state.exported.setSessionTokens({ accessToken: 'test-new-access', refreshToken: 'test-new-refresh' });
+  await assert.rejects(() => state.callbacks.request.success(request),
+    (error) => state.exported.isSessionChangedError(error));
+  await assert.rejects(() => state.callbacks.response.failure({
+    config: request, response: { status: 401 }, message: 'expired',
+  }), (error) => state.exported.isSessionChangedError(error));
+  assert.equal(state.events.filter(([name]) => name === 'retry').length, 0);
+  assert.equal(state.events.filter(([name]) => name === 'delete').length, 0);
+});
+
+function authStoreHarness(apiState, services = {}) {
+  let auth;
+  const errors = [];
+  const store = () => auth;
+  store.getState = () => auth;
+  store.setState = (patch) => { auth = { ...auth, ...patch }; };
+  const resetStore = { getState: () => ({ reset() {} }) };
+  loadModule('stores/authStore.ts', {
+    zustand: { create: (factory) => {
+      auth = factory(store.setState);
+      return store;
+    } },
+    'expo-secure-store': { getItemAsync: async (key) => apiState.storage.get(key) ?? null },
+    axios: { default: { isAxiosError: (error) => !!error?.isAxiosError } },
+    '../services': {
+      authService: {
+        loginWithKakao: async () => ({ accessToken: 'test-account-b-access', refreshToken: 'test-account-b-refresh', user: { id: 2 } }),
+        exchangeCode: async () => ({ accessToken: 'test-account-b-access', refreshToken: 'test-account-b-refresh', isNewUser: false, termsAgreed: true, privacyAgreed: true }),
+        logout: async () => {},
+        ...services.authService,
+      },
+      userService: { getMe: async () => ({ id: apiState.storage.get('accessToken') === 'test-account-b-access' ? 2 : 1 }), ...services.userService },
+    },
+    '../services/api': apiState.exported,
+    '../utils/logger': { logger: { log() {}, error: (...args) => errors.push(args) } },
+    './medicationStore': { useMedicationStore: resetStore },
+    './supplementStore': { useSupplementStore: resetStore },
+    './analysisStore': { useAnalysisStore: resetStore },
+    './familyStore': { useFamilyStore: resetStore },
+  });
+  return { store, errors };
+}
+
+test('실제 OAuth store의 이전 대기 저장 취소가 새 로그인 토큰/상태를 지우지 않는다', async () => {
+  const started = deferred();
+  const releaseWrite = deferred();
+  const apiState = apiHarness({ setItem: async (_key, value) => {
+    if (value === 'test-held-access') { started.resolve(); await releaseWrite.promise; }
+  } });
+  const { store, errors } = authStoreHarness(apiState);
+  const held = apiState.exported.setSessionTokens({ accessToken: 'test-held-access', refreshToken: 'test-held-refresh' });
+  await started.promise;
+  const first = store.getState().handleOAuthCallback('test-account-a-access', 'test-account-a-refresh', true);
+  first.catch(() => {});
+  const second = store.getState().handleOAuthCallback('test-account-b-access', 'test-account-b-refresh', false);
+  releaseWrite.resolve();
+  await Promise.all([held, second]);
+  await assert.rejects(() => first, (error) => apiState.exported.isSessionChangedError(error));
+  assert.equal(apiState.storage.get('refreshToken'), 'test-account-b-refresh');
+  assert.equal(store.getState().user.id, 2);
+  assert.equal(store.getState().isAuthenticated, true);
+  assert.equal(store.getState().error, null);
+  assert.equal(errors.length, 0);
+});
+
+test('이전 OAuth 사용자 조회의 늦은 성공이 새 로그인 사용자/온보딩 상태를 덮지 않는다', async () => {
+  const firstUser = deferred();
+  let userCalls = 0;
+  const apiState = apiHarness();
+  const { store, errors } = authStoreHarness(apiState, { userService: {
+    getMe: () => ++userCalls === 1 ? firstUser.promise : Promise.resolve({ id: 2 }),
+  } });
+  const first = store.getState().handleOAuthCallback('test-account-a-access', 'test-account-a-refresh', true);
+  first.catch(() => {});
+  await flush();
+  await store.getState().handleOAuthCallback('test-account-b-access', 'test-account-b-refresh', false);
+  firstUser.resolve({ id: 1 });
+  await assert.rejects(() => first, (error) => apiState.exported.isSessionChangedError(error));
+  assert.equal(store.getState().user.id, 2);
+  assert.equal(store.getState().needsOnboarding, false);
+  assert.equal(apiState.storage.get('refreshToken'), 'test-account-b-refresh');
+  assert.equal(errors.length, 0);
+});
+
+test('이전 코드 교환 실패는 완료된 새 로그인 세션을 삭제하거나 오류 상태로 바꾸지 않는다', async () => {
+  const firstResponse = deferred();
+  let calls = 0;
+  const apiState = apiHarness();
+  const { store, errors } = authStoreHarness(apiState, { authService: { exchangeCode: () => ++calls === 1
+    ? firstResponse.promise : Promise.resolve({ accessToken: 'test-account-b-access', refreshToken: 'test-account-b-refresh', isNewUser: false, termsAgreed: true, privacyAgreed: true }) } });
+  const first = store.getState().exchangeCodeAndLogin('test-code-a');
+  first.catch(() => {});
+  await store.getState().exchangeCodeAndLogin('test-code-b');
+  firstResponse.reject(new Error('old request failed'));
+  await assert.rejects(() => first, (error) => apiState.exported.isSessionChangedError(error));
+  assert.equal(apiState.storage.get('refreshToken'), 'test-account-b-refresh');
+  assert.equal(store.getState().user.id, 2);
+  assert.equal(store.getState().isAuthenticated, true);
+  assert.equal(store.getState().error, null);
+  assert.equal(errors.length, 0);
+});
+
+test('이전 초기화 사용자 조회가 늦게 도착해도 새 로그인 상태를 덮지 않는다', async () => {
+  const firstUser = deferred();
+  let calls = 0;
+  const apiState = apiHarness();
+  const { store, errors } = authStoreHarness(apiState, { userService: { getMe: () => ++calls === 1
+    ? firstUser.promise : Promise.resolve({ id: 2 }) } });
+  const initialization = store.getState().initialize();
+  await flush();
+  await store.getState().handleOAuthCallback('test-account-b-access', 'test-account-b-refresh', false);
+  firstUser.resolve({ id: 1 });
+  await initialization;
+  assert.equal(store.getState().user.id, 2);
+  assert.equal(errors.length, 0);
+});
+
+test('이전 카카오 로그인 응답이 늦게 와도 새 로그인 토큰/사용자를 덮지 않는다', async () => {
+  const firstResponse = deferred();
+  const apiState = apiHarness();
+  const { store, errors } = authStoreHarness(apiState, { authService: { loginWithKakao: () => firstResponse.promise } });
+  const first = store.getState().loginWithKakao('test-kakao-a');
+  await store.getState().handleOAuthCallback('test-account-b-access', 'test-account-b-refresh', false);
+  firstResponse.resolve({ accessToken: 'test-account-a-access', refreshToken: 'test-account-a-refresh', user: { id: 1 } });
+  await first;
+  assert.equal(apiState.storage.get('refreshToken'), 'test-account-b-refresh');
+  assert.equal(store.getState().user.id, 2);
+  assert.equal(errors.length, 0);
+});
+
+test('이전 로그아웃의 늦은 종료가 새 로그인 토큰/상태를 지우지 않는다', async () => {
+  const response = deferred();
+  const apiState = apiHarness();
+  const { store } = authStoreHarness(apiState, { authService: { logout: () => response.promise } });
+  const logout = store.getState().logout();
+  await store.getState().handleOAuthCallback('test-account-b-access', 'test-account-b-refresh', false);
+  response.resolve();
+  await logout;
+  assert.equal(apiState.storage.get('refreshToken'), 'test-account-b-refresh');
+  assert.equal(store.getState().user.id, 2);
+  assert.equal(store.getState().isAuthenticated, true);
+});
+
+test('현재 OAuth 로그인의 실제 실패는 토큰 삭제와 오류 표시를 유지한다', async () => {
+  const apiState = apiHarness();
+  const { store, errors } = authStoreHarness(apiState, { userService: { getMe: async () => { throw new Error('current failure'); } } });
+  await assert.rejects(() => store.getState().handleOAuthCallback('test-account-a-access', 'test-account-a-refresh', false));
+  assert.equal(apiState.storage.size, 0);
+  assert.equal(store.getState().isLoading, false);
+  assert.equal(errors.length, 1);
+});
+
 test('훅이 Zustand 인증과 AppState를 연결하고 해제할 때 두 구독을 정리한다', () => {
   const events = [];
   let authListener;

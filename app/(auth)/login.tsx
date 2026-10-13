@@ -7,6 +7,7 @@ import { Button, Typography } from '../../components/ui';
 import { Colors } from '../../constants';
 import { useAuthStore } from '../../stores/authStore';
 import { authService } from '../../services/auth';
+import { isSessionChangedError } from '../../services/api';
 
 const { width } = Dimensions.get('window');
 
@@ -79,6 +80,7 @@ export default function LoginScreen() {
       router.replace('/(tabs)');
 
     } catch (err: any) {
+      if (isSessionChangedError(err)) return;
       console.error('[Login] 테스트 로그인 에러:', err);
       Alert.alert('로그인 실패', err.message || '테스트 로그인에 실패했습니다.');
     } finally {
@@ -127,6 +129,7 @@ export default function LoginScreen() {
       }
 
     } catch (err: any) {
+      if (isSessionChangedError(err)) return;
       console.error('[Login] 카카오 로그인 에러:', err);
 
       // 사용자가 취소한 경우
