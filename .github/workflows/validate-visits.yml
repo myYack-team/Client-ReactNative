@@ -1,0 +1,27 @@
+name: Validate daily app visits
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  visits:
+    name: daily-visit-tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install dependencies without native build scripts
+        run: npm ci --ignore-scripts
+      - name: Test app visits and session transitions
+        run: npm run test:visits
