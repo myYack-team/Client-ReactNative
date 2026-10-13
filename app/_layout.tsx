@@ -9,8 +9,10 @@ import { notificationService, NOTIFICATION_ACTIONS } from '../services';
 import { refreshTokenSingleFlight } from '../services/api';
 import { Colors } from '../constants';
 import SplashScreen from '../components/SplashScreen';
+import { useDailyVisitTracking } from '../hooks/useDailyVisitTracking';
 
 export default function RootLayout() {
+  useDailyVisitTracking();
   const router = useRouter();
   const { initialize: initAuth, isLoading: authLoading, isAuthenticated } = useAuthStore();
   const { initialize: initSettings, isLoading: settingsLoading } = useSettingsStore();

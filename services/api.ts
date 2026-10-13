@@ -4,10 +4,43 @@ import { API_BASE_URL } from '../constants';
 import { ApiResponse } from '../types';
 import { logger } from '../utils/logger';
 
+declare module 'axios' {
+  interface AxiosRequestConfig<D = any> {
+    // 사용 흐름에 영향을 주지 않는 선택적 요청의 오류 로그만 생략합니다.
+    suppressErrorLogging?: boolean;
+  }
+}
+
 logger.log('[API] Initializing with base URL:', API_BASE_URL);
 
 // Single-flight token refresh promise
 let refreshPromise: Promise<{ accessToken: string; refreshToken: string }> | null = null;
+let sessionGeneration = 0;
+let sessionWriteQueue: Promise<void> = Promise.resolve();
+
+class SessionChangedError extends Error {}
+
+function writeSession<T>(operation: () => Promise<T>): Promise<T> {
+  const result = sessionWriteQueue.then(operation);
+  sessionWriteQueue = result.then(() => undefined, () => undefined);
+  return result;
+}
+
+async function writeTokens(tokens: { accessToken: string; refreshToken: string }): Promise<void> {
+  await SecureStore.setItemAsync('accessToken', tokens.accessToken);
+  await SecureStore.setItemAsync('refreshToken', tokens.refreshToken);
+}
+
+// 로그인·갱신·로그아웃의 토큰 쓰기를 직렬화해 이전 세션 응답이 새 로그인을 덮지 않습니다.
+export function setSessionTokens(tokens: { accessToken: string; refreshToken: string }): Promise<void> {
+  const generation = ++sessionGeneration;
+  refreshPromise = null;
+  const { accessToken, refreshToken } = tokens;
+  return writeSession(async () => {
+    if (generation !== sessionGeneration) throw new SessionChangedError();
+    await writeTokens({ accessToken, refreshToken });
+  });
+}
 
 // 세션 무효화 콜백 (순환 의존성 방지를 위한 콜백 등록 패턴)
 let onSessionInvalidated: (() => void) | null = null;
@@ -40,7 +73,8 @@ export async function refreshTokenSingleFlight(): Promise<{ accessToken: string;
 
   logger.log('[API] Starting token refresh');
 
-  refreshPromise = (async () => {
+  const generation = sessionGeneration;
+  const pendingRefresh: Promise<{ accessToken: string; refreshToken: string }> = Promise.resolve().then(async () => {
     try {
       const refreshToken = await SecureStore.getItemAsync('refreshToken');
       if (!refreshToken) {
@@ -50,17 +84,27 @@ export async function refreshTokenSingleFlight(): Promise<{ accessToken: string;
       const response = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken });
       const { accessToken, refreshToken: newRefreshToken } = response.data.result;
 
-      await SecureStore.setItemAsync('accessToken', accessToken);
-      await SecureStore.setItemAsync('refreshToken', newRefreshToken);
+      await writeSession(async () => {
+        const currentRefreshToken = await SecureStore.getItemAsync('refreshToken');
+        if (generation !== sessionGeneration || currentRefreshToken !== refreshToken) {
+          throw new SessionChangedError();
+        }
+        await writeTokens({ accessToken, refreshToken: newRefreshToken });
+      });
+      if (generation !== sessionGeneration) throw new SessionChangedError();
 
       logger.log('[API] Token refresh successful');
       return { accessToken, refreshToken: newRefreshToken };
+    } catch (error) {
+      if (generation !== sessionGeneration) throw new SessionChangedError();
+      throw error;
     } finally {
-      refreshPromise = null;
+      if (refreshPromise === pendingRefresh) refreshPromise = null;
     }
-  })();
+  });
 
-  return refreshPromise;
+  refreshPromise = pendingRefresh;
+  return pendingRefresh;
 }
 
 /**
@@ -69,9 +113,15 @@ export async function refreshTokenSingleFlight(): Promise<{ accessToken: string;
  */
 export async function clearSession({ notify = true } = {}): Promise<void> {
   logger.log('[API] Clearing session');
-  await SecureStore.deleteItemAsync('accessToken');
-  await SecureStore.deleteItemAsync('refreshToken');
-  if (notify) {
+  const generation = ++sessionGeneration;
+  refreshPromise = null;
+  const cleared = await writeSession(async () => {
+    if (generation !== sessionGeneration) return false;
+    await SecureStore.deleteItemAsync('accessToken');
+    await SecureStore.deleteItemAsync('refreshToken');
+    return true;
+  });
+  if (cleared && notify && generation === sessionGeneration) {
     try {
       onSessionInvalidated?.();
     } catch (e) {
@@ -93,7 +143,9 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    logger.error('[API Request Error]', error);
+    if (!error.config?.suppressErrorLogging) {
+      logger.error('[API Request Error]', error);
+    }
     return Promise.reject(error);
   }
 );
@@ -128,7 +180,16 @@ api.interceptors.response.use(
 
         return api(originalRequest);
       } catch (refreshError) {
-        logger.error('[API] Token refresh failed:', refreshError);
+        if (refreshError instanceof SessionChangedError) {
+          return Promise.reject(error);
+        }
+        // 취소된 선택적 요청은 이전 세션의 실패를 새 세션에 반영하지 않습니다.
+        if (originalRequest.suppressErrorLogging && originalRequest.signal?.aborted) {
+          return Promise.reject(error);
+        }
+        if (!originalRequest.suppressErrorLogging) {
+          logger.error('[API] Token refresh failed:', refreshError);
+        }
         // 인증 에러(401/403)만 세션 삭제, 네트워크 에러나 서버 에러(5xx)는 토큰 유지
         if (axios.isAxiosError(refreshError)) {
           const status = refreshError.response?.status;

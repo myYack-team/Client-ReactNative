@@ -3,7 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import axios from 'axios';
 import { User } from '../types';
 import { authService, userService } from '../services';
-import { clearSession, setSessionInvalidatedCallback } from '../services/api';
+import { clearSession, setSessionInvalidatedCallback, setSessionTokens } from '../services/api';
 import { logger } from '../utils/logger';
 import { useMedicationStore } from './medicationStore';
 import { useSupplementStore } from './supplementStore';
@@ -104,8 +104,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       const { accessToken, refreshToken, user } = await authService.loginWithKakao(kakaoAccessToken);
 
-      await SecureStore.setItemAsync('accessToken', accessToken);
-      await SecureStore.setItemAsync('refreshToken', refreshToken);
+      await setSessionTokens({ accessToken, refreshToken });
 
       set({ user, isAuthenticated: true, isLoading: false });
     } catch (error) {
@@ -123,8 +122,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ isLoading: true, error: null });
 
       // 토큰 저장
-      await SecureStore.setItemAsync('accessToken', accessToken);
-      await SecureStore.setItemAsync('refreshToken', refreshToken);
+      await setSessionTokens({ accessToken, refreshToken });
 
       // 사용자 정보 조회
       const user = await userService.getMe();
@@ -148,8 +146,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
       const result = await authService.exchangeCode(code);
 
-      await SecureStore.setItemAsync('accessToken', result.accessToken);
-      await SecureStore.setItemAsync('refreshToken', result.refreshToken);
+      await setSessionTokens(result);
 
       const user = await userService.getMe();
 
